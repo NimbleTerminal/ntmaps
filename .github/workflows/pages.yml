@@ -3,36 +3,47 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
+permissions: {}
 
 concurrency:
   group: pages
   cancel-in-progress: true
-
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v6
+      - uses: actions/checkout@v7
+      - name: Set up Go
+        uses: actions/setup-go@v7
         with:
-          go-version-file: go.mod
-      - name: Build WASM binary
-        run: GOWORK="$PWD/wasm.work" GOARCH=wasm GOOS=js go build -o web/app.wasm ./examples/mapview/
-      - name: Set up web assets
-        run: go tool booba-assets web/
+          go-version: '1.27.2'
+          cache-dependency-path: |
+            go.sum
+            examples/go.sum
+            wasm.work.sum
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - name: Install Task
+        uses: go-task/setup-task@v2
+      # Validate the exact revision being deployed, including manual runs.
+      # task ci also builds the WASM site; only upload it if all checks pass.
+      - name: Run CI checks and build site
+        run: task ci
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:
           path: web
-
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

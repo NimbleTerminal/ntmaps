@@ -1,5 +1,16 @@
 # `ntcharts-osm` CHANGELOG
 
+## Unreleased
+
+- Move map rendering from NTCharts picture to ntpicture v0.1.0's legacy API,
+  retaining the existing map API and buffered-panning behavior.
+- Upgrade the 3D map demo to ntcharts3d v0.3.1 (nt3d v0.2.0/ntpicture), share terminal
+  discovery with the map source, and dispose chart placements before quitting.
+- Isolate demos in an examples module; update booba to v0.9.2 and publish both
+  demos with browser action controls, runtime validation, and WASM smoke tests.
+- Use released texture fast paths to eliminate per-pixel texture allocations.
+- Preserve glyph caching around the ntpicture v0.1.0 legacy bridge regression.
+
 ## v0.2.0 (2026-09-29)
 
  * feat(demo): add a textured ntcharts3d map surface with independent camera and map controls.

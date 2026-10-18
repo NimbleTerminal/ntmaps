@@ -1,9 +1,9 @@
 // examples/mapview/main.go
 //
 // A two-pane mapview demo: a places list (top-left) plus details (bottom-left)
-// alongside a live OpenStreetMap view (right). Tiles render via half-block
-// glyphs (default) or the Kitty graphics protocol if your terminal supports it
-// (Kitty, Ghostty, WezTerm).
+// alongside a live OpenStreetMap view (right). Tiles render via the Kitty
+// graphics protocol if your terminal supports it (Kitty, Ghostty, WezTerm),
+// or half-block glyphs otherwise.
 //
 // Keys:
 //
@@ -29,7 +29,7 @@ import (
 	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
-	booba "github.com/NimbleMarkets/go-booba"
+	"github.com/NimbleMarkets/ntcharts-osm/examples/internal/demorun"
 	"github.com/NimbleMarkets/ntcharts-osm/mapview"
 )
 
@@ -183,7 +183,7 @@ func initialModel(medium mapview.KittyMedium) model {
 	// Oversample: 2 gives a 2× pixel-density tile-canvas at +1 OSM zoom,
 	// which Kitty terminals downscale to a noticeably sharper image at no
 	// extra geographic coverage. Glyph mode is unaffected visually.
-	cfg := mapview.Config{Oversample: 2, KittyMedium: medium}
+	cfg := mapview.Config{Oversample: 2, KittyMedium: medium, PreferKitty: true}
 	if runtime.GOOS != "js" {
 		// Buffer nearby tiles for smooth panning and refill in the background.
 		cfg.PanBuffer = 1
@@ -425,7 +425,10 @@ func main() {
 		os.Exit(2)
 	}
 	m := initialModel(medium)
-	err := booba.Run(m)
+	err := demorun.Run(m, "mapview", "Explore OpenStreetMap", demorun.Keys{
+		Primary: []key.Binding{demorun.Binding("up", "North"), demorun.Binding("down", "South"), demorun.Binding("left", "West"), demorun.Binding("right", "East"), demorun.Binding("+", "Zoom in"), demorun.Binding("-", "Zoom out")},
+		More:    []key.Binding{demorun.Binding("j", "Next place"), demorun.Binding("k", "Previous place"), m.keys.mode, m.keys.style, m.keys.fit, m.keys.help},
+	})
 	m.mv.Close()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)

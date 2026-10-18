@@ -6,7 +6,7 @@
     <a href="https://github.com/NimbleMarkets/ntcharts-osm/blob/main/CODE_OF_CONDUCT.md"><img src="https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg"  alt="Code Of Conduct"></a>
 </p>
 
-`ntcharts-osm` is a [Bubble Tea](https://github.com/charmbracelet/bubbletea) widget that renders OpenStreetMap tiles in the terminal. It pairs [`flopp/go-staticmaps`](https://github.com/flopp/go-staticmaps) for tile fetching with [`ntcharts/v2/picture`](https://github.com/NimbleMarkets/ntcharts) for image rendering — half-block glyphs anywhere, full-resolution Kitty graphics on terminals that support them (Kitty, Ghostty, WezTerm).
+`ntcharts-osm` is a [Bubble Tea](https://github.com/charmbracelet/bubbletea) widget that renders OpenStreetMap tiles in the terminal. It pairs [`flopp/go-staticmaps`](https://github.com/flopp/go-staticmaps) for tile fetching with [`ntpicture`](https://nimbleterminal.dev/ntpicture) for image rendering — half-block glyphs anywhere, full-resolution Kitty graphics on terminals that support them (Kitty, Ghostty, WezTerm).
 
 <p align="center"><a href="https://nimblemarkets.github.io/ntcharts-osm"/><b>Live Demo</b><a> (<a href="./examples/mapview/main.go">source</a>)<br><a href="https://nimblemarkets.github.io/ntcharts-osm"/><img src="examples/mapview/demo.gif" alt="quickstart gif" width="75%"/></a></p>
 
@@ -78,10 +78,10 @@ for key repeats to stop. `RenderDebounce` applies only when buffering is off.
 For a compatible local Kitty/Ghostty terminal, try shared-memory transport:
 
 ```sh
-go run ./examples/mapview -medium shm
+go -C examples run ./mapview -medium shm
 ```
 
-Press `g` to select Kitty rendering. The default `-medium direct` also works
+The demo starts in Kitty rendering when the terminal supports it; press `g` to toggle. The default `-medium direct` also works
 over SSH. Call `mv.Close()` after your Bubble Tea program exits to release
 pending shared-memory images.
 
@@ -93,12 +93,14 @@ pending shared-memory images.
 
 | Mode | What it does | Where it works |
 |---|---|---|
-| `mapview.RenderGlyph` (default) | Half-block ANSI from [`pixterm/ansimage`](https://github.com/eliukblau/pixterm), via `ntcharts/v2/picture` | Any modern terminal |
+| `mapview.RenderGlyph` (default) | Half-block ANSI from ntpicture | Any modern terminal |
 | `mapview.RenderKitty` | Full-resolution image via Kitty graphics protocol | Kitty, Ghostty, WezTerm |
 
 `mv.SetRenderMode(mode)` returns a `tea.Cmd` that re-renders at the new mode. Toggling away from Kitty automatically deletes the uploaded image so no ghost stays in the terminal.
 
-The WASM browser demo requests Kitty shared-memory transport through booba v0.7.0. Press `g` to switch from the initial glyph mode to Kitty rendering. Native demos default to direct transmission, including over SSH. Other consumers can opt in with `mapview.Config{KittyMedium: mapview.KittyMediumSharedMemory}` when their terminal or browser bridge supports it. Shared-memory allocation or bridge failures fall back to direct transmission.
+To start in Kitty whenever it is available, set `mapview.Config{PreferKitty: true}`. The model begins in Glyph and switches once the terminal's Kitty-support probe succeeds; it never overrides a mode chosen with `SetRenderMode`.
+
+The WASM browser demo requests Kitty shared-memory transport through booba v0.9.2 and starts in Kitty rendering; press `g` to switch to glyphs. Native demos default to direct transmission, including over SSH. Other consumers can opt in with `mapview.Config{KittyMedium: mapview.KittyMediumSharedMemory}` when their terminal or browser bridge supports it. Shared-memory allocation or bridge failures fall back to direct transmission.
 
 ## Bubble Tea version
 
@@ -106,7 +108,7 @@ Targets Bubble Tea **v2** (`charm.land/bubbletea/v2`). No v1 backport.
 
 ## Routing messages across multiple picture owners
 
-`mapview.IsMapUpdate(msg)` is a **"may need this"** predicate, not an ownership predicate. It returns `true` for both mapview's own messages *and* for every `picture.IsPictureMsg` (Kitty frames, cell-size events, capability probes). Picture messages are program-wide — they belong to the runtime, not to any one model.
+`mapview.IsMapUpdate(msg)` is a **"may need this"** predicate, not an ownership predicate. It returns `true` for both mapview's own messages *and* for every `legacy.IsPictureMsg` (Kitty frames, cell-size events, capability probes). Picture messages are program-wide — they belong to the runtime, not to any one model.
 
 If your program embeds `picture.Model` in more than one place (say, a `mapview.Model` *and* a `pictureurl.Model` rendering a product image), do NOT route picture messages with `else if` — broadcast them to every picture owner, otherwise one of them will starve:
 
@@ -132,9 +134,28 @@ if mapMsg || prodMsg {
 
 For the narrower "is this message owned by mapview alone" predicate (the `MapCoordinates` input, async tile-render results, debounce ticks), use `mapview.IsMapOwnMsg(msg)`. Each model's own `Update` already filters by instance ID where applicable, so broadcasting picture messages is safe.
 
+## 3D map demo
+
+The `mapview3d` example displays `mapview.Image()` on an unlit ntcharts3d
+surface. It is a flat map in 3D, without terrain elevation. Camera movement
+reuses the texture; panning or changing map zoom updates it.
+
+```sh
+go -C examples run ./mapview3d -medium shm
+```
+
+Use arrows to tilt and rotate, WASD to pan the map, `[` / `]` for map zoom,
+and `+` / `-` for camera zoom. `n` / `p` select places, `0` resets the camera,
+`r` toggles rotation, `o` switches projection, and `g` toggles glyph/Kitty output.
+
+Software rendering is the default. Add `-renderer gpu` for higher resolution
+with WebGPU; build with `go -C examples build -tags webgpu -o ../bin/ntcharts-osm-mapview3d ./mapview3d` to enable native GPU support. ntcharts3d falls back to software if GPU initialization fails.
+Use `-medium direct` (the default) over SSH. Build a native binary with
+`task build-ex-mapview3d`.
+
 ## Known caveats
 
-- **WASM dependencies.** `wasm.work` selects Bubble Tea and clipboard forks with browser support. Native builds use upstream versions. The WASM task and CI select this workspace automatically; manual builds need `GOWORK="$PWD/wasm.work" GOOS=js GOARCH=wasm go build -o web/app.wasm ./examples/mapview/`.
+- **WASM dependencies.** `wasm.work` selects Bubble Tea and clipboard forks with browser support. Native builds use upstream versions. The WASM task and CI select this workspace automatically; manual builds need `task build-wasm` (or select that workspace with `go -C examples build`).
 - **go-staticmaps fork for marker performance.** `go.mod` replaces `flopp/go-staticmaps` with [`neomantra/go-staticmaps`](https://github.com/neomantra/go-staticmaps) to fix offscreen marker wrapping and skip drawing invisible pins. These fixes reduce rendering delays when panning. We'll switch back when upstream includes them.
 - **Tile fetching is synchronous per render.** Each render builds its own `*sm.Context` inside a dispatched goroutine. With buffering off, generation counters discard stale results. With `PanBuffer` enabled, tile renders are serialized and completed buffers are cropped for the latest compatible camera position. Composited viewports are kept in a small per-Model LRU keyed on `(lat, lng, zoom, cols, rows, style, oversample, markers)` — revisiting a state hits the cache synchronously (no Loading overlay). Default cap is 16 entries; tune via `mapview.NewWithConfig(Config{CacheCap: N})` (`-1` disables this LRU; an explicitly enabled pan buffer remains active).
 - **Server-side supersample (`Config.Oversample`).** Raises the source-image pixel density without changing visible geographic coverage — `Oversample: N` (powers of 2) renders the same area at `N×` per-cell resolution and `+log2(N)` OSM tile zoom, so Kitty terminals can downscale a sharper source. `1` (default) keeps current behavior; `2` is a noticeable boost; `4` is hi-DPI quality at ~16× the tile fetches. Capped so the effective tile zoom never exceeds 19. Glyph mode pays the cost without visible benefit.
@@ -151,3 +172,29 @@ Many thanks to the **OpenStreetMap Foundation** ([donate](https://supporting.ope
 
 ----
 Made with :heart: and :fire: by the team behind [Nimble.Markets](https://nimble.markets).
+
+## Development and browser demos
+
+The root module contains the map widget. `examples/go.mod` owns ntcharts3d
+v0.3.1 (with nt3d v0.2.0) and go-booba v0.9.2; library users do not inherit the demo or GPU
+dependencies. ntcharts3d uses published nt3d and ntpicture modules. The root
+module path remains `github.com/NimbleMarkets/ntcharts-osm`.
+
+Run `task test` for both modules, `task build` for native binaries, and
+`task ci` for race tests, vet, dependency checks, native builds, and browser
+smoke tests. Build the browser site with `task build-wasm-site`, then serve it
+with `task serve-wasm-site`. The landing page offers both map demos, action
+buttons, renderer selection, and restart. Generated assets are ignored.
+GitHub Pages deploys only after the same CI checks pass.
+
+After changing dependencies, run `task go-tidy` and `task notices`. Browser
+builds use `wasm.work`; native tasks explicitly disable workspaces. The
+staticmaps fork replacement is repeated in the examples module because Go
+ignores dependency modules' replace directives.
+
+See [migration notes](MIGRATION.md) for the compatibility adapter, the upstream
+glyph-cache regression, and suggested platform guide corrections.
+
+For reproducible 3D CPU benchmarks, run `task bench-mapview3d`. See the
+[performance baseline](examples/mapview3d/PERFORMANCE.md) for timings, allocation
+profiles, and measurement limits.

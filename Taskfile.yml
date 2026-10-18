@@ -2,6 +2,9 @@
 
 version: '3'
 
+env:
+  GOWORK: 'off'
+
 tasks:
   default:
     desc: 'Default task runs the "test" and "build" tasks'
@@ -21,17 +24,20 @@ tasks:
     run: once
     cmds:
       - go mod tidy
+      - go -C examples mod tidy
 
   go-update:
     desc: 'Go update all the dependencies'
     run: once
     cmds:
       - go get -u ./...
+      - go -C examples get -u ./...
 
   test:
     desc: 'Run all Go tests'
     cmds:
-      - go test ./...
+      - go test -mod=readonly ./...
+      - go -C examples test -mod=readonly ./...
 
   build:
     desc: 'Build all the things'
@@ -41,7 +47,7 @@ tasks:
   clean:
     desc: 'Clean built examples'
     cmds:
-      - rm -f bin/ntcharts-osm-mapview
+      - rm -f bin/ntcharts-osm-mapview bin/ntcharts-osm-mapview3d
       - rm -rf .task
 
 ###############################################################################
@@ -51,17 +57,30 @@ tasks:
     desc: 'Build all examples'
     deps:
       - build-ex-mapview
+      - build-ex-mapview3d
+
+  bench-mapview3d:
+    desc: 'Measure 3D software rendering and texture replacement without network or terminal I/O'
+    cmds:
+      - go -C examples test -run '^$' -bench BenchmarkMap3D -benchmem -benchtime=1s -count=3 ./mapview3d
+
+  build-ex-mapview3d:
+    desc: 'Build the textured 3D map example'
+    cmds:
+      - go -C examples build -mod=readonly -o ../bin/ntcharts-osm-mapview3d ./mapview3d
 
   build-ex-mapview:
     desc: 'Build the mapview example'
-    deps:
-      - go-tidy
     cmds:
-      - go build -o bin/ntcharts-osm-mapview ./examples/mapview
+      - go -C examples build -mod=readonly -o ../bin/ntcharts-osm-mapview ./mapview
     sources:
       - mapview/**/*.go
       - examples/mapview/*.go
       - go.mod
+      - go.sum
+      - examples/go.mod
+      - examples/go.sum
+      - examples/internal/**/*.go
     generates:
       - bin/ntcharts-osm-mapview
 
@@ -84,30 +103,68 @@ tasks:
 ###############################################################################
 # Demo website via booba
 
-  build-wasm-site:
-    desc: 'Build the WASM showcase site into web/'
-    deps: [go-tidy]
+  build-wasm:
+    desc: 'Build both browser demos'
+    env:
+      GOWORK: '{{.ROOT_DIR}}/wasm.work'
+      GOOS: js
+      GOARCH: wasm
+      CGO_ENABLED: '0'
     cmds:
-      - GOWORK="$PWD/wasm.work" GOARCH=wasm GOOS=js go build -o web/app.wasm ./examples/mapview/
-      - go tool booba-assets web/
-    generates:
-      - web/app.wasm
+      - mkdir -p web/demos
+      - for: [mapview, mapview3d]
+        cmd: go -C examples build -mod=readonly -o ../web/demos/{{.ITEM}}.wasm ./{{.ITEM}}
+
+  build-wasm-site:
+    desc: 'Build demos and export the pinned booba runtime'
+    cmds:
+      - task: build-wasm
+      - go -C examples tool booba-assets --no-index ../web/
+      - cp LICENSE.txt web/LICENSE
+      - cp THIRD_PARTY_NOTICES.md web/
+
+  check-site:
+    desc: 'Validate browser assets and exercise both WASM demos'
+    cmds:
+      - node --check web/site.js
+      - node scripts/check-site.mjs
+      - for: [mapview, mapview3d]
+        cmd: node scripts/smoke-demo.mjs {{.ITEM}}
 
   serve-wasm-site:
-    desc: 'Serve web/ at http://localhost:8000/ntcharts-osm/ (matches GH Pages prefix)'
+    desc: 'Serve at http://localhost:8000/ntcharts-osm/'
     deps: [build-wasm-site]
     vars:
       SERVE_DIR: /tmp/ntcharts-osm-site
     cmds:
-      - mkdir -p {{.SERVE_DIR}}
-      - rm -f {{.SERVE_DIR}}/ntcharts-osm
-      - ln -sfn "$(pwd)/web" {{.SERVE_DIR}}/ntcharts-osm
-      - echo 'Serving at http://localhost:8000/ntcharts-osm/'
-      - cd {{.SERVE_DIR}} && python3 -m http.server 8000
+      - mkdir -p "{{.SERVE_DIR}}"
+      - ln -sfn "$PWD/web" "{{.SERVE_DIR}}/ntcharts-osm"
+      - python3 -m http.server 8000 --directory "{{.SERVE_DIR}}"
 
   clean-wasm-site:
-    desc: 'Remove generated showcase artifacts'
+    desc: 'Remove generated browser artifacts'
     cmds:
-      - rm -rf web/_assets/booba web/_assets/ghostty-web
-      - rm -f web/_assets/wasm_exec.js web/_assets/index.html
-      - rm -f web/app.wasm
+      - rm -rf web/booba web/ghostty-web web/demos
+      - rm -f web/app.wasm web/wasm_exec.js web/LICENSE web/THIRD_PARTY_NOTICES.md
+
+  notices:
+    desc: 'Regenerate dependency licenses for native and browser demos'
+    cmds:
+      - go run ./internal/tools/notices > THIRD_PARTY_NOTICES.md
+
+  ci:
+    desc: 'Check formatting, dependencies, native tests, and browser demos'
+    cmds:
+      - test -z "$(gofmt -l mapview examples internal)"
+      - go mod tidy -diff
+      - go -C examples mod tidy -diff
+      - go mod verify
+      - go -C examples mod verify
+      - go test -mod=readonly -race ./...
+      - go -C examples test -mod=readonly -race ./...
+      - go vet -mod=readonly ./...
+      - go -C examples vet -mod=readonly ./...
+      - task: build
+      - task: build-wasm-site
+      - task: check-site
+      - go run ./internal/tools/notices | cmp -s - THIRD_PARTY_NOTICES.md
