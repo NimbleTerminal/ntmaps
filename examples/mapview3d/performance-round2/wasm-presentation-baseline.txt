@@ -1,0 +1,36 @@
+goos: js
+goarch: wasm
+pkg: github.com/NimbleMarkets/ntcharts3d
+BenchmarkPresentation/glyph/camera         	      20	    929805 ns/op	         0 coalesced	        20.00 completed	         0 direct-frames	    146138 output-ns/frame	     12672 prepare-ns/op	         0 protocol-B/frame	    552832 render-ns/frame	        20.00 requested	         0 shm-frames	     19342 view-B/frame	  226301 B/op	      55 allocs/op
+--- BENCH: BenchmarkPresentation/glyph/camera
+    presentation_bench_test.go:286: raster=(80,40) renderer=software picture=0 transport={Generation:3 Presented:3 Busy:false Err:<nil> Format:zlib Medium:direct} aniso=4 shrink=0 frames=1
+    presentation_bench_test.go:286: raster=(80,40) renderer=software picture=0 transport={Generation:22 Presented:22 Busy:false Err:<nil> Format:zlib Medium:direct} aniso=4 shrink=0 frames=20
+BenchmarkPresentation/glyph/camera         	      20	    806464 ns/op	         0 coalesced	        20.00 completed	         0 direct-frames	    101530 output-ns/frame	      5120 prepare-ns/op	         0 protocol-B/frame	    509837 render-ns/frame	        20.00 requested	         0 shm-frames	     19342 view-B/frame	  226301 B/op	      55 allocs/op
+--- BENCH: BenchmarkPresentation/glyph/camera
+    presentation_bench_test.go:286: raster=(80,40) renderer=software picture=0 transport={Generation:3 Presented:3 Busy:false Err:<nil> Format:zlib Medium:direct} aniso=4 shrink=0 frames=1
+    presentation_bench_test.go:286: raster=(80,40) renderer=software picture=0 transport={Generation:22 Presented:22 Busy:false Err:<nil> Format:zlib Medium:direct} aniso=4 shrink=0 frames=20
+BenchmarkPresentation/glyph/camera         	      20	    793638 ns/op	         0 coalesced	        20.00 completed	         0 direct-frames	     96960 output-ns/frame	      4378 prepare-ns/op	         0 protocol-B/frame	    508352 render-ns/frame	        20.00 requested	         0 shm-frames	     19342 view-B/frame	  226301 B/op	      55 allocs/op
+--- BENCH: BenchmarkPresentation/glyph/camera
+    presentation_bench_test.go:286: raster=(80,40) renderer=software picture=0 transport={Generation:3 Presented:3 Busy:false Err:<nil> Format:zlib Medium:direct} aniso=4 shrink=0 frames=1
+    presentation_bench_test.go:286: raster=(80,40) renderer=software picture=0 transport={Generation:22 Presented:22 Busy:false Err:<nil> Format:zlib Medium:direct} aniso=4 shrink=0 frames=20
+BenchmarkPresentation/glyph/texture        	      20	  35773811 ns/op	         0 coalesced	        20.00 completed	         0 direct-frames	    162458 output-ns/frame	    734259 prepare-ns/op	         0 protocol-B/frame	  34548864 render-ns/frame	        20.00 requested	         0 shm-frames	     19442 view-B/frame	 2675596 B/op	      86 allocs/op
+--- BENCH: BenchmarkPresentation/glyph/texture
+    presentation_bench_test.go:286: raster=(80,40) renderer=software picture=0 transport={Generation:3 Presented:3 Busy:false Err:<nil> Format:zlib Medium:direct} aniso=4 shrink=0 frames=1
+    presentation_bench_test.go:286: raster=(80,40) renderer=software picture=0 transport={Generation:22 Presented:22 Busy:false Err:<nil> Format:zlib Medium:direct} aniso=4 shrink=0 frames=20
+BenchmarkPresentation/glyph/texture        	      20	  33954342 ns/op	         0 coalesced	        20.00 completed	         0 direct-frames	    122522 output-ns/frame	    623731 prepare-ns/op	         0 protocol-B/frame	  32935642 render-ns/frame	        20.00 requested	         0 shm-frames	     19442 view-B/frame	 2675574 B/op	      86 allocs/op
+--- BENCH: BenchmarkPresentation/glyph/texture
+    presentation_bench_test.go:286: raster=(80,40) renderer=software picture=0 transport={Generation:3 Presented:3 Busy:false Err:<nil> Format:zlib Medium:direct} aniso=4 shrink=0 frames=1
+    presentation_bench_test.go:286: raster=(80,40) renderer=software picture=0 transport={Generation:22 Presented:22 Busy:false Err:<nil> Format:zlib Medium:direct} aniso=4 shrink=0 frames=20
+BenchmarkPresentation/glyph/texture        	      20	  33280525 ns/op	         0 coalesced	        20.00 completed	         0 direct-frames	    110054 output-ns/frame	    548314 prepare-ns/op	         0 protocol-B/frame	  32364070 render-ns/frame	        20.00 requested	         0 shm-frames	     19442 view-B/frame	 2675574 B/op	      86 allocs/op
+--- BENCH: BenchmarkPresentation/glyph/texture
+    presentation_bench_test.go:286: raster=(80,40) renderer=software picture=0 transport={Generation:3 Presented:3 Busy:false Err:<nil> Format:zlib Medium:direct} aniso=4 shrink=0 frames=1
+    presentation_bench_test.go:286: raster=(80,40) renderer=software picture=0 transport={Generation:22 Presented:22 Busy:false Err:<nil> Format:zlib Medium:direct} aniso=4 shrink=0 frames=20
+--- FAIL: BenchmarkPresentation/direct/camera
+    presentation_bench_test.go:168: adaptive quality changed; sample invalid
+--- FAIL: BenchmarkPresentation/direct/texture
+    presentation_bench_test.go:168: adaptive quality changed; sample invalid
+--- FAIL: BenchmarkPresentation
+FAIL
+exit status 1
+FAIL	github.com/NimbleMarkets/ntcharts3d	3.232s
+FAIL

@@ -1,0 +1,61 @@
+  wasm_exec.js          → ../web/wasm_exec.js
+  booba/ (19 files)      → ../web/booba
+  ghostty-web/ (3 files) → ../web/ghostty-web
+2026/10/18 13:44:00 Error downloading tile file: Get "https://c.tile.openstreetmap.org/15/8350/12184.png": net/http: fetch() failed: Error: Offline smoke test
+2026/10/18 13:44:00 Error downloading tile file: Get "https://a.tile.openstreetmap.org/15/8350/12185.png": net/http: fetch() failed: Error: Offline smoke test
+2026/10/18 13:44:00 Error downloading tile file: Get "https://b.tile.openstreetmap.org/15/8350/12186.png": net/http: fetch() failed: Error: Offline smoke test
+2026/10/18 13:44:00 Error downloading tile file: Get "https://a.tile.openstreetmap.org/15/8351/12184.png": net/http: fetch() failed: Error: Offline smoke test
+2026/10/18 13:44:00 Error downloading tile file: Get "https://b.tile.openstreetmap.org/15/8351/12185.png": net/http: fetch() failed: Error: Offline smoke test
+2026/10/18 13:44:00 Error downloading tile file: Get "https://c.tile.openstreetmap.org/15/8351/12186.png": net/http: fetch() failed: Error: Offline smoke test
+mapview: startup, actions, resize, input, and quit passed
+2026/10/18 13:44:00 Error downloading tile file: Get "https://c.tile.openstreetmap.org/15/16932/11624.png": net/http: fetch() failed: Error: Offline smoke test
+2026/10/18 13:44:00 Error downloading tile file: Get "https://a.tile.openstreetmap.org/15/16932/11625.png": net/http: fetch() failed: Error: Offline smoke test
+2026/10/18 13:44:00 Error downloading tile file: Get "https://b.tile.openstreetmap.org/15/16932/11626.png": net/http: fetch() failed: Error: Offline smoke test
+2026/10/18 13:44:00 Error downloading tile file: Get "https://c.tile.openstreetmap.org/15/16932/11627.png": net/http: fetch() failed: Error: Offline smoke test
+2026/10/18 13:44:00 Error downloading tile file: Get "https://a.tile.openstreetmap.org/15/16932/11628.png": net/http: fetch() failed: Error: Offline smoke test
+2026/10/18 13:44:00 Error downloading tile file: Get "https://a.tile.openstreetmap.org/15/16933/11624.png": net/http: fetch() failed: Error: Offline smoke test
+2026/10/18 13:44:00 Error downloading tile file: Get "https://b.tile.openstreetmap.org/15/16933/11625.png": net/http: fetch() failed: Error: Offline smoke test
+2026/10/18 13:44:00 Error downloading tile file: Get "https://c.tile.openstreetmap.org/15/16933/11626.png": net/http: fetch() failed: Error: Offline smoke test
+2026/10/18 13:44:00 Error downloading tile file: Get "https://a.tile.openstreetmap.org/15/16933/11627.png": net/http: fetch() failed: Error: Offline smoke test
+2026/10/18 13:44:00 Error downloading tile file: Get "https://b.tile.openstreetmap.org/15/16933/11628.png": net/http: fetch() failed: Error: Offline smoke test
+2026/10/18 13:44:00 Error downloading tile file: Get "https://b.tile.openstreetmap.org/15/16934/11624.png": net/http: fetch() failed: Error: Offline smoke test
+2026/10/18 13:44:00 Error downloading tile file: Get "https://c.tile.openstreetmap.org/15/16934/11625.png": net/http: fetch() failed: Error: Offline smoke test
+2026/10/18 13:44:00 Error downloading tile file: Get "https://a.tile.openstreetmap.org/15/16934/11626.png": net/http: fetch() failed: Error: Offline smoke test
+2026/10/18 13:44:00 Error downloading tile file: Get "https://b.tile.openstreetmap.org/15/16934/11627.png": net/http: fetch() failed: Error: Offline smoke test
+2026/10/18 13:44:00 Error downloading tile file: Get "https://c.tile.openstreetmap.org/15/16934/11628.png": net/http: fetch() failed: Error: Offline smoke test
+2026/10/18 13:44:00 Error downloading tile file: Get "https://c.tile.openstreetmap.org/15/16935/11624.png": net/http: fetch() failed: Error: Offline smoke test
+2026/10/18 13:44:00 Error downloading tile file: Get "https://a.tile.openstreetmap.org/15/16935/11625.png": net/http: fetch() failed: Error: Offline smoke test
+2026/10/18 13:44:00 Error downloading tile file: Get "https://b.tile.openstreetmap.org/15/16935/11626.png": net/http: fetch() failed: Error: Offline smoke test
+2026/10/18 13:44:00 Error downloading tile file: Get "https://c.tile.openstreetmap.org/15/16935/11627.png": net/http: fetch() failed: Error: Offline smoke test
+2026/10/18 13:44:00 Error downloading tile file: Get "https://a.tile.openstreetmap.org/15/16935/11628.png": net/http: fetch() failed: Error: Offline smoke test
+2026/10/18 13:44:00 Error downloading tile file: Get "https://a.tile.openstreetmap.org/15/16936/11624.png": net/http: fetch() failed: Error: Offline smoke test
+2026/10/18 13:44:00 Error downloading tile file: Get "https://b.tile.openstreetmap.org/15/16936/11625.png": net/http: fetch() failed: Error: Offline smoke test
+2026/10/18 13:44:00 Error downloading tile file: Get "https://c.tile.openstreetmap.org/15/16936/11626.png": net/http: fetch() failed: Error: Offline smoke test
+2026/10/18 13:44:00 Error downloading tile file: Get "https://a.tile.openstreetmap.org/15/16936/11627.png": net/http: fetch() failed: Error: Offline smoke test
+2026/10/18 13:44:00 Error downloading tile file: Get "https://b.tile.openstreetmap.org/15/16936/11628.png": net/http: fetch() failed: Error: Offline smoke test
+2026/10/18 13:44:00 Error downloading tile file: Get "https://a.tile.openstreetmap.org/14/4173/6090.png": net/http: fetch() failed: Error: Offline smoke test
+2026/10/18 13:44:00 Error downloading tile file: Get "https://b.tile.openstreetmap.org/14/4173/6091.png": net/http: fetch() failed: Error: Offline smoke test
+2026/10/18 13:44:00 Error downloading tile file: Get "https://c.tile.openstreetmap.org/14/4173/6092.png": net/http: fetch() failed: Error: Offline smoke test
+2026/10/18 13:44:00 Error downloading tile file: Get "https://a.tile.openstreetmap.org/14/4173/6093.png": net/http: fetch() failed: Error: Offline smoke test
+2026/10/18 13:44:00 Error downloading tile file: Get "https://b.tile.openstreetmap.org/14/4173/6094.png": net/http: fetch() failed: Error: Offline smoke test
+2026/10/18 13:44:00 Error downloading tile file: Get "https://b.tile.openstreetmap.org/14/4174/6090.png": net/http: fetch() failed: Error: Offline smoke test
+2026/10/18 13:44:00 Error downloading tile file: Get "https://c.tile.openstreetmap.org/14/4174/6091.png": net/http: fetch() failed: Error: Offline smoke test
+2026/10/18 13:44:00 Error downloading tile file: Get "https://a.tile.openstreetmap.org/14/4174/6092.png": net/http: fetch() failed: Error: Offline smoke test
+2026/10/18 13:44:00 Error downloading tile file: Get "https://b.tile.openstreetmap.org/14/4174/6093.png": net/http: fetch() failed: Error: Offline smoke test
+2026/10/18 13:44:00 Error downloading tile file: Get "https://c.tile.openstreetmap.org/14/4174/6094.png": net/http: fetch() failed: Error: Offline smoke test
+2026/10/18 13:44:00 Error downloading tile file: Get "https://c.tile.openstreetmap.org/14/4175/6090.png": net/http: fetch() failed: Error: Offline smoke test
+2026/10/18 13:44:00 Error downloading tile file: Get "https://a.tile.openstreetmap.org/14/4175/6091.png": net/http: fetch() failed: Error: Offline smoke test
+2026/10/18 13:44:00 Error downloading tile file: Get "https://b.tile.openstreetmap.org/14/4175/6092.png": net/http: fetch() failed: Error: Offline smoke test
+2026/10/18 13:44:00 Error downloading tile file: Get "https://c.tile.openstreetmap.org/14/4175/6093.png": net/http: fetch() failed: Error: Offline smoke test
+2026/10/18 13:44:00 Error downloading tile file: Get "https://a.tile.openstreetmap.org/14/4175/6094.png": net/http: fetch() failed: Error: Offline smoke test
+2026/10/18 13:44:00 Error downloading tile file: Get "https://a.tile.openstreetmap.org/14/4176/6090.png": net/http: fetch() failed: Error: Offline smoke test
+2026/10/18 13:44:00 Error downloading tile file: Get "https://b.tile.openstreetmap.org/14/4176/6091.png": net/http: fetch() failed: Error: Offline smoke test
+2026/10/18 13:44:00 Error downloading tile file: Get "https://c.tile.openstreetmap.org/14/4176/6092.png": net/http: fetch() failed: Error: Offline smoke test
+2026/10/18 13:44:00 Error downloading tile file: Get "https://a.tile.openstreetmap.org/14/4176/6093.png": net/http: fetch() failed: Error: Offline smoke test
+2026/10/18 13:44:00 Error downloading tile file: Get "https://b.tile.openstreetmap.org/14/4176/6094.png": net/http: fetch() failed: Error: Offline smoke test
+2026/10/18 13:44:00 Error downloading tile file: Get "https://b.tile.openstreetmap.org/14/4177/6090.png": net/http: fetch() failed: Error: Offline smoke test
+2026/10/18 13:44:00 Error downloading tile file: Get "https://c.tile.openstreetmap.org/14/4177/6091.png": net/http: fetch() failed: Error: Offline smoke test
+2026/10/18 13:44:00 Error downloading tile file: Get "https://a.tile.openstreetmap.org/14/4177/6092.png": net/http: fetch() failed: Error: Offline smoke test
+2026/10/18 13:44:00 Error downloading tile file: Get "https://b.tile.openstreetmap.org/14/4177/6093.png": net/http: fetch() failed: Error: Offline smoke test
+2026/10/18 13:44:00 Error downloading tile file: Get "https://c.tile.openstreetmap.org/14/4177/6094.png": net/http: fetch() failed: Error: Offline smoke test
+mapview3d: startup, actions, resize, input, and quit passed

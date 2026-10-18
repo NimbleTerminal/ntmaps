@@ -1,0 +1,67 @@
+--- a/texture.go
++++ b/texture.go
+@@ -29,6 +29,20 @@
+ 	b := src.Bounds()
+ 	if b.Dx() < 1 || b.Dy() < 1 || b.Dx() > 8192 || b.Dy() > 8192 {
+ 		return nil, fmt.Errorf("ntcharts3d: texture dimensions must be 1..8192")
++	}
++	// Concrete image opacity checks avoid boxing a color for every pixel.
++	// Keep the generic path for other image implementations.
++	switch img := src.(type) {
++	case *image.RGBA:
++		if !img.Opaque() {
++			return nil, fmt.Errorf("ntcharts3d: texture must be opaque")
++		}
++		return nt3d.NewTexture(src)
++	case *image.NRGBA:
++		if !img.Opaque() {
++			return nil, fmt.Errorf("ntcharts3d: texture must be opaque")
++		}
++		return nt3d.NewTexture(src)
+ 	}
+ 	for y := b.Min.Y; y < b.Max.Y; y++ {
+ 		for x := b.Min.X; x < b.Max.X; x++ {
+--- /dev/null
++++ b/texture_fastpath_test.go
+@@ -0,0 +1,41 @@
++package ntcharts3d
++
++import (
++	"image"
++	"image/color"
++	"testing"
++)
++
++func TestTextureTypedOpacitySubimages(t *testing.T) {
++	for _, nrgba := range []bool{false, true} {
++		var src interface {
++			image.Image
++			Set(int, int, color.Color)
++		}
++		if nrgba {
++			src = image.NewNRGBA(image.Rect(-5, 7, 19, 29))
++		} else {
++			src = image.NewRGBA(image.Rect(-5, 7, 19, 29))
++		}
++		bounds := image.Rect(-2, 9, 13, 21)
++		for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
++			for x := bounds.Min.X; x < bounds.Max.X; x++ {
++				src.Set(x, y, color.RGBA{R: 100, A: 255})
++			}
++		}
++		var sub image.Image
++		switch img := src.(type) {
++		case *image.RGBA:
++			sub = img.SubImage(bounds)
++		case *image.NRGBA:
++			sub = img.SubImage(bounds)
++		}
++		if _, err := NewTexture(sub); err != nil {
++			t.Fatalf("opaque subimage: %v", err)
++		}
++		src.Set(bounds.Min.X, bounds.Min.Y, color.RGBA{A: 254})
++		if _, err := NewTexture(sub); err == nil {
++			t.Fatal("accepted translucent subimage")
++		}
++	}
++}

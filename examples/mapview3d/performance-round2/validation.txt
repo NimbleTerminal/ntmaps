@@ -1,0 +1,43 @@
+
+$ go -C /tmp/osm-perf-round2/nt3d test -race ./...
+ok  	nimbleterminal.dev/nt3d	12.963s
+ok  	nimbleterminal.dev/nt3d/math	1.234s
+ok  	nimbleterminal.dev/nt3d/mesh	2.194s
+?   	nimbleterminal.dev/nt3d/mesh/formats	[no test files]
+ok  	nimbleterminal.dev/nt3d/mesh/gltf	1.674s
+ok  	nimbleterminal.dev/nt3d/widget	1.754s
+
+$ go -C /tmp/osm-perf-round2/nt3d vet ./...
+
+$ go -C /tmp/osm-perf-round2/ntgpuimage test -race ./...
+ok  	nimbleterminal.dev/ntgpuimage	9.309s
+?   	nimbleterminal.dev/ntgpuimage/examples/clear	[no test files]
+?   	nimbleterminal.dev/ntgpuimage/examples/texture	[no test files]
+?   	nimbleterminal.dev/ntgpuimage/examples/twopass	[no test files]
+?   	nimbleterminal.dev/ntgpuimage/internal/browsertest	[no test files]
+
+$ go -C /tmp/osm-perf-round2/ntgpuimage vet ./...
+
+$ go -C /tmp/osm-perf-round2/ntcharts3d test -race ./...
+ok  	github.com/NimbleMarkets/ntcharts3d	7.559s
+?   	github.com/NimbleMarkets/ntcharts3d/cmd/wasm-build	[no test files]
+ok  	github.com/NimbleMarkets/ntcharts3d/examples/multichart	1.483s
+
+$ go -C /tmp/osm-perf-round2/ntcharts3d vet ./...
+
+$ go -C /tmp/osm-perf-round2/ntcharts-osm test -race ./...
+?   	github.com/NimbleMarkets/ntcharts-osm/internal/tools/notices	[no test files]
+ok  	github.com/NimbleMarkets/ntcharts-osm/mapview	1.672s
+
+$ go -C /tmp/osm-perf-round2/ntcharts-osm vet ./...
+
+$ go -C /tmp/osm-perf-round2/ntcharts-osm/examples test -race ./...
+?   	github.com/NimbleMarkets/ntcharts-osm/examples/internal/demorun	[no test files]
+?   	github.com/NimbleMarkets/ntcharts-osm/examples/mapview	[no test files]
+ok  	github.com/NimbleMarkets/ntcharts-osm/examples/mapview3d	1.495s
+
+$ go -C /tmp/osm-perf-round2/ntcharts-osm/examples vet ./...
+ok  	github.com/NimbleMarkets/ntcharts-osm/examples/mapview3d	2.101s
+ok  	github.com/NimbleMarkets/ntcharts-osm/examples/mapview3d	1.513s
+
+All 216 rendered-pixel hashes match.

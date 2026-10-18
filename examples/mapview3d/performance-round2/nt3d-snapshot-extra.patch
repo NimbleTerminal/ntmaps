@@ -1,0 +1,173 @@
+--- a/geometry.go
++++ b/geometry.go
+@@ -42,8 +42,9 @@
+ // Geometry contains points, indexed triangles, boxes, line pairs, and arrow instances.
+ // Scene setters copy geometry; frame consumers must treat snapshots as read-only.
+ type Geometry struct {
+-	posed     *posedGeometry
+-	Billboard *Billboard // Optional camera-facing transform, resolved by Scene.Frame.
++	pointUpdate *pointUpdate
++	posed       *posedGeometry
++	Billboard   *Billboard // Optional camera-facing transform, resolved by Scene.Frame.
+ 
+ 	// WireGrid optionally describes a row-major rectangular vertex lattice (NX, NY).
+ 	// Wireframe draws viewport-adaptive rows/columns instead of triangle edges.
+--- a/primitives.go
++++ b/primitives.go
+@@ -42,6 +42,7 @@
+ 	return color.RGBA{mix(a.R, b.R), mix(a.G, b.G), mix(a.B, b.B), mix(a.A, b.A)}
+ }
+ func cloneGeometry(g Geometry) Geometry {
++	g.pointUpdate = nil
+ 	g.Points = slices.Clone(g.Points)
+ 	g.Vertices = slices.Clone(g.Vertices)
+ 	g.Indices = slices.Clone(g.Indices)
+--- a/render_geometry.go
++++ b/render_geometry.go
+@@ -24,13 +24,14 @@
+ // gpuGeometry is a geometry's uploaded primitives and the instance sets that
+ // draw them: one set for each draw of the frame, reused across frames.
+ type gpuGeometry struct {
+-	skin    *gpuSkin
+-	batches [9]gpuBatch // Same primitive slots as gpuRenderer; slot 7 is textured triangles, slot 8 drop discs.
+-	sets    []*instanceSet
+-	used    int           // Sets drawn from this frame.
+-	order   *wgpu.Buffer  // Alpha points' order, farthest first, as last sorted.
+-	view    nt3dmath.Mat4 // The matrix it was sorted under.
+-	sorted  bool
++	pointRevision uint64
++	skin          *gpuSkin
++	batches       [9]gpuBatch // Same primitive slots as gpuRenderer; slot 7 is textured triangles, slot 8 drop discs.
++	sets          []*instanceSet
++	used          int           // Sets drawn from this frame.
++	order         *wgpu.Buffer  // Alpha points' order, farthest first, as last sorted.
++	view          nt3dmath.Mat4 // The matrix it was sorted under.
++	sorted        bool
+ }
+ 
+ func (n *gpuGeometry) release() {
+@@ -158,8 +159,28 @@
+ 					return err
+ 				}
+ 			}
++			if geom.pointUpdate != nil {
++				node.pointRevision = geom.pointUpdate.revision
++			}
+ 			g.geometries[keys[i]] = node
+ 			g.uploads++
++		}
++		if u := geom.pointUpdate; u != nil && node.pointRevision != u.revision {
++			first, end := 0, len(geom.Points)
++			if node.pointRevision == u.previous {
++				first, end = u.first, u.end
++			}
++			data := geometryData(Geometry{Points: geom.Points[first:end], PointStyle: geom.PointStyle})[0]
++			if err := dev.Queue().WriteBuffer(node.batches[0].buffer, uint64(first*pointRecord), data); err != nil {
++				return err
++			}
++			if geom.DropShadow.Strength > 0 {
++				data := geometryData(Geometry{Bounds: geom.Bounds, DropShadow: geom.DropShadow})[8]
++				if err := dev.Queue().WriteBuffer(node.batches[8].buffer, 0, data); err != nil {
++					return err
++				}
++			}
++			node.pointRevision, node.sorted = u.revision, false
+ 		}
+ 		g.nodes[i] = node
+ 		if !drawn[i] {
+--- a/renderer.go
++++ b/renderer.go
+@@ -288,7 +288,7 @@
+ 		return fmt.Errorf("nt3d: frame exceeds GPU binding limit")
+ 	}
+ 	for i, g := range f.Geometry {
+-		if err := g.Validate(); err != nil {
++		if err := validateFrameGeometry(g); err != nil {
+ 			return err
+ 		}
+ 		m := instance(f, i).World
+--- /dev/null
++++ b/point_update.go
+@@ -0,0 +1,82 @@
++// Copyright (c) 2026 Neomantra Corp.
++package nt3d
++
++import (
++	"fmt"
++	"nimbleterminal.dev/nt3d/math"
++	"slices"
++)
++
++// pointUpdate identifies an immutable, validated snapshot and its changed range.
++// It holds no previous snapshot, so animation cannot retain a chain of frames.
++type pointUpdate struct {
++	revision, previous uint64
++	first, end         int
++	points             []Point
++	style              PointStyle
++}
++
++// SetNodePoints replaces an existing geometry's points without changing their
++// count or style. Only points are copied and checked; other primitives are shared
++// with previous snapshots. bounds must enclose ALL the geometry's local primitive
++// positions (point radii are handled separately by culling). Construct it with
++// AABB.Include. A fixed conservative bound avoids a bounds pass each frame.
++// Use SetNodeGeometry when changing the point count/style or a deformed mesh.
++func (s *Scene) SetNodePoints(id NodeID, points []Point, bounds nt3dmath.AABB) error {
++	n := s.nodes[id]
++	if n == nil || n.geometry == nil || len(points) != len(n.geometry.Points) {
++		return fmt.Errorf("nt3d: SetNodePoints requires an existing geometry with the same point count")
++	}
++	return s.UpdateNodePoints(id, 0, points, bounds)
++}
++
++// UpdateNodePoints replaces a fixed range starting at first. It preserves old
++// frame snapshots by copying only the point slice. The GPU uploads this range
++// when it rendered the preceding update, or the whole point buffer if frames
++// were skipped. bounds has the same contract as SetNodePoints.
++func (s *Scene) UpdateNodePoints(id NodeID, first int, points []Point, bounds nt3dmath.AABB) error {
++	n := s.nodes[id]
++	if id == Root || n == nil || n.geometry == nil || n.shared != nil || n.deformation != nil {
++		return fmt.Errorf("nt3d: invalid point update node %d", id)
++	}
++	old := n.geometry
++	if first < 0 || first > len(old.Points) || len(points) > len(old.Points)-first {
++		return fmt.Errorf("nt3d: point update range out of bounds")
++	}
++	if !bounds.IsValid() || !finiteVec(bounds.Min) || !finiteVec(bounds.Max) || bounds.Min.X > bounds.Max.X || bounds.Min.Y > bounds.Max.Y || bounds.Min.Z > bounds.Max.Z {
++		return fmt.Errorf("nt3d: point update requires finite bounds")
++	}
++	for _, p := range points {
++		if !finiteVec(p.Position) || !validPointRadius(old.PointStyle.Units, p.Radius) || !contains(bounds, p.Position) {
++			return fmt.Errorf("nt3d: invalid point or point outside supplied bounds")
++		}
++	}
++	if len(points) == 0 {
++		return nil
++	}
++	g := *old
++	if first == 0 && len(points) == len(old.Points) {
++		g.Points = slices.Clone(points)
++	} else {
++		g.Points = slices.Clone(old.Points)
++		copy(g.Points[first:], points)
++	}
++	previous := uint64(0)
++	if old.pointUpdate != nil {
++		previous = old.pointUpdate.revision
++	}
++	s.changed(false, false)
++	g.pointUpdate = &pointUpdate{s.stateRevision, previous, first, first + len(points), g.Points, g.PointStyle}
++	g.Bounds = bounds
++	n.geometry, n.pickIndex = &g, nil
++	return nil
++}
++
++func validateFrameGeometry(g Geometry) error {
++	// Scene-owned arrays are immutable by contract. Public Geometry.Validate
++	// still checks every point; manually constructed frames have no certificate.
++	if u := g.pointUpdate; u != nil && len(g.Points) == len(u.points) && len(g.Points) > 0 && &g.Points[0] == &u.points[0] && g.PointStyle == u.style {
++		g.Points = nil
++	}
++	return g.Validate()
++}
