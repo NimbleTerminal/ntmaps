@@ -7,7 +7,9 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/NimbleMarkets/ntcharts/v2/picture"
+	"charm.land/lipgloss/v2"
+	picture "nimbleterminal.dev/ntpicture"
+	"nimbleterminal.dev/ntpicture/legacy"
 )
 
 func TestNewInitializesDefaultState(t *testing.T) {
@@ -249,9 +251,9 @@ func TestOpticalCrop_Geometry(t *testing.T) {
 			src.SetRGBA(x, y, color.RGBA{R: 255, G: 255, B: 255, A: 255})
 		}
 	}
-	src.SetRGBA(24, 24, color.RGBA{R: 1, A: 255})       // crop top-left
-	src.SetRGBA(w-1, 0, color.RGBA{G: 50, A: 255})      // OUTSIDE crop
-	src.SetRGBA(w/2, h/2, color.RGBA{B: 1, A: 255})     // source center
+	src.SetRGBA(24, 24, color.RGBA{R: 1, A: 255})   // crop top-left
+	src.SetRGBA(w-1, 0, color.RGBA{G: 50, A: 255})  // OUTSIDE crop
+	src.SetRGBA(w/2, h/2, color.RGBA{B: 1, A: 255}) // source center
 
 	out := opticalCrop(src, factor)
 
@@ -335,15 +337,15 @@ func TestOpticalCrop_ParityFixForRealisticSize(t *testing.T) {
 // map portion is shrunk to the boundary AR.
 func TestTargetMapDims(t *testing.T) {
 	cases := []struct {
-		name                       string
-		cellRectW, cellRectH       int
-		maxAR                      float64
-		wantMapW, wantMapH         int
+		name                 string
+		cellRectW, cellRectH int
+		maxAR                float64
+		wantMapW, wantMapH   int
 	}{
 		{"unconstrained 0", 800, 400, 0, 800, 400},
 		{"unconstrained negative", 800, 400, -1, 800, 400},
-		{"in range, no letterbox", 800, 400, 3.0, 800, 400}, // AR=2.0, in [0.33, 3.0]
-		{"too wide, clamp at maxAR", 800, 100, 2.0, 200, 100}, // AR=8.0 > 2.0 → mapW=H*2
+		{"in range, no letterbox", 800, 400, 3.0, 800, 400},     // AR=2.0, in [0.33, 3.0]
+		{"too wide, clamp at maxAR", 800, 100, 2.0, 200, 100},   // AR=8.0 > 2.0 → mapW=H*2
 		{"too tall, clamp at 1/maxAR", 100, 800, 2.0, 100, 200}, // AR=0.125 < 0.5 → mapH=W*2
 		{"square cap, wider rect", 800, 400, 1.0, 400, 400},     // AR=2.0 > 1.0 → square at H
 		{"square cap, taller rect", 400, 800, 1.0, 400, 400},    // AR=0.5 < 1.0 → square at W
@@ -493,7 +495,7 @@ func TestSetOpticalZoom_KittyEndToEnd(t *testing.T) {
 	}
 
 	// Optical zoom change: should re-crop the cached source synchronously
-	// and feed picture.Model directly — no renderMapCmd dispatch.
+	// and feed legacy.Model directly — no renderMapCmd dispatch.
 	startGen := *updated.renderGen
 	cmd := updated.SetOpticalZoom(2)
 	if got := *updated.renderGen; got != startGen {
@@ -506,9 +508,9 @@ func TestSetOpticalZoom_KittyEndToEnd(t *testing.T) {
 	// Drain the Cmd to a KittyFrameMsg and verify it carries a populated
 	// grid + APC at the expected cell-rectangle dimensions.
 	msg := cmd()
-	frame, ok := msg.(picture.KittyFrameMsg)
+	frame, ok := msg.(legacy.KittyFrameMsg)
 	if !ok {
-		t.Fatalf("expected picture.KittyFrameMsg, got %T", msg)
+		t.Fatalf("expected legacy.KittyFrameMsg, got %T", msg)
 	}
 	if frame.Grid == "" {
 		t.Error("expected non-empty kitty grid after optical-zoom Cmd")
@@ -628,7 +630,7 @@ func TestSetOpticalZoom_WithSourceAppliesSync(t *testing.T) {
 }
 
 // TestSetOpticalZoom_NoOpOnSameValue verifies that SetOpticalZoom with the
-// current value returns nil and doesn't churn picture.Model.
+// current value returns nil and doesn't churn legacy.Model.
 func TestSetOpticalZoom_NoOpOnSameValue(t *testing.T) {
 	m := New(80, 24)
 	if cmd := m.SetOpticalZoom(0); cmd != nil {
@@ -715,20 +717,20 @@ func TestRenderMapCmdMissBumpsGen(t *testing.T) {
 	}
 }
 
-// TestOverlayCenteredBoxComposites unit-tests the overlay primitive that
+// TestOverlayBoxComposites unit-tests the overlay primitive that
 // View() uses to composite the Loading badge on top of the previous image.
 // Picture content can have fewer cells than picRows when the source image
 // is small (the actual osm.Render path matches the cell rectangle exactly,
 // but tests don't), so this exercises the function directly with predictable
 // inputs.
-func TestOverlayCenteredBoxComposites(t *testing.T) {
+func TestOverlayBoxComposites(t *testing.T) {
 	cols, rows := 40, 10
 	row := strings.Repeat("X", cols)
 	content := strings.Repeat(row+"\n", rows-1) + row
 
 	overlay := "+---+\n| L |\n+---+"
 
-	got := overlayCenteredBox(content, cols, rows, overlay)
+	got := overlayBox(content, cols, rows, overlay, lipgloss.Center, lipgloss.Center)
 	if !strings.Contains(got, "L") {
 		t.Fatalf("expected overlay 'L' to appear in result, got %q", got)
 	}
@@ -838,8 +840,8 @@ func TestIsMapUpdateRecognizesPictureMessages(t *testing.T) {
 	if !IsMapUpdate(MapCoordinates{}) {
 		t.Error("expected MapCoordinates to be a map update")
 	}
-	if !IsMapUpdate(picture.KittyFrameMsg{}) {
-		t.Error("expected picture.KittyFrameMsg to be a map update (forwarded to embedded pic.Model)")
+	if !IsMapUpdate(legacy.KittyFrameMsg{}) {
+		t.Error("expected legacy.KittyFrameMsg to be a map update (forwarded to embedded pic.Model)")
 	}
 	if IsMapUpdate("random string") {
 		t.Error("expected unrelated messages to not be a map update")
@@ -860,7 +862,7 @@ func TestIsMapOwnMsgExcludesPictureMessages(t *testing.T) {
 	if !IsMapOwnMsg(debouncedFetchMsg{}) {
 		t.Error("expected debouncedFetchMsg to be a map-own msg")
 	}
-	if IsMapOwnMsg(picture.KittyFrameMsg{}) {
+	if IsMapOwnMsg(legacy.KittyFrameMsg{}) {
 		t.Error("KittyFrameMsg is a shared picture runtime msg, not map-owned")
 	}
 	if IsMapOwnMsg("random string") {
@@ -879,9 +881,9 @@ func (errExample) Error() string { return "render boom" }
 // is a no-op and the model stays in Glyph mode.
 func forceKittySupported(t *testing.T) {
 	t.Helper()
-	prev := picture.KittySupported()
-	picture.ForceKittyCapability(picture.KittyCapabilitySupported)
-	t.Cleanup(func() { picture.ForceKittyCapability(prev) })
+	prev := legacy.KittySupported()
+	legacy.ForceKittyCapability(picture.KittyCapabilitySupported)
+	t.Cleanup(func() { legacy.ForceKittyCapability(prev) })
 }
 
 func newSolidImage(c color.RGBA) image.Image {

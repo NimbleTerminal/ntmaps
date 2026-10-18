@@ -10,9 +10,9 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/NimbleMarkets/ntcharts/v2/picture"
 	sm "github.com/flopp/go-staticmaps"
 	"github.com/golang/geo/s2"
+	"nimbleterminal.dev/ntpicture/legacy"
 )
 
 func bufferedTestModel() Model {
@@ -209,7 +209,7 @@ func TestBufferedKittyPresentsFramesDuringRapidInput(t *testing.T) {
 			t.Fatal("pan invalidated the encoding in flight")
 		}
 	}
-	frame := first().(panPictureMsg).msg.(picture.KittyFrameMsg)
+	frame := first().(panPictureMsg).msg.(legacy.KittyFrameMsg)
 	if cmd := m.pic.Update(frame); cmd == nil {
 		t.Fatal("first frame became stale during input")
 	}
@@ -218,7 +218,7 @@ func TestBufferedKittyPresentsFramesDuringRapidInput(t *testing.T) {
 	if latest == nil {
 		t.Fatal("latest requested image was not queued after presentation")
 	}
-	next := latest().(panPictureMsg).msg.(picture.KittyFrameMsg)
+	next := latest().(panPictureMsg).msg.(legacy.KittyFrameMsg)
 	if next.APC == frame.APC || m.pic.Update(next) == nil {
 		t.Fatal("latest pan was not encoded and accepted")
 	}
