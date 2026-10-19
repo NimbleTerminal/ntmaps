@@ -4,6 +4,15 @@ The demo now uses published ntcharts3d v0.3.1 and nt3d v0.2.0. See
 [released optimization results](#released-optimization-results) below. The
 original baseline is retained for comparison.
 
+Testing ntgpuimage v0.4.0 against v0.3.0 on 2026-10-19, with the same chart/engine
+versions, reduced fresh-texture snapshots from 15.879 to 10.202 ms in software
+and 6.863 to 2.382 ms on the native GPU. These are medians of three 144-operation
+runs on Apple M5 Max / Go 1.27.2, using a 512×512 map texture, 640×320 output and
+4× anisotropy; terminal presentation is excluded. Longer GPU camera-only samples
+remained at about 0.316 ms. Full CI and native GPU mipmap, anisotropy and texture
+replacement tests passed. The gains come from faster CPU mip-chain generation;
+the new mipmapped render-target feature is not used by the current demos.
+
 ## Original baseline
 
 Measured 2026-10-18 on Apple M5 Max, darwin/arm64, Go 1.27.2.
