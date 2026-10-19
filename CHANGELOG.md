@@ -6,8 +6,10 @@
   retaining the existing map API and buffered-panning behavior.
 - Upgrade the 3D map demo to ntcharts3d v0.3.1 (nt3d v0.2.0/ntpicture), share terminal
   discovery with the map source, and dispose chart placements before quitting.
-- Isolate demos in an examples module; update booba to v0.9.2 and publish both
+- Isolate demos in an examples module; update booba to v0.10.1 and publish both
   demos with browser action controls, runtime validation, and WASM smoke tests.
+- Opt into graceful action-metadata fallback so oversized descriptions cannot
+  prevent demo startup; keyboard controls remain available.
 - Use released texture fast paths to eliminate per-pixel texture allocations.
 - Preserve glyph caching around the ntpicture v0.1.0 legacy bridge regression.
 

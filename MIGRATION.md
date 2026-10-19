@@ -1,7 +1,7 @@
 # NimbleTerminal migration notes
 
 This repository uses published ntpicture v0.1.0, ntcharts3d v0.3.1, nt3d v0.2.0,
-and booba v0.9.2. No sibling checkout replacements are required.
+and booba v0.10.1. No sibling checkout replacements are required.
 
 ## ntpicture compatibility is a two-import migration
 
@@ -58,7 +58,11 @@ the examples module (Go does not inherit them from the library).
 
 The action status protocol caps decoded snapshots at 2,048 bytes. Advertising
 all 18 individual 3D controls exceeded that limit and prevented startup; the
-wrapper validates the snapshot before booba starts. Keep the browser bar to a
+strict wrapper validated the snapshot before booba started. With v0.10.1, our
+wrapper opts into `NewModelWithFallback`: invalid action metadata emits a
+diagnostic and disables action publication while keyboard controls and startup
+continue. `NewModel` still has strict behavior; upgrading alone is insufficient.
+The size limit remains unchanged. Keep the browser bar to a
 compact subset and retain full keyboard instructions inside the terminal.
 Include this limit and a startup smoke test in the deployment guide.
 
