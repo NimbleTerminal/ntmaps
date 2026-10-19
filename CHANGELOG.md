@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Fix explorer mouse reporting and pane-relative 3D coordinates; add 2D
+  drag/wheel navigation, sidebar selection, and capture cleanup on view changes.
+
+- Split the minimal 2D map example from the explorer sample app; add 2D/3D
+  switching, shared city rendering, bounded neighborhood caching, cancellation,
+  and an explorer browser demo with lifecycle checks.
+
+- Add experimental internal building-data/projection/extrusion helpers and a
+  native city viewer with a bundled OSM neighborhood, height provenance, and
+  camera movement; no public API is exposed yet.
 - Add live software/GPU switching to the 3D demo with `t`, and show the active
   renderer and fallback errors without resetting the map or camera.
 - Move map rendering from NTCharts picture to ntpicture v0.1.0's legacy API,

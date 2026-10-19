@@ -1,12 +1,13 @@
 import { BoobaTerminal, installActionBar, installRendererHud, parseRendererFromURL } from './booba/booba.js';
 
-const demos = { mapview: 'Explore the map', mapview3d: 'Map in 3D' };
+const demos = { explorer: 'Map explorer', mapview: 'Simple 2D map', mapview3d: 'Flat map in 3D' };
 const help = {
- mapview: 'Arrows pan · +/- zoom · j/k choose a place · g graphics · s tile style · / filter · q quit.',
- mapview3d: 'Arrows tilt/rotate · WASD pan · [] map zoom · +/- camera zoom · n/p place · r rotate · g graphics · q quit.',
+ explorer: 'Drag to pan/orbit · Shift-drag pans in 3D · scroll to zoom · click places · v switches 2D/3D · j/k choose a place · / filters · arrows pan/look · WASD moves in 3D · t GPU/software · R refreshes buildings · q quits.',
+ mapview: 'Arrows pan · +/- zoom · g glyph/Kitty · q quit.',
+ mapview3d: 'Arrows tilt/rotate · WASD pan · [] map zoom · +/- camera zoom · n/p place · r rotate · t renderer · g graphics · q quit.',
 };
 const requested = new URLSearchParams(location.search).get('demo');
-const demo = Object.hasOwn(demos, requested) ? requested : 'mapview';
+const demo = Object.hasOwn(demos, requested) ? requested : 'explorer';
 const status = document.querySelector('#status');
 document.querySelector('#title').textContent = demos[demo];
 document.title = `${demos[demo]} · ntcharts-osm`;

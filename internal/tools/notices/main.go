@@ -31,14 +31,14 @@ func main() {
 
 func run() error {
 	modules := map[string]module{}
-	// Include both native examples and the WASM dependency graph.
+	// Include every example/app and its native and WASM dependency graphs.
 	for _, build := range []struct {
 		dir  string
 		env  []string
 		pkgs []string
 	}{
-		{"examples", []string{"GOWORK=off"}, []string{"./mapview", "./mapview3d"}},
-		{"examples", []string{"GOOS=js", "GOARCH=wasm", "GOWORK=" + mustWorkspace()}, []string{"./mapview", "./mapview3d"}},
+		{"examples", []string{"GOWORK=off"}, []string{"./..."}},
+		{"examples", []string{"GOOS=js", "GOARCH=wasm", "GOWORK=" + mustWorkspace()}, []string{"./..."}},
 	} {
 		// Credit versioned forks separately; local replacements keep their module name.
 		args := append([]string{"list", "-deps", "-f", `{{with .Module}}{{$m := .}}{{with .Replace}}{{if .Version}}{{$m = .}}{{end}}{{end}}{{with $m}}{{.Path}}	{{.Version}}	{{.Dir}}{{end}}{{end}}`}, build.pkgs...)

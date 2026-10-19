@@ -13,7 +13,7 @@ for (const file of [
 ]) await access(`web/${file}`);
 const html = await readFile('web/index.html', 'utf8');
 const demos = [...html.matchAll(/data-demo="([^"]+)"/g)].map(m => m[1]);
-assert.deepEqual(demos, ['mapview', 'mapview3d'], 'demo cards');
+assert.deepEqual(demos, ['explorer', 'mapview', 'mapview3d'], 'demo cards');
 for (const demo of demos) {
   const bytes = await readFile(`web/demos/${demo}.wasm`);
   assert.deepEqual([...bytes.subarray(0, 4)], [0, 97, 115, 109], `${demo}: WASM header`);

@@ -8,7 +8,9 @@
 
 `ntcharts-osm` is a [Bubble Tea](https://github.com/charmbracelet/bubbletea) widget that renders OpenStreetMap tiles in the terminal. It pairs [`flopp/go-staticmaps`](https://github.com/flopp/go-staticmaps) for tile fetching with [`ntpicture`](https://nimbleterminal.dev/ntpicture) for image rendering — half-block glyphs anywhere, full-resolution Kitty graphics on terminals that support them (Kitty, Ghostty, WezTerm).
 
-<p align="center"><a href="https://nimblemarkets.github.io/ntcharts-osm"/><b>Live Demo</b><a> (<a href="./examples/mapview/main.go">source</a>)<br><a href="https://nimblemarkets.github.io/ntcharts-osm"/><img src="examples/mapview/demo.gif" alt="quickstart gif" width="75%"/></a></p>
+[Open the map explorer](https://nimblemarkets.github.io/ntcharts-osm/?demo=explorer) ·
+[Minimal 2D example](examples/mapview/main.go) ·
+[Explorer sample app](examples/explorer/main.go)
 
 ## Quickstart
 
@@ -54,14 +56,14 @@ Pan with arrows or `hjkl`, zoom with `+`/`-`. The widget owns those bindings —
 
 ## Demo
 
-A fuller single-pane demo lives at [`examples/mapview`](./examples/mapview/main.go) — adds tile-style cycling and Glyph/Kitty mode toggling.
+The sample app lives at [`examples/explorer`](./examples/explorer/main.go), with a places list, tile-style cycling, and 2D/3D switching. The minimal widget host is [`examples/mapview`](./examples/mapview/main.go).
 
 ```sh
-task build-ex-mapview
-./bin/ntcharts-osm-mapview
+task build-ex-explorer
+./bin/ntcharts-osm-explorer
 ```
 
-The native demo buffers a one-tile border around the map. Arrows move two
+The native explorer buffers a one-tile border around the map. Arrows move two
 columns horizontally or one row vertically with a critically damped
 [Harmonica](https://github.com/charmbracelet/harmonica) spring, cropping the
 buffered image during movement and refilling it in the background near an edge.
@@ -78,7 +80,7 @@ for key repeats to stop. `RenderDebounce` applies only when buffering is off.
 For a compatible local Kitty/Ghostty terminal, try shared-memory transport:
 
 ```sh
-go -C examples run ./mapview -medium shm
+go -C examples run ./explorer -medium shm
 ```
 
 The demo starts in Kitty rendering when the terminal supports it; press `g` to toggle. The default `-medium direct` also works
@@ -134,7 +136,66 @@ if mapMsg || prodMsg {
 
 For the narrower "is this message owned by mapview alone" predicate (the `MapCoordinates` input, async tile-render results, debounce ticks), use `mapview.IsMapOwnMsg(msg)`. Each model's own `Update` already filters by instance ID where applicable, so broadcasting picture messages is safe.
 
-## 3D map demo
+## Examples and sample application
+
+| Program | Purpose |
+| --- | --- |
+| `mapview` | Minimal 2D map widget host: pan, zoom, marker, glyph/Kitty toggle |
+| `explorer` | Places browser with a details pane and switchable 2D / 3D buildings |
+| `cityview3d` | Standalone development viewer for the internal city helpers |
+| `mapview3d` | Flat textured-map rendering and performance fixture |
+
+The small 2D example keeps application concerns out of the embedding code:
+
+```sh
+task build-ex-mapview
+./bin/ntcharts-osm-mapview -lat 40.7415 -lon -73.989 -zoom 16
+```
+
+### Map explorer
+
+The richer places/list UI lives in `examples/explorer`. It starts at Flatiron,
+Manhattan; the first 3D neighborhood is bundled and works without network access.
+
+```sh
+task build-ex-explorer
+./bin/ntcharts-osm-explorer
+```
+
+Press **`v` to switch 2D/3D**, `j`/`k` or Shift-Up/Down to choose a place, and `/`
+to filter the list. Filtering owns keyboard input until accepted or canceled.
+Arrows pan in 2D and orbit/tilt in 3D. In 3D, WASD moves, E/F rises/lowers,
+`+`/`-` zooms, `0` resets the camera and `t` switches GPU/software. In 2D, `s`
+changes map/satellite style, `f` cycles fit, and `[`/`]` changes optical zoom.
+`g` toggles glyph/Kitty output in either view; `?` expands the help.
+
+Mouse controls work inside the active map pane: drag to pan in 2D, drag to
+orbit in 3D, Shift-drag to pan the 3D camera, and scroll to zoom. Click or scroll
+in the places list to select a place. Borders/status rows do not receive map
+zoom gestures, and releasing outside the pane ends the drag. The app enables
+terminal mouse reporting in both native and browser sessions.
+
+Switching preserves the geographic center. Returning from 3D moves the 2D map
+to the city camera's ground target. Moving within an already loaded neighborhood
+reuses the city geometry. Selecting a different place loads a small neighborhood
+around that point; obsolete requests are canceled and stale results are ignored.
+The app shows loading/error feedback instead of displaying the previous city's
+buildings under a new place name. It does not stream new areas during flight.
+
+Neighborhood scenes use a bounded in-memory cache. Native runs additionally
+cache source data under the OS user-cache directory at
+`ntcharts-osm/neighborhoods-v1`: up to eight files / 32 MiB, expiring after seven
+days. Use `-cache-dir PATH` to choose a directory, or `-cache-dir ''` to disable
+disk storage. The browser uses memory only. Uppercase **`R` explicitly refreshes**
+the current 3D neighborhood; `-offline` allows only cached/bundled data. The bundled
+sample is seeded in memory even without a cache directory; normal LRU eviction
+still applies as other neighborhoods are loaded.
+
+3D data loads use OpenStreetMap's read API with bounded area/response size and a
+deadline. Raw geographic data, mesh generation, rendering, and app caching remain
+separate internal pieces; no new public library API is introduced.
+
+## Flat textured-map fixture
 
 The `mapview3d` example displays `mapview.Image()` on an unlit ntcharts3d
 surface. It is a flat map in 3D, without terrain elevation. Camera movement
@@ -158,6 +219,45 @@ The `webgpu` tag enables opt-in GPU tests and benchmarks; run
 `task bench-mapview3d-gpu` to measure GPU snapshots (the benchmark rejects fallback).
 Use `-medium direct` (the default) over SSH. Build a native binary with
 `task build-ex-mapview3d`.
+
+## Experimental city viewer
+
+`cityview3d` explores actual building footprints and heights. It starts with a
+bundled OpenStreetMap sample around Flatiron in Manhattan, so no network request
+is needed. It requests GPU rendering by default, with software fallback.
+
+```sh
+task build-ex-cityview3d
+./bin/ntcharts-osm-cityview3d
+```
+
+Arrows orbit/tilt the camera; WASD moves the camera target along the ground,
+E/F raises/lowers it, `+`/`-` zooms, `0` resets, and `t` switches GPU/software.
+`g` switches glyph/Kitty output. Only the loaded neighborhood is drawn; moving
+farther does not fetch more data. Flight has no collision detection.
+
+Building colors describe height provenance: orange uses a recorded height,
+blue estimates from floor counts, and gray uses a 9-meter default. Flat roofs,
+flat ground and road centerlines form the first scaffold. Courtyard relations,
+open/incomplete ways and invalid footprints are omitted and counted in the HUD.
+
+Load a local OSM Map API/Overpass JSON file with `-file path.json`. An optional
+top-level `bounds` object uses `south`, `west`, `north`, `east`; otherwise supply
+`-lat`, `-lon`, and `-radius` to describe its neighborhood. Overpass geometry must
+be complete, not clipped. A single live neighborhood fetch is explicit:
+
+```sh
+./bin/ntcharts-osm-cityview3d -osm -lat 40.7415 -lon -73.989 -radius 200
+./bin/ntcharts-osm-cityview3d -snapshot /tmp/city.png
+```
+
+The helpers live in [`internal/city`](internal/city/README.md), with no rendering
+dependencies or public API commitment. The Tea pane and chart adapter are shared
+by this development viewer and the explorer in `examples/internal/cityview`. The
+standalone viewer remains native; the explorer is included in the browser site. The bundled data's source and
+attribution are recorded in [examples/cityview3d/DATA.md](examples/cityview3d/DATA.md).
+
+![Bundled Flatiron neighborhood rendered with WebGPU](examples/cityview3d/preview.png)
 
 ## Known caveats
 
@@ -189,7 +289,7 @@ module path remains `github.com/NimbleMarkets/ntcharts-osm`.
 Run `task test` for both modules, `task build` for native binaries, and
 `task ci` for race tests, vet, dependency checks, native builds, and browser
 smoke tests. Build the browser site with `task build-wasm-site`, then serve it
-with `task serve-wasm-site`. The landing page offers both map demos, action
+with `task serve-wasm-site`. The landing page offers the explorer, minimal 2D map, and flat-map fixture, with action
 buttons, renderer selection, and restart. Generated assets are ignored.
 GitHub Pages deploys only after the same CI checks pass.
 

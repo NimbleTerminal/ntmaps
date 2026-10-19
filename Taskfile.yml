@@ -47,7 +47,7 @@ tasks:
   clean:
     desc: 'Clean built examples'
     cmds:
-      - rm -f bin/ntcharts-osm-mapview bin/ntcharts-osm-mapview3d
+      - rm -f bin/ntcharts-osm-mapview bin/ntcharts-osm-mapview3d bin/ntcharts-osm-cityview3d bin/ntcharts-osm-explorer
       - rm -rf .task
 
 ###############################################################################
@@ -58,6 +58,8 @@ tasks:
     deps:
       - build-ex-mapview
       - build-ex-mapview3d
+      - build-ex-cityview3d
+      - build-ex-explorer
 
   bench-mapview3d:
     desc: 'Measure 3D software rendering and texture replacement without network or terminal I/O'
@@ -73,6 +75,16 @@ tasks:
     desc: 'Build the textured 3D map example'
     cmds:
       - go -C examples build -mod=readonly -o ../bin/ntcharts-osm-mapview3d ./mapview3d
+
+  build-ex-explorer:
+    desc: 'Build the sample map explorer with 2D and 3D views'
+    cmds:
+      - go -C examples build -mod=readonly -o ../bin/ntcharts-osm-explorer ./explorer
+
+  build-ex-cityview3d:
+    desc: 'Build the experimental building-footprint city viewer'
+    cmds:
+      - go -C examples build -mod=readonly -o ../bin/ntcharts-osm-cityview3d ./cityview3d
 
   build-ex-mapview:
     desc: 'Build the mapview example'
@@ -109,7 +121,7 @@ tasks:
 # Demo website via booba
 
   build-wasm:
-    desc: 'Build both browser demos'
+    desc: 'Build the browser examples and explorer app'
     env:
       GOWORK: '{{.ROOT_DIR}}/wasm.work'
       GOOS: js
@@ -117,7 +129,7 @@ tasks:
       CGO_ENABLED: '0'
     cmds:
       - mkdir -p web/demos
-      - for: [mapview, mapview3d]
+      - for: [explorer, mapview, mapview3d]
         cmd: go -C examples build -mod=readonly -o ../web/demos/{{.ITEM}}.wasm ./{{.ITEM}}
 
   build-wasm-site:
@@ -129,11 +141,11 @@ tasks:
       - cp THIRD_PARTY_NOTICES.md web/
 
   check-site:
-    desc: 'Validate browser assets and exercise both WASM demos'
+    desc: 'Validate browser assets and exercise all WASM demos'
     cmds:
       - node --check web/site.js
       - node scripts/check-site.mjs
-      - for: [mapview, mapview3d]
+      - for: [explorer, mapview, mapview3d]
         cmd: node scripts/smoke-demo.mjs {{.ITEM}}
 
   serve-wasm-site:
