@@ -3,6 +3,7 @@ package main
 import (
 	"image"
 	"image/color"
+	"strings"
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
@@ -10,6 +11,30 @@ import (
 	chart "github.com/NimbleMarkets/ntcharts3d"
 	picture "nimbleterminal.dev/ntpicture"
 )
+
+func TestRendererTogglePreservesMapAndCamera(t *testing.T) {
+	m := newModel([]mapview.Place{{Name: "Test", Lat: 40, Lon: 10, Zoom: 10}}, picture.KittyMediumDirect, chart.Software)
+	defer m.chart.Close()
+	defer m.source.Close()
+	m.Update(tea.KeyPressMsg{Code: tea.KeyRight})
+	camera := m.chart.Camera()
+	lat, lng := m.source.Center()
+	for _, want := range []chart.RenderMode{chart.WebGPU, chart.Software, chart.WebGPU} {
+		m.Update(tea.KeyPressMsg{Code: 't', Text: "t"})
+		if m.chart.RequestedRenderMode() != want || m.chart.RenderMode() != want {
+			t.Fatalf("toggle did not select %v", want)
+		}
+		if m.chart.Camera() != camera {
+			t.Fatal("renderer toggle reset the camera")
+		}
+		if a, b := m.source.Center(); a != lat || b != lng || m.source.Zoom() != 10 {
+			t.Fatal("renderer toggle moved the map")
+		}
+		if !strings.Contains(m.View().Content, want.String()+" · ") {
+			t.Fatal("status does not identify the selected renderer")
+		}
+	}
+}
 
 func TestCameraAndMapControlsAreIndependent(t *testing.T) {
 	m := newModel([]mapview.Place{{Name: "Test", Lat: 40, Lon: 10, Zoom: 10}}, picture.KittyMediumDirect, chart.Software)

@@ -106,6 +106,12 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Batch(m.source.Init(), m.syncTexture())
 		case "0":
 			return m, m.chart.SetCamera(initialCamera())
+		case "t":
+			renderer := chart.WebGPU
+			if m.chart.RequestedRenderMode() == chart.WebGPU {
+				renderer = chart.Software
+			}
+			return m, m.chart.SetRenderMode(renderer)
 		}
 		if key, ok := mapKey(v.String()); ok {
 			var cmd tea.Cmd
@@ -141,9 +147,18 @@ func (m *model) View() tea.View {
 	if m.err != nil {
 		status = m.err.Error()
 	}
+	renderer := m.chart.RenderMode().String()
+	if requested := m.chart.RequestedRenderMode(); requested != m.chart.RenderMode() {
+		renderer += fmt.Sprintf(" (requested %s", requested)
+		if err := m.chart.Err(); err != nil {
+			renderer += ": " + err.Error()
+		}
+		renderer += ")"
+	}
+	status = renderer + " · " + status
 	clip := func(s string) string { return ansi.Truncate(s, max(1, m.width), "") }
 	v.Content += "\n" + clip(status) + "\n" + clip("arrows tilt/rotate · WASD map pan · [] map zoom · +/- camera zoom · n/p place · 0 reset · q quit")
-	v.Content += "\n" + clip("Map data © OpenStreetMap contributors · r auto-rotate · o projection · g glyph/Kitty")
+	v.Content += "\n" + clip("t renderer · r rotate · o projection · g graphics · © OpenStreetMap contributors")
 	v.AltScreen = true
 	return v
 }
@@ -178,7 +193,7 @@ func main() {
 	m := newModel(places, medium, renderer)
 	err = demorun.Run(m, "mapview3d", "Explore a textured 3D map", demorun.Keys{
 		Primary: []key.Binding{demorun.Binding("left", "Rotate left"), demorun.Binding("right", "Rotate right"), demorun.Binding("up", "Tilt up"), demorun.Binding("down", "Tilt down"), demorun.Binding("n", "Next place")},
-		More:    []key.Binding{demorun.Binding("w", "Map north"), demorun.Binding("s", "Map south"), demorun.Binding("a", "Map west"), demorun.Binding("d", "Map east"), demorun.Binding("+", "Camera closer"), demorun.Binding("-", "Camera farther"), demorun.Binding("g", "Graphics")},
+		More:    []key.Binding{demorun.Binding("w", "Map north"), demorun.Binding("s", "Map south"), demorun.Binding("a", "Map west"), demorun.Binding("d", "Map east"), demorun.Binding("+", "Camera closer"), demorun.Binding("-", "Camera farther"), demorun.Binding("t", "Renderer")},
 	})
 	m.source.Close()
 	closeErr := m.chart.Close()

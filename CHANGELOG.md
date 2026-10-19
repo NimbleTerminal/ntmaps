@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add live software/GPU switching to the 3D demo with `t`, and show the active
+  renderer and fallback errors without resetting the map or camera.
 - Move map rendering from NTCharts picture to ntpicture v0.1.0's legacy API,
   retaining the existing map API and buffered-panning behavior.
 - Upgrade the 3D map demo to ntcharts3d v0.3.1 (nt3d v0.2.0/ntpicture), share terminal

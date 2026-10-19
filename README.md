@@ -147,9 +147,15 @@ go -C examples run ./mapview3d -medium shm
 Use arrows to tilt and rotate, WASD to pan the map, `[` / `]` for map zoom,
 and `+` / `-` for camera zoom. `n` / `p` select places, `0` resets the camera,
 `r` toggles rotation, `o` switches projection, and `g` toggles glyph/Kitty output.
+Press `t` to switch between software and GPU rendering without restarting. The
+status line shows the active renderer and, if it falls back, the requested mode
+and any rendering error. Switching renderers preserves the map and camera.
 
-Software rendering is the default. Add `-renderer gpu` for higher resolution
-with WebGPU; build with `go -C examples build -tags webgpu -o ../bin/ntcharts-osm-mapview3d ./mapview3d` to enable native GPU support. ntcharts3d falls back to software if GPU initialization fails.
+Software rendering is the default. Add `-renderer gpu` to request WebGPU:
+`go -C examples run ./mapview3d -renderer gpu`. Native GPU backends are included
+without an extra build tag. ntcharts3d falls back to software if GPU rendering fails.
+The `webgpu` tag enables opt-in GPU tests and benchmarks; run
+`task bench-mapview3d-gpu` to measure GPU snapshots (the benchmark rejects fallback).
 Use `-medium direct` (the default) over SSH. Build a native binary with
 `task build-ex-mapview3d`.
 
