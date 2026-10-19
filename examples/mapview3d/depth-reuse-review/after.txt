@@ -1,0 +1,18 @@
+goos: darwin
+goarch: arm64
+pkg: github.com/NimbleMarkets/ntcharts-osm/examples/mapview3d
+cpu: Apple M5 Max
+BenchmarkMap3DCamera/640x320/aniso4-18 	     144	   5789521 ns/op	  819716 B/op	       7 allocs/op
+BenchmarkMap3DCamera/640x320/aniso4-18 	     144	   5790102 ns/op	  819715 B/op	       7 allocs/op
+BenchmarkMap3DCamera/640x320/aniso4-18 	     144	   5765572 ns/op	  819714 B/op	       7 allocs/op
+PASS
+ok  	github.com/NimbleMarkets/ntcharts-osm/examples/mapview3d	2.828s
+goos: darwin
+goarch: arm64
+pkg: github.com/NimbleMarkets/ntcharts-osm/examples/mapview3d
+cpu: Apple M5 Max
+BenchmarkMap3DTextureReplacement-18    	     144	   7194344 ns/op	 3268125 B/op	      38 allocs/op
+BenchmarkMap3DTextureReplacement-18    	     144	   7111056 ns/op	 3268121 B/op	      38 allocs/op
+BenchmarkMap3DTextureReplacement-18    	     144	   7122821 ns/op	 3268122 B/op	      38 allocs/op
+PASS
+ok  	github.com/NimbleMarkets/ntcharts-osm/examples/mapview3d	3.362s

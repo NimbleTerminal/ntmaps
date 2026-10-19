@@ -1,0 +1,17 @@
+=== RUN   TestReviewGPUSustained
+    review_stress_test.go:26: warm heap_live=5768352 heap_objects=13867 goroutines=4 rss_KiB=53584
+    review_stress_test.go:26: block0 heap_live=9920208 heap_objects=14125 goroutines=4 rss_KiB=72000
+    review_stress_test.go:26: block1 heap_live=18342880 heap_objects=14264 goroutines=5 rss_KiB=113728
+    review_stress_test.go:26: block2 heap_live=8952128 heap_objects=14307 goroutines=5 rss_KiB=113872
+    review_stress_test.go:26: block3 heap_live=9973040 heap_objects=14309 goroutines=4 rss_KiB=113920
+    review_stress_test.go:26: block4 heap_live=9975808 heap_objects=14331 goroutines=4 rss_KiB=113968
+    review_stress_test.go:26: block5 heap_live=18366392 heap_objects=14379 goroutines=5 rss_KiB=114192
+    review_stress_test.go:26: block6 heap_live=8978128 heap_objects=14418 goroutines=5 rss_KiB=114224
+    review_stress_test.go:26: block7 heap_live=9998000 heap_objects=14425 goroutines=4 rss_KiB=114288
+    review_stress_test.go:26: block8 heap_live=10006288 heap_objects=14457 goroutines=4 rss_KiB=114336
+    review_stress_test.go:26: block9 heap_live=18403064 heap_objects=14521 goroutines=5 rss_KiB=117568
+    review_stress_test.go:53: 1440 camera operations, 20 texture replacements, changing raster: p50=1.358375ms p95=4.161625ms max=10.162459ms rendered=1481 completed=1481
+    review_stress_test.go:26: closed heap_live=5696792 heap_objects=1866 goroutines=2 rss_KiB=117040
+--- PASS: TestReviewGPUSustained (3.55s)
+PASS
+ok  	github.com/NimbleMarkets/ntcharts3d	3.698s

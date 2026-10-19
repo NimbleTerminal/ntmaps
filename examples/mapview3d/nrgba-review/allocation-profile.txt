@@ -1,0 +1,357 @@
+File: charts.test
+Type: alloc_objects
+Time: 2026-10-18 19:27:24 EDT
+Showing nodes accounting for 1686797, 100% of 1686797 total
+      flat  flat%   sum%        cum   cum%
+    490981 29.11% 29.11%     490981 29.11%  github.com/gogpu/wgpu/hal/metal.msgSend
+     70578  4.18% 33.29%     252072 14.94%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).bakeExpressionImpl
+     65536  3.89% 37.18%     127034  7.53%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).writeEntryPointOutputStruct
+     65536  3.89% 41.06%     170696 10.12%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).writeExpression
+     54614  3.24% 44.30%      55005  3.26%  fmt.Sprintf
+     49152  2.91% 47.21%      49152  2.91%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).buildRZSWBoundsCheck
+     43692  2.59% 49.80%      58515  3.47%  github.com/gogpu/naga/wgsl/internal/parser.(*Parser).primary
+     34244  2.03% 51.83%      34244  2.03%  github.com/gogpu/naga/msl/internal/codegen.(*namer).call
+     32769  1.94% 53.78%     349584 20.72%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).writeEntryPoint
+     32768  1.94% 55.72%      32768  1.94%  github.com/gogpu/naga/ir.ResolveExpressionType
+     32768  1.94% 57.66%      32768  1.94%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).formatGlobalResourceParam
+     32768  1.94% 59.60%      32768  1.94%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).getExpressionScalarType
+     32768  1.94% 61.55%      98597  5.85%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).writeAccessIndex
+     32768  1.94% 63.49%      32768  1.94%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).writeLocalVariable
+     32768  1.94% 65.43%      99767  5.91%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).writeMath
+     32768  1.94% 67.37%      32768  1.94%  github.com/gogpu/naga/msl/internal/codegen.exprRefs
+     32768  1.94% 69.32%      32768  1.94%  github.com/gogpu/naga/msl/internal/codegen.vectorTypeName
+     32768  1.94% 71.26%      32768  1.94%  github.com/gogpu/wgpu/hal/metal.argPointer (inline)
+     32768  1.94% 73.20%     517195 30.66%  github.com/gogpu/wgpu/hal/metal.msgSendID (inline)
+     32768  1.94% 75.15%      95302  5.65%  nimbleterminal.dev/ntpicture.encodeKittyGraphicsData
+     32768  1.94% 77.09%      32768  1.94%  runtime.mallocgcSmallScanNoHeaderSC2
+     26331  1.56% 78.65%      26331  1.56%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).computeResourceMap
+     25003  1.48% 80.13%      25003  1.48%  strings.(*Builder).Write
+     24576  1.46% 81.59%      24576  1.46%  nimbleterminal.dev/nt3d.floats (inline)
+     23405  1.39% 82.98%      23405  1.39%  github.com/gogpu/naga/wgsl/internal/parser.(*Parser).typeSpec
+     19115  1.13% 84.11%      19115  1.13%  strings.(*Builder).WriteByte (inline)
+     17862  1.06% 85.17%      17862  1.06%  bytes.growSlice
+     16384  0.97% 86.14%      16384  0.97%  github.com/gogpu/wgpu.(*stagingBelt).allocate
+     12288  0.73% 86.87%      12288  0.73%  github.com/gogpu/wgpu/core/track.NewBufferUsageScope (inline)
+     12230  0.73% 87.59%      12230  0.73%  bytes.(*Buffer).String (inline)
+     11469  0.68% 88.27%      44237  2.62%  github.com/gogpu/wgpu/hal/metal.pointerArgs (inline)
+     10923  0.65% 88.92%      10923  0.65%  github.com/go-webgpu/goffi/ffi.callbackWrap
+     10923  0.65% 89.57%      10923  0.65%  github.com/gogpu/wgpu.buildTrackerIndexResolver
+     10923  0.65% 90.22%      10923  0.65%  github.com/gogpu/wgpu/core.(*CoreCommandEncoder).convertRenderPassDescriptor
+     10923  0.65% 90.86%      10923  0.65%  github.com/gogpu/wgpu/hal/metal.newFrameCompletionBlock
+     10923  0.65% 91.51%      10923  0.65%  github.com/gogpu/wgpu/hal/metal.newGPUCompletionBlock
+     10923  0.65% 92.16%      10923  0.65%  nimbleterminal.dev/ntpicture.(*TerminalSession).notification.func1
+     10129   0.6% 92.76%      10129   0.6%  strings.(*Builder).WriteString (inline)
+      8354   0.5% 93.25%       8354   0.5%  github.com/gogpu/naga/ir.compactFunctionExpressions
+      8192  0.49% 93.74%       8192  0.49%  github.com/gogpu/wgpu.convertRenderPassDesc
+      8192  0.49% 94.23%     117421  6.96%  github.com/gogpu/wgpu/core.(*CoreCommandEncoder).BeginRenderPass
+      7274  0.43% 94.66%       7274  0.43%  compress/flate.newHuffmanEncoder (inline)
+      6554  0.39% 95.04%      13108  0.78%  github.com/gogpu/naga/wgsl/internal/parser.(*Parser).returnStmt
+      6554  0.39% 95.43%      98306  5.83%  github.com/gogpu/wgpu/hal/metal.(*CommandEncoder).BeginRenderPass
+      6486  0.38% 95.82%      39254  2.33%  runtime.mallocgc
+      5461  0.32% 96.14%      72729  4.31%  github.com/gogpu/naga/wgsl/internal/parser.(*Parser).block
+      5461  0.32% 96.47%      63196  3.75%  github.com/gogpu/naga/wgsl/internal/parser.(*Parser).postfix
+      5042   0.3% 96.76%       5042   0.3%  github.com/gogpu/wgpu.addTrackedBuffer
+      4681  0.28% 97.04%      63196  3.75%  github.com/gogpu/naga/wgsl/internal/parser.(*Parser).comparison
+      4681  0.28% 97.32%       4681  0.28%  github.com/gogpu/wgpu/core.(*DestroyQueue).Triage
+      4096  0.24% 97.56%      13458   0.8%  github.com/gogpu/naga/wgsl/internal/parser.(*Parser).parameter
+      3641  0.22% 97.78%       3641  0.22%  github.com/gogpu/wgpu.(*CommandEncoder).trackBuffer (inline)
+      3445   0.2% 97.98%      28026  1.66%  nimbleterminal.dev/nt3d.(*gpuRenderer).Render
+      2979  0.18% 98.16%       2979  0.18%  fmt.init.func1
+      2979  0.18% 98.34%       7660  0.45%  github.com/gogpu/naga/wgsl/internal/parser.(*Parser).varDecl
+      2801  0.17% 98.50%      35688  2.12%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).registerNames
+      2730  0.16% 98.66%      38713  2.30%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).writeEntryPointInputStruct
+      2553  0.15% 98.81%      36516  2.16%  github.com/gogpu/naga/wgsl/internal/lower.(*Lowerer).lowerFunction
+      2521  0.15% 98.96%       2521  0.15%  nimbleterminal.dev/ntpicture.(*Picture).schedule
+      1643 0.097% 99.06%       3560  0.21%  github.com/NimbleMarkets/ntcharts3d.(*Model).View
+      1329 0.079% 99.14%      34097  2.02%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).collectNeedBakeExpressions
+      1260 0.075% 99.22%       4946  0.29%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).writeCall
+      1195 0.071% 99.29%      33963  2.01%  github.com/gogpu/naga/wgsl/internal/lower.(*Lowerer).addExpressionRaw
+      1170 0.069% 99.36%     126783  7.52%  github.com/gogpu/wgpu.(*CommandEncoder).BeginRenderPass
+      1056 0.063% 99.42%       1056 0.063%  github.com/lrstanley/bubblezone/v2.(*scanner).emit
+      1024 0.061% 99.48%      92151  5.46%  github.com/gogpu/wgpu.(*Device).CreateCommandEncoder
+       977 0.058% 99.54%        977 0.058%  sync.(*Pool).pinSlow
+       897 0.053% 99.59%        897 0.053%  internal/bytealg.MakeNoZero
+       861 0.051% 99.64%        861 0.051%  github.com/lrstanley/bubblezone/v2.(*Manager).Mark
+       774 0.046% 99.69%        774 0.046%  compress/flate.(*fastGen).addBlock
+       747 0.044% 99.73%       9750  0.58%  compress/flate.NewWriter (inline)
+       742 0.044% 99.77%        742 0.044%  image.NewNRGBA
+       735 0.044% 99.82%        735 0.044%  slices.Grow[go.shape.[]uint8,go.shape.uint8]
+       712 0.042% 99.86%        712 0.042%  nimbleterminal.dev/ntpicture.kittyRGBBytes
+       689 0.041% 99.90%       9003  0.53%  compress/flate.(*compressor).init
+       668  0.04% 99.94%        668  0.04%  compress/flate.newFastEnc
+       455 0.027%   100%     661169 39.20%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).writeModule
+       372 0.022%   100%       7646  0.45%  compress/flate.newHuffmanBitWriter
+        49 0.0029%   100%         49 0.0029%  github.com/gogpu/wgpu/hal/metal.NSString
+        48 0.0028%   100%       6129  0.36%  github.com/NimbleMarkets/ntcharts3d.(*presentationPump).run
+        26 0.0015%   100%         26 0.0015%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).String
+        24 0.0014%   100%         24 0.0014%  github.com/gogpu/wgpu/core.NewStorage[go.shape.171d629994ad9ab5d43c531cf6a16ddda53591c342fcb1fa192b13a11f0e21f9,go.shape.struct {}]
+         9 0.00053%   100%          9 0.00053%  github.com/gogpu/naga/wgsl/internal/parser.(*Lexer).addToken
+         6 0.00036%   100%          6 0.00036%  github.com/gogpu/naga/wgsl/internal/parser.NewLexer
+         2 0.00012%   100%          2 0.00012%  image.NewRGBA
+         2 0.00012%   100%          2 0.00012%  nimbleterminal.dev/nt3d.NewTexture
+         0     0%   100%        794 0.047%  bytes.(*Buffer).Grow
+         0     0%   100%       9549  0.57%  bytes.(*Buffer).Write
+         0     0%   100%       7519  0.45%  bytes.(*Buffer).WriteString
+         0     0%   100%      17862  1.06%  bytes.(*Buffer).grow
+         0     0%   100%        774 0.046%  compress/flate.(*Writer).Write
+         0     0%   100%        774 0.046%  compress/flate.(*compressor).deflateFast
+         0     0%   100%        774 0.046%  compress/flate.(*compressor).write
+         0     0%   100%        774 0.046%  compress/flate.(*fastEncL1).encode
+         0     0%   100%       9750  0.58%  compress/flate.NewWriterDict
+         0     0%   100%      10524  0.62%  compress/zlib.(*Writer).Write
+         0     0%   100%       9750  0.58%  compress/zlib.(*Writer).writeHeader
+         0     0%   100%        735 0.044%  encoding/base64.(*Encoding).AppendEncode
+         0     0%   100%      27982  1.66%  fmt.Fprintf
+         0     0%   100%       3370   0.2%  fmt.newPrinter
+         0     0%   100%       2521  0.15%  github.com/NimbleMarkets/ntcharts3d.(*Model).Update
+         0     0%   100%       2521  0.15%  github.com/NimbleMarkets/ntcharts3d.(*Model).present
+         0     0%   100%      28026  1.66%  github.com/NimbleMarkets/ntcharts3d.(*Model).schedule.func1
+         0     0%   100%      28026  1.66%  github.com/NimbleMarkets/ntcharts3d.(*gpuRenderer).Render
+         0     0%   100%     147836  8.76%  github.com/NimbleMarkets/ntcharts3d.(*presentationPump).launch.func1
+         0     0%   100%       6081  0.36%  github.com/NimbleMarkets/ntcharts3d.(*presentationPump).route
+         0     0%   100%       6133  0.36%  github.com/NimbleMarkets/ntcharts3d.BenchmarkPresentation.func1
+         0     0%   100%          2 0.00012%  github.com/NimbleMarkets/ntcharts3d.NewTexture
+         0     0%   100%         52 0.0031%  github.com/NimbleMarkets/ntcharts3d.presentationFixture
+         0     0%   100%      25217  1.49%  github.com/charmbracelet/x/ansi.KittyGraphics
+         0     0%   100%        391 0.023%  github.com/charmbracelet/x/ansi/kitty.(*Options).Options
+         0     0%   100%        195 0.012%  github.com/go-webgpu/goffi/ffi.CallFunction
+         0     0%   100%        195 0.012%  github.com/go-webgpu/goffi/ffi.CallFunctionContext
+         0     0%   100%        195 0.012%  github.com/go-webgpu/goffi/ffi.executeFunction
+         0     0%   100%        195 0.012%  github.com/go-webgpu/goffi/internal/arch/arm64.(*Implementation).Execute
+         0     0%   100%        195 0.012%  github.com/go-webgpu/goffi/internal/syscall.CallNFloatErrno
+         0     0%   100%      44838  2.66%  github.com/gogpu/naga.Lower (inline)
+         0     0%   100%      44870  2.66%  github.com/gogpu/naga.LowerWithSource
+         0     0%   100%      96344  5.71%  github.com/gogpu/naga.Parse
+         0     0%   100%       7913  0.47%  github.com/gogpu/naga/internal/textutil.(*IndentWriter).WriteIndent (inline)
+         0     0%   100%      44108  2.61%  github.com/gogpu/naga/internal/textutil.(*IndentWriter).WriteLine
+         0     0%   100%       8354   0.5%  github.com/gogpu/naga/ir.CompactExpressions
+         0     0%   100%      32768  1.94%  github.com/gogpu/naga/ir.resolveBinaryType
+         0     0%   100%      32768  1.94%  github.com/gogpu/naga/ir.resolveSwizzleType
+         0     0%   100%     661195 39.20%  github.com/gogpu/naga/msl.Compile (inline)
+         0     0%   100%     661195 39.20%  github.com/gogpu/naga/msl.CompileWithPipeline
+         0     0%   100%     134765  7.99%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).bakeExpression
+         0     0%   100%     117307  6.95%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).bakeExpressionWithName (inline)
+         0     0%   100%      10923  0.65%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).outputMemberAttribute
+         0     0%   100%       9811  0.58%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).write
+         0     0%   100%      32768  1.94%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).writeAccessChain
+         0     0%   100%     100352  5.95%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).writeBinary
+         0     0%   100%     327513 19.42%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).writeBlock
+         0     0%   100%      34633  2.05%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).writeCompose
+         0     0%   100%     252072 14.94%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).writeEmit
+         0     0%   100%        256 0.015%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).writeEntryPoint.func3
+         0     0%   100%      34684  2.06%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).writeEntryPointInputStruct.func1
+         0     0%   100%      15569  0.92%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).writeEntryPointInputStruct.func4
+         0     0%   100%      33403  1.98%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).writeEntryPointOutputReturn
+         0     0%   100%        455 0.027%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).writeEntryPointParam
+         0     0%   100%     252616 14.98%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).writeExpressionInline
+         0     0%   100%     252616 14.98%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).writeExpressionKind
+         0     0%   100%       1365 0.081%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).writeF2IHelper
+         0     0%   100%     272087 16.13%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).writeFunction
+         0     0%   100%     101850  6.04%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).writeIf
+         0     0%   100%      82213  4.87%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).writeLoad
+         0     0%   100%       1280 0.076%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).writeLocalVars
+         0     0%   100%      33415  1.98%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).writeLoop
+         0     0%   100%      36848  2.18%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).writeReturn
+         0     0%   100%      34133  2.02%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).writeSelect
+         0     0%   100%      34231  2.03%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).writeSplat
+         0     0%   100%     327513 19.42%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).writeStatement (inline)
+         0     0%   100%     327513 19.42%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).writeStatementKind
+         0     0%   100%      32768  1.94%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).writeStore
+         0     0%   100%        940 0.056%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).writeStructDefinition
+         0     0%   100%       3235  0.19%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).writeSwizzle
+         0     0%   100%        940 0.056%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).writeTypeDefinition
+         0     0%   100%      32768  1.94%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).writeTypeInnerName
+         0     0%   100%      32768  1.94%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).writeTypeName
+         0     0%   100%        940 0.056%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).writeTypes
+         0     0%   100%      33061  1.96%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).writeUncheckedLoad
+         0     0%   100%      32768  1.94%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).writeUncheckedStore
+         0     0%   100%     100254  5.94%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).writeWrappedBinaryOperand
+         0     0%   100%     661195 39.20%  github.com/gogpu/naga/msl/internal/codegen.CompileWithPipeline
+         0     0%   100%      10923  0.65%  github.com/gogpu/naga/msl/internal/codegen.locationInputAttribute
+         0     0%   100%          9 0.00053%  github.com/gogpu/naga/wgsl.(*Lexer).Tokenize
+         0     0%   100%      96329  5.71%  github.com/gogpu/naga/wgsl.(*Parser).Parse (inline)
+         0     0%   100%      44870  2.66%  github.com/gogpu/naga/wgsl.LowerWithSource (inline)
+         0     0%   100%      44870  2.66%  github.com/gogpu/naga/wgsl.LowerWithWarnings
+         0     0%   100%          6 0.00036%  github.com/gogpu/naga/wgsl.NewLexer
+         0     0%   100%      33963  2.01%  github.com/gogpu/naga/wgsl/internal/lower.(*Lowerer).addExpression
+         0     0%   100%        512  0.03%  github.com/gogpu/naga/wgsl/internal/lower.(*Lowerer).applyLoadRule
+         0     0%   100%      33280  1.97%  github.com/gogpu/naga/wgsl/internal/lower.(*Lowerer).lowerBinary
+         0     0%   100%      33963  2.01%  github.com/gogpu/naga/wgsl/internal/lower.(*Lowerer).lowerBlock (inline)
+         0     0%   100%       1195 0.071%  github.com/gogpu/naga/wgsl/internal/lower.(*Lowerer).lowerCall
+         0     0%   100%      33963  2.01%  github.com/gogpu/naga/wgsl/internal/lower.(*Lowerer).lowerExpression
+         0     0%   100%        683  0.04%  github.com/gogpu/naga/wgsl/internal/lower.(*Lowerer).lowerExpressionForRef
+         0     0%   100%      32768  1.94%  github.com/gogpu/naga/wgsl/internal/lower.(*Lowerer).lowerFor
+         0     0%   100%      32768  1.94%  github.com/gogpu/naga/wgsl/internal/lower.(*Lowerer).lowerLocalConst
+         0     0%   100%        512  0.03%  github.com/gogpu/naga/wgsl/internal/lower.(*Lowerer).lowerMathCall
+         0     0%   100%        683  0.04%  github.com/gogpu/naga/wgsl/internal/lower.(*Lowerer).lowerMember
+         0     0%   100%        683  0.04%  github.com/gogpu/naga/wgsl/internal/lower.(*Lowerer).lowerMemberForRef
+         0     0%   100%       1195 0.071%  github.com/gogpu/naga/wgsl/internal/lower.(*Lowerer).lowerReturn
+         0     0%   100%      33963  2.01%  github.com/gogpu/naga/wgsl/internal/lower.(*Lowerer).lowerStatement
+         0     0%   100%      44870  2.66%  github.com/gogpu/naga/wgsl/internal/lower.LowerWithWarnings (inline)
+         0     0%   100%      44870  2.66%  github.com/gogpu/naga/wgsl/internal/lower.lowerImpl
+         0     0%   100%          9 0.00053%  github.com/gogpu/naga/wgsl/internal/parser.(*Lexer).Tokenize
+         0     0%   100%          9 0.00053%  github.com/gogpu/naga/wgsl/internal/parser.(*Lexer).identifier
+         0     0%   100%          9 0.00053%  github.com/gogpu/naga/wgsl/internal/parser.(*Lexer).scanToken
+         0     0%   100%      96329  5.71%  github.com/gogpu/naga/wgsl/internal/parser.(*Parser).Parse
+         0     0%   100%      63196  3.75%  github.com/gogpu/naga/wgsl/internal/parser.(*Parser).additive
+         0     0%   100%       5461  0.32%  github.com/gogpu/naga/wgsl/internal/parser.(*Parser).attributes
+         0     0%   100%      63196  3.75%  github.com/gogpu/naga/wgsl/internal/parser.(*Parser).bitwiseAnd
+         0     0%   100%      63196  3.75%  github.com/gogpu/naga/wgsl/internal/parser.(*Parser).bitwiseOr
+         0     0%   100%      63196  3.75%  github.com/gogpu/naga/wgsl/internal/parser.(*Parser).bitwiseXor
+         0     0%   100%      96329  5.71%  github.com/gogpu/naga/wgsl/internal/parser.(*Parser).declaration
+         0     0%   100%      63196  3.75%  github.com/gogpu/naga/wgsl/internal/parser.(*Parser).equality
+         0     0%   100%      28711  1.70%  github.com/gogpu/naga/wgsl/internal/parser.(*Parser).exprOrAssignStmt
+         0     0%   100%      63196  3.75%  github.com/gogpu/naga/wgsl/internal/parser.(*Parser).expression (inline)
+         0     0%   100%      25123  1.49%  github.com/gogpu/naga/wgsl/internal/parser.(*Parser).forStmt
+         0     0%   100%      91648  5.43%  github.com/gogpu/naga/wgsl/internal/parser.(*Parser).functionDecl
+         0     0%   100%      17789  1.05%  github.com/gogpu/naga/wgsl/internal/parser.(*Parser).ifStmt
+         0     0%   100%      11235  0.67%  github.com/gogpu/naga/wgsl/internal/parser.(*Parser).letStmt
+         0     0%   100%      63196  3.75%  github.com/gogpu/naga/wgsl/internal/parser.(*Parser).logicalAnd
+         0     0%   100%      63196  3.75%  github.com/gogpu/naga/wgsl/internal/parser.(*Parser).logicalOr
+         0     0%   100%      63196  3.75%  github.com/gogpu/naga/wgsl/internal/parser.(*Parser).multiplicative
+         0     0%   100%      63196  3.75%  github.com/gogpu/naga/wgsl/internal/parser.(*Parser).shift
+         0     0%   100%      67268  3.99%  github.com/gogpu/naga/wgsl/internal/parser.(*Parser).statement
+         0     0%   100%       4681  0.28%  github.com/gogpu/naga/wgsl/internal/parser.(*Parser).structDecl
+         0     0%   100%       4681  0.28%  github.com/gogpu/naga/wgsl/internal/parser.(*Parser).structMember
+         0     0%   100%      63196  3.75%  github.com/gogpu/naga/wgsl/internal/parser.(*Parser).unary
+         0     0%   100%        391 0.023%  github.com/gogpu/wgpu.(*Buffer).MapAsync
+         0     0%   100%      23303  1.38%  github.com/gogpu/wgpu.(*CommandEncoder).CopyTextureToBuffer
+         0     0%   100%     661244 39.20%  github.com/gogpu/wgpu.(*Device).CreateRenderPipeline
+         0     0%   100%     141214  8.37%  github.com/gogpu/wgpu.(*Device).CreateShaderModule
+         0     0%   100%       6554  0.39%  github.com/gogpu/wgpu.(*Device).FreeCommandBuffer
+         0     0%   100%      39322  2.33%  github.com/gogpu/wgpu.(*Device).Poll
+         0     0%   100%     206332 12.23%  github.com/gogpu/wgpu.(*Queue).Submit
+         0     0%   100%      62260  3.69%  github.com/gogpu/wgpu.(*Queue).WriteBuffer
+         0     0%   100%      15965  0.95%  github.com/gogpu/wgpu.(*Queue).injectBarriers
+         0     0%   100%       4681  0.28%  github.com/gogpu/wgpu.(*Queue).postSubmit
+         0     0%   100%      15965  0.95%  github.com/gogpu/wgpu.(*Queue).prependTextureBarriers
+         0     0%   100%     115782  6.86%  github.com/gogpu/wgpu.(*RenderPassEncoder).Draw
+         0     0%   100%       6554  0.39%  github.com/gogpu/wgpu.(*RenderPassEncoder).End (inline)
+         0     0%   100%       6554  0.39%  github.com/gogpu/wgpu.(*pendingWrites).activate
+         0     0%   100%      62260  3.69%  github.com/gogpu/wgpu.(*pendingWrites).writeBuffer
+         0     0%   100%         24 0.0014%  github.com/gogpu/wgpu.CreateInstance
+         0     0%   100%        391 0.023%  github.com/gogpu/wgpu.acquireMapPending
+         0     0%   100%       5042   0.3%  github.com/gogpu/wgpu.buildBufferTrackerIndexResolver
+         0     0%   100%     115782  6.86%  github.com/gogpu/wgpu/core.(*CoreRenderPassEncoder).Draw (inline)
+         0     0%   100%       6554  0.39%  github.com/gogpu/wgpu/core.(*CoreRenderPassEncoder).End
+         0     0%   100%      12288  0.73%  github.com/gogpu/wgpu/core.(*Device).CreateCommandEncoderWithHAL
+         0     0%   100%         24 0.0014%  github.com/gogpu/wgpu/core.(*Instance).enumerateRealAdapters
+         0     0%   100%         24 0.0014%  github.com/gogpu/wgpu/core.GetGlobal
+         0     0%   100%         24 0.0014%  github.com/gogpu/wgpu/core.GetGlobal.func1
+         0     0%   100%         24 0.0014%  github.com/gogpu/wgpu/core.NewHub
+         0     0%   100%         24 0.0014%  github.com/gogpu/wgpu/core.NewInstance
+         0     0%   100%         24 0.0014%  github.com/gogpu/wgpu/core.NewRegistry[go.shape.171d629994ad9ab5d43c531cf6a16ddda53591c342fcb1fa192b13a11f0e21f9,go.shape.struct {}]
+         0     0%   100%      45104  2.67%  github.com/gogpu/wgpu/core.ValidateShaderModuleDescriptor
+         0     0%   100%      45104  2.67%  github.com/gogpu/wgpu/core.validateShaderModuleFeatures
+         0     0%   100%      45104  2.67%  github.com/gogpu/wgpu/core.validateWGSLShaderFeatures
+         0     0%   100%      78644  4.66%  github.com/gogpu/wgpu/hal/metal.(*AutoreleasePool).Drain
+         0     0%   100%       6554  0.39%  github.com/gogpu/wgpu/hal/metal.(*CommandBuffer).Destroy
+         0     0%   100%       6554  0.39%  github.com/gogpu/wgpu/hal/metal.(*CommandBuffer).Destroy.func1
+         0     0%   100%      85393  5.06%  github.com/gogpu/wgpu/hal/metal.(*CommandEncoder).BeginEncoding
+         0     0%   100%      39322  2.33%  github.com/gogpu/wgpu/hal/metal.(*CommandEncoder).CopyBufferToBuffer
+         0     0%   100%      19662  1.17%  github.com/gogpu/wgpu/hal/metal.(*CommandEncoder).CopyTextureToBuffer
+         0     0%   100%     661244 39.20%  github.com/gogpu/wgpu/hal/metal.(*Device).CreateRenderPipeline
+         0     0%   100%      18932  1.12%  github.com/gogpu/wgpu/hal/metal.(*Device).CreateShaderModule
+         0     0%   100%       6554  0.39%  github.com/gogpu/wgpu/hal/metal.(*Device).FreeCommandBuffer
+         0     0%   100%      39322  2.33%  github.com/gogpu/wgpu/hal/metal.(*Device).WaitIdle
+         0     0%   100%     661244 39.20%  github.com/gogpu/wgpu/hal/metal.(*Device).compileLibrary
+         0     0%   100%     185686 11.01%  github.com/gogpu/wgpu/hal/metal.(*Queue).Submit
+         0     0%   100%      76459  4.53%  github.com/gogpu/wgpu/hal/metal.(*Queue).registerFrameCompletionHandler
+         0     0%   100%      10923  0.65%  github.com/gogpu/wgpu/hal/metal.(*Queue).registerSubmissionCompletionHandler
+         0     0%   100%     115782  6.86%  github.com/gogpu/wgpu/hal/metal.(*RenderPassEncoder).Draw
+         0     0%   100%       6554  0.39%  github.com/gogpu/wgpu/hal/metal.(*RenderPassEncoder).End
+         0     0%   100%      97759  5.80%  github.com/gogpu/wgpu/hal/metal.(*RenderPassEncoder).applyBindGroup
+         0     0%   100%       6554  0.39%  github.com/gogpu/wgpu/hal/metal.(*RenderPassEncoder).applyPipeline
+         0     0%   100%     104313  6.18%  github.com/gogpu/wgpu/hal/metal.(*RenderPassEncoder).beginNative
+         0     0%   100%     104313  6.18%  github.com/gogpu/wgpu/hal/metal.(*RenderPassEncoder).replayPendingState
+         0     0%   100%        195 0.012%  github.com/gogpu/wgpu/hal/metal.GetClass
+         0     0%   100%     561432 33.28%  github.com/gogpu/wgpu/hal/metal.MsgSend
+         0     0%   100%     150929  8.95%  github.com/gogpu/wgpu/hal/metal.NewAutoreleasePool
+         0     0%   100%     150929  8.95%  github.com/gogpu/wgpu/hal/metal.NewAutoreleasePool.func1
+         0     0%   100%      78644  4.66%  github.com/gogpu/wgpu/hal/metal.NewAutoreleasePool.func2
+         0     0%   100%      13108  0.78%  github.com/gogpu/wgpu/hal/metal.Release
+         0     0%   100%       6554  0.39%  github.com/gogpu/wgpu/hal/metal.Retain
+         0     0%   100%       6554  0.39%  github.com/gogpu/wgpu/hal/metal.msgSendVoid (inline)
+         0     0%   100%     150929  8.95%  github.com/gogpu/wgpu/hal/metal.newAutoreleasePoolWithCallbacks
+         0     0%   100%       1056 0.063%  github.com/lrstanley/bubblezone/v2.(*Manager).Scan
+         0     0%   100%       1056 0.063%  github.com/lrstanley/bubblezone/v2.(*scanner).run
+         0     0%   100%       1056 0.063%  github.com/lrstanley/bubblezone/v2.scanID
+         0     0%   100%       3423   0.2%  io.WriteString
+         0     0%   100%          2 0.00012%  nimbleterminal.dev/nt3d.(*Texture).levels
+         0     0%   100%          2 0.00012%  nimbleterminal.dev/nt3d.(*Texture).levels.func1
+         0     0%   100%     311379 18.46%  nimbleterminal.dev/nt3d.(*gpuRenderer).Render.func1
+         0     0%   100%     175858 10.43%  nimbleterminal.dev/nt3d.(*gpuRenderer).Render.func1.1
+         0     0%   100%     175858 10.43%  nimbleterminal.dev/nt3d.(*gpuRenderer).drawScene
+         0     0%   100%      89567  5.31%  nimbleterminal.dev/nt3d.(*gpuRenderer).drawTextured (inline)
+         0     0%   100%      89567  5.31%  nimbleterminal.dev/nt3d.(*gpuRenderer).drawTexturedOffset
+         0     0%   100%       6554  0.39%  nimbleterminal.dev/nt3d.(*gpuRenderer).prepareTarget.func1
+         0     0%   100%          5 0.0003%  nimbleterminal.dev/nt3d.(*gpuRenderer).prepareTextures
+         0     0%   100%     187096 11.09%  nimbleterminal.dev/nt3d.(*gpuRenderer).prepareTextures.func1
+         0     0%   100%     249119 14.77%  nimbleterminal.dev/nt3d.(*gpuRenderer).renderScene
+         0     0%   100%     608808 36.09%  nimbleterminal.dev/nt3d.(*gpuRenderer).setup.func1
+         0     0%   100%       1787  0.11%  nimbleterminal.dev/nt3d.(*gpuRenderer).setupShadowPipelines
+         0     0%   100%      72202  4.28%  nimbleterminal.dev/nt3d.(*gpuRenderer).setupSprites
+         0     0%   100%      21902  1.30%  nimbleterminal.dev/nt3d.(*gpuRenderer).setupTexturedShadowPipelines
+         0     0%   100%     114894  6.81%  nimbleterminal.dev/nt3d.(*gpuRenderer).setupTextures
+         0     0%   100%      70285  4.17%  nimbleterminal.dev/nt3d.(*gpuRenderer).setupTextures.func1 (inline)
+         0     0%   100%      23689  1.40%  nimbleterminal.dev/nt3d.(*gpuRenderer).shadowPipeline
+         0     0%   100%       6554  0.39%  nimbleterminal.dev/nt3d.(*sceneTarget).setup
+         0     0%   100%     103170  6.12%  nimbleterminal.dev/nt3d.blendPipeline
+         0     0%   100%     169873 10.07%  nimbleterminal.dev/nt3d.pointPipeline
+         0     0%   100%     802458 47.57%  nimbleterminal.dev/ntgpuimage.(*Renderer).Do.func1
+         0     0%   100%          3 0.00018%  nimbleterminal.dev/ntgpuimage.(*Renderer).UploadTextureLevels
+         0     0%   100%     680169 40.32%  nimbleterminal.dev/ntgpuimage.(*Renderer).execute.func1
+         0     0%   100%         24 0.0014%  nimbleterminal.dev/ntgpuimage.(*Renderer).init
+         0     0%   100%     680169 40.32%  nimbleterminal.dev/ntgpuimage.(*Renderer).render
+         0     0%   100%     206332 12.23%  nimbleterminal.dev/ntgpuimage.(*Renderer).submit
+         0     0%   100%    1482651 87.90%  nimbleterminal.dev/ntgpuimage.(*executor).loop
+         0     0%   100%    1482651 87.90%  nimbleterminal.dev/ntgpuimage.(*executor).run.func1
+         0     0%   100%          2 0.00012%  nimbleterminal.dev/ntgpuimage.MipChain
+         0     0%   100%         24 0.0014%  nimbleterminal.dev/ntgpuimage.New.func1
+         0     0%   100%      23303  1.38%  nimbleterminal.dev/ntgpuimage.encodeReadback
+         0     0%   100%      40450  2.40%  nimbleterminal.dev/ntgpuimage.mapImage
+         0     0%   100%          3 0.00018%  nimbleterminal.dev/ntgpuimage.packLevels
+         0     0%   100%          5 0.0003%  nimbleterminal.dev/ntgpuimage.packPixels
+         0     0%   100%      39322  2.33%  nimbleterminal.dev/ntgpuimage.waitMapped
+         0     0%   100%       2521  0.15%  nimbleterminal.dev/ntpicture.(*Picture).Submit
+         0     0%   100%       2521  0.15%  nimbleterminal.dev/ntpicture.(*Picture).changed (inline)
+         0     0%   100%       2521  0.15%  nimbleterminal.dev/ntpicture.(*Picture).changedWith
+         0     0%   100%     108887  6.46%  nimbleterminal.dev/ntpicture.(*Picture).schedule.func2
+         0     0%   100%     108887  6.46%  nimbleterminal.dev/ntpicture.(*pictureJob).execute
+         0     0%   100%        897 0.053%  nimbleterminal.dev/ntpicture.buildKittyGrid
+         0     0%   100%        391 0.023%  nimbleterminal.dev/ntpicture.kittyPlacementOptions
+         0     0%   100%     107990  6.40%  nimbleterminal.dev/ntpicture.kittyTransport.buildKittyAPC
+         0     0%   100%     107990  6.40%  nimbleterminal.dev/ntpicture.kittyTransport.buildKittyZlibAPC
+         0     0%   100%     108887  6.46%  nimbleterminal.dev/ntpicture.prepareKittyFrame
+         0     0%   100%       5461  0.32%  runtime.(*scavengerState).init
+         0     0%   100%      32768  1.94%  runtime.(*scavengerState).sleep
+         0     0%   100%      32768  1.94%  runtime.(*timer).maybeAdd
+         0     0%   100%      32768  1.94%  runtime.(*timer).modify
+         0     0%   100%      32768  1.94%  runtime.(*timer).reset (inline)
+         0     0%   100%      32768  1.94%  runtime.(*timers).addHeap
+         0     0%   100%       1025 0.061%  runtime.allocm
+         0     0%   100%      38229  2.27%  runtime.bgscavenge
+         0     0%   100%      10923  0.65%  runtime.cgocallback
+         0     0%   100%      10923  0.65%  runtime.cgocallbackg
+         0     0%   100%      10923  0.65%  runtime.cgocallbackg1
+         0     0%   100%      32768  1.94%  runtime.growslice
+         0     0%   100%        513  0.03%  runtime.mcall
+         0     0%   100%        512  0.03%  runtime.mstart
+         0     0%   100%        512  0.03%  runtime.mstart0
+         0     0%   100%        512  0.03%  runtime.mstart1
+         0     0%   100%       1025 0.061%  runtime.newm
+         0     0%   100%       6486  0.38%  runtime.newobject
+         0     0%   100%        513  0.03%  runtime.park_m
+         0     0%   100%        769 0.046%  runtime.resetspinning
+         0     0%   100%       1025 0.061%  runtime.schedule
+         0     0%   100%       1025 0.061%  runtime.startm
+         0     0%   100%       1025 0.061%  runtime.wakep
+         0     0%   100%        897 0.053%  strings.(*Builder).Grow
+         0     0%   100%        897 0.053%  strings.(*Builder).grow
+         0     0%   100%       6580  0.39%  sync.(*Once).Do (inline)
+         0     0%   100%       6580  0.39%  sync.(*Once).doSlow
+         0     0%   100%       3956  0.23%  sync.(*Pool).Get
+         0     0%   100%        977 0.058%  sync.(*Pool).pin
+         0     0%   100%       6131  0.36%  testing.(*B).launch
+         0     0%   100%          2 0.00012%  testing.(*B).run1.func1
+         0     0%   100%       6133  0.36%  testing.(*B).runN

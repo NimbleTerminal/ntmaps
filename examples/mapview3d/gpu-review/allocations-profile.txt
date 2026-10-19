@@ -1,0 +1,44 @@
+File: charts.test
+Type: alloc_objects
+Time: 2026-10-18 17:32:58 EDT
+Showing nodes accounting for 38483144, 96.94% of 39697414 total
+Dropped 326 nodes (cum <= 198487)
+      flat  flat%   sum%        cum   cum%
+  38011460 95.75% 95.75%   38011460 95.75%  image.(*NRGBA).At
+    375198  0.95% 96.70%     377018  0.95%  github.com/gogpu/wgpu/hal/metal.msgSend
+     49152  0.12% 96.82%     241028  0.61%  github.com/gogpu/wgpu/hal/metal.newAutoreleasePoolWithCallbacks
+     32768 0.083% 96.90%     403232  1.02%  github.com/gogpu/wgpu/hal/metal.msgSendID (inline)
+     10923 0.028% 96.93%   38081577 95.93%  nimbleterminal.dev/ntpicture.kittyTransport.buildKittyZlibAPC
+      2341 0.0059% 96.94%     618135  1.56%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).writeModule
+       717 0.0018% 96.94%   38012177 95.75%  nimbleterminal.dev/ntpicture.kittyRGBBytes
+       585 0.0015% 96.94%     216185  0.54%  github.com/gogpu/naga/wgsl/internal/lower.lowerImpl
+         0     0% 96.94%   38110726 96.00%  github.com/NimbleMarkets/ntcharts3d.(*presentationPump).launch.func1
+         0     0% 96.94%     216185  0.54%  github.com/gogpu/naga.LowerWithSource
+         0     0% 96.94%     618207  1.56%  github.com/gogpu/naga/msl.Compile (inline)
+         0     0% 96.94%     618207  1.56%  github.com/gogpu/naga/msl.CompileWithPipeline
+         0     0% 96.94%     203458  0.51%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).writeBlock
+         0     0% 96.94%     449096  1.13%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).writeEntryPoint
+         0     0% 96.94%     203458  0.51%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).writeStatement (inline)
+         0     0% 96.94%     203458  0.51%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).writeStatementKind
+         0     0% 96.94%     618207  1.56%  github.com/gogpu/naga/msl/internal/codegen.CompileWithPipeline
+         0     0% 96.94%     216185  0.54%  github.com/gogpu/naga/wgsl.LowerWithSource (inline)
+         0     0% 96.94%     216185  0.54%  github.com/gogpu/naga/wgsl.LowerWithWarnings
+         0     0% 96.94%     216185  0.54%  github.com/gogpu/naga/wgsl/internal/lower.LowerWithWarnings (inline)
+         0     0% 96.94%     652841  1.64%  github.com/gogpu/wgpu.(*Device).CreateRenderPipeline
+         0     0% 96.94%     238357   0.6%  github.com/gogpu/wgpu.(*Device).CreateShaderModule
+         0     0% 96.94%     652841  1.64%  github.com/gogpu/wgpu/hal/metal.(*Device).CreateRenderPipeline
+         0     0% 96.94%     620073  1.56%  github.com/gogpu/wgpu/hal/metal.(*Device).compileLibrary
+         0     0% 96.94%     506997  1.28%  github.com/gogpu/wgpu/hal/metal.MsgSend
+         0     0% 96.94%     241028  0.61%  github.com/gogpu/wgpu/hal/metal.NewAutoreleasePool
+         0     0% 96.94%     436988  1.10%  nimbleterminal.dev/nt3d.(*gpuRenderer).Render.func1
+         0     0% 96.94%     351790  0.89%  nimbleterminal.dev/nt3d.(*gpuRenderer).renderScene
+         0     0% 96.94%     649101  1.64%  nimbleterminal.dev/nt3d.(*gpuRenderer).setup.func1
+         0     0% 96.94%     891198  2.24%  nimbleterminal.dev/ntgpuimage.(*Renderer).Do.func1
+         0     0% 96.94%     573316  1.44%  nimbleterminal.dev/ntgpuimage.(*Renderer).execute.func1
+         0     0% 96.94%     573316  1.44%  nimbleterminal.dev/ntgpuimage.(*Renderer).render
+         0     0% 96.94%    1499467  3.78%  nimbleterminal.dev/ntgpuimage.(*executor).loop
+         0     0% 96.94%    1499467  3.78%  nimbleterminal.dev/ntgpuimage.(*executor).run.func1
+         0     0% 96.94%   38082329 95.93%  nimbleterminal.dev/ntpicture.(*Picture).schedule.func2
+         0     0% 96.94%   38082329 95.93%  nimbleterminal.dev/ntpicture.(*pictureJob).execute
+         0     0% 96.94%   38081577 95.93%  nimbleterminal.dev/ntpicture.kittyTransport.buildKittyAPC
+         0     0% 96.94%   38082329 95.93%  nimbleterminal.dev/ntpicture.prepareKittyFrame

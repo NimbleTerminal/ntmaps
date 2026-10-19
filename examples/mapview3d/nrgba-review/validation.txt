@@ -1,0 +1,13 @@
+ok  	nimbleterminal.dev/ntpicture	(cached)
+ok  	nimbleterminal.dev/ntpicture/animation	(cached)
+ok  	nimbleterminal.dev/ntpicture/decoders	(cached)
+ok  	nimbleterminal.dev/ntpicture/internal/imageview	(cached)
+ok  	nimbleterminal.dev/ntpicture/internal/kittyshm	(cached)
+?   	nimbleterminal.dev/ntpicture/internal/legacybridge	[no test files]
+?   	nimbleterminal.dev/ntpicture/internal/tools/notices	[no test files]
+ok  	nimbleterminal.dev/ntpicture/legacy	(cached)
+ok  	nimbleterminal.dev/ntpicture/playback	(cached)
+ok  	github.com/NimbleMarkets/ntcharts3d	7.766s
+ok  	github.com/NimbleMarkets/ntcharts-osm/examples/internal/demorun	(cached)
+?   	github.com/NimbleMarkets/ntcharts-osm/examples/mapview	[no test files]
+ok  	github.com/NimbleMarkets/ntcharts-osm/examples/mapview3d	1.478s

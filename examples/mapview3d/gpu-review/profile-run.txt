@@ -1,0 +1,10 @@
+goos: darwin
+goarch: arm64
+pkg: github.com/NimbleMarkets/ntcharts3d
+cpu: Apple M5 Max
+BenchmarkPresentation/direct/camera-18         	     720	   3203415 ns/op	         0 coalesced	       720.0 completed	       720.0 direct-frames	   2494548 output-ns/frame	      1146 prepare-ns/op	     50422 protocol-B/frame	    668090 render-ns/frame	       720.0 requested	         0 shm-frames	     13442 view-B/frame	 3739093 B/op	  206024 allocs/op
+--- BENCH: BenchmarkPresentation/direct/camera-18
+    presentation_bench_test.go:290: raster=(640,320) renderer=WebGPU picture=1 transport={Generation:3 Presented:3 Busy:false Err:<nil> Format:zlib Medium:direct} aniso=4 shrink=0 frames=1
+    presentation_bench_test.go:290: raster=(640,320) renderer=WebGPU picture=1 transport={Generation:722 Presented:722 Busy:false Err:<nil> Format:zlib Medium:direct} aniso=4 shrink=0 frames=720
+PASS
+ok  	github.com/NimbleMarkets/ntcharts3d	2.859s

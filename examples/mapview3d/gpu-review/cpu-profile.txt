@@ -1,0 +1,119 @@
+File: charts.test
+Type: cpu
+Time: 2026-10-18 17:32:55 EDT
+Duration: 2.62s, Total samples = 2.22s (84.84%)
+Showing nodes accounting for 2.08s, 93.69% of 2.22s total
+Dropped 98 nodes (cum <= 0.01s)
+      flat  flat%   sum%        cum   cum%
+     1.15s 51.80% 51.80%      1.15s 51.80%  runtime.pthread_cond_signal
+     0.20s  9.01% 60.81%      0.20s  9.01%  runtime.kevent
+     0.20s  9.01% 69.82%      0.20s  9.01%  runtime.pthread_cond_wait
+     0.16s  7.21% 77.03%      0.16s  7.21%  runtime.madvise
+     0.10s  4.50% 81.53%      0.10s  4.50%  runtime.cgocall
+     0.05s  2.25% 83.78%      0.05s  2.25%  runtime.pthread_kill
+     0.05s  2.25% 86.04%      0.05s  2.25%  runtime.usleep
+     0.04s  1.80% 87.84%      0.11s  4.95%  runtime.mallocgc
+     0.03s  1.35% 89.19%      0.03s  1.35%  <unknown>
+     0.03s  1.35% 90.54%      0.03s  1.35%  internal/runtime/atomic.(*UnsafePointer).Load (inline)
+     0.03s  1.35% 91.89%      0.12s  5.41%  nimbleterminal.dev/ntpicture.kittyRGBBytes
+     0.01s  0.45% 92.34%      0.07s  3.15%  runtime.convTnoptr
+     0.01s  0.45% 92.79%      0.05s  2.25%  runtime.lock2
+     0.01s  0.45% 93.24%      0.02s   0.9%  runtime.mallocgcTinySC2
+     0.01s  0.45% 93.69%      0.02s   0.9%  runtime.scanObjectsSmall
+         0     0% 93.69%      1.06s 47.75%  _.goready.func1
+         0     0% 93.69%      0.14s  6.31%  github.com/NimbleMarkets/ntcharts3d.(*presentationPump).launch.func1
+         0     0% 93.69%      0.09s  4.05%  github.com/go-webgpu/goffi/ffi.CallFunction (inline)
+         0     0% 93.69%      0.09s  4.05%  github.com/go-webgpu/goffi/ffi.CallFunctionContext
+         0     0% 93.69%      0.09s  4.05%  github.com/go-webgpu/goffi/ffi.executeFunction
+         0     0% 93.69%      0.09s  4.05%  github.com/go-webgpu/goffi/internal/arch/arm64.(*Implementation).Execute
+         0     0% 93.69%      0.09s  4.05%  github.com/go-webgpu/goffi/internal/syscall.CallNFloatErrno
+         0     0% 93.69%      0.02s   0.9%  github.com/gogpu/naga.Parse
+         0     0% 93.69%      0.04s  1.80%  github.com/gogpu/naga/msl.Compile (inline)
+         0     0% 93.69%      0.04s  1.80%  github.com/gogpu/naga/msl.CompileWithPipeline
+         0     0% 93.69%      0.03s  1.35%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).writeEntryPoint
+         0     0% 93.69%      0.02s   0.9%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).writeEntryPointOutputStruct
+         0     0% 93.69%      0.04s  1.80%  github.com/gogpu/naga/msl/internal/codegen.(*Writer).writeModule
+         0     0% 93.69%      0.04s  1.80%  github.com/gogpu/naga/msl/internal/codegen.CompileWithPipeline
+         0     0% 93.69%      0.02s   0.9%  github.com/gogpu/wgpu.(*CommandEncoder).CopyTextureToBuffer
+         0     0% 93.69%      0.07s  3.15%  github.com/gogpu/wgpu.(*Device).CreateRenderPipeline
+         0     0% 93.69%      0.02s   0.9%  github.com/gogpu/wgpu.(*Device).CreateShaderModule
+         0     0% 93.69%      0.02s   0.9%  github.com/gogpu/wgpu.CreateInstance
+         0     0% 93.69%      0.02s   0.9%  github.com/gogpu/wgpu/core.(*Instance).enumerateRealAdapters
+         0     0% 93.69%      0.02s   0.9%  github.com/gogpu/wgpu/core.NewInstance
+         0     0% 93.69%      0.02s   0.9%  github.com/gogpu/wgpu/hal/metal.(*CommandEncoder).CopyTextureToBuffer
+         0     0% 93.69%      0.07s  3.15%  github.com/gogpu/wgpu/hal/metal.(*Device).CreateRenderPipeline
+         0     0% 93.69%      0.06s  2.70%  github.com/gogpu/wgpu/hal/metal.(*Device).compileLibrary
+         0     0% 93.69%      0.08s  3.60%  github.com/gogpu/wgpu/hal/metal.MsgSend
+         0     0% 93.69%      0.08s  3.60%  github.com/gogpu/wgpu/hal/metal.msgSend
+         0     0% 93.69%      0.08s  3.60%  github.com/gogpu/wgpu/hal/metal.msgSendID (inline)
+         0     0% 93.69%      0.08s  3.60%  image.(*NRGBA).At
+         0     0% 93.69%      0.03s  1.35%  nimbleterminal.dev/nt3d.(*gpuRenderer).prepareTextures.func1
+         0     0% 93.69%      0.06s  2.70%  nimbleterminal.dev/nt3d.(*gpuRenderer).setup.func1
+         0     0% 93.69%      0.02s   0.9%  nimbleterminal.dev/nt3d.(*gpuRenderer).setupSprites
+         0     0% 93.69%      0.03s  1.35%  nimbleterminal.dev/nt3d.pointPipeline
+         0     0% 93.69%      0.09s  4.05%  nimbleterminal.dev/ntgpuimage.(*Renderer).Do.func1
+         0     0% 93.69%      0.04s  1.80%  nimbleterminal.dev/ntgpuimage.(*Renderer).execute.func1
+         0     0% 93.69%      0.02s   0.9%  nimbleterminal.dev/ntgpuimage.(*Renderer).init
+         0     0% 93.69%      0.04s  1.80%  nimbleterminal.dev/ntgpuimage.(*Renderer).render
+         0     0% 93.69%      0.16s  7.21%  nimbleterminal.dev/ntgpuimage.(*executor).loop
+         0     0% 93.69%      0.16s  7.21%  nimbleterminal.dev/ntgpuimage.(*executor).run.func1
+         0     0% 93.69%      0.02s   0.9%  nimbleterminal.dev/ntgpuimage.New.func1
+         0     0% 93.69%      0.02s   0.9%  nimbleterminal.dev/ntgpuimage.encodeReadback
+         0     0% 93.69%      0.14s  6.31%  nimbleterminal.dev/ntpicture.(*Picture).schedule.func2
+         0     0% 93.69%      0.14s  6.31%  nimbleterminal.dev/ntpicture.(*pictureJob).execute
+         0     0% 93.69%      0.14s  6.31%  nimbleterminal.dev/ntpicture.kittyTransport.buildKittyAPC
+         0     0% 93.69%      0.14s  6.31%  nimbleterminal.dev/ntpicture.kittyTransport.buildKittyZlibAPC
+         0     0% 93.69%      0.14s  6.31%  nimbleterminal.dev/ntpicture.prepareKittyFrame
+         0     0% 93.69%      0.04s  1.80%  runtime.(*gcControllerState).enlistWorker
+         0     0% 93.69%      0.16s  7.21%  runtime.(*mheap).alloc.func1
+         0     0% 93.69%      0.16s  7.21%  runtime.(*mheap).allocSpan
+         0     0% 93.69%      0.03s  1.35%  runtime._ExternalCode
+         0     0% 93.69%      0.26s 11.71%  runtime.findRunnable
+         0     0% 93.69%      0.07s  3.15%  runtime.gcBgMarkWorker
+         0     0% 93.69%      0.13s  5.86%  runtime.gcBgMarkWorker.func2
+         0     0% 93.69%      0.13s  5.86%  runtime.gcDrain
+         0     0% 93.69%      0.12s  5.41%  runtime.gcDrainMarkWorkerDedicated (inline)
+         0     0% 93.69%      0.21s  9.46%  runtime.gcStart.func4
+         0     0% 93.69%      0.03s  1.35%  runtime.goexit0
+         0     0% 93.69%      0.02s   0.9%  runtime.gopreempt_m (inline)
+         0     0% 93.69%      0.02s   0.9%  runtime.goschedImpl
+         0     0% 93.69%      0.03s  1.35%  runtime.growslice
+         0     0% 93.69%      0.05s  2.25%  runtime.lock (inline)
+         0     0% 93.69%      0.05s  2.25%  runtime.lockWithRank (inline)
+         0     0% 93.69%      0.20s  9.01%  runtime.mPark (inline)
+         0     0% 93.69%      0.04s  1.80%  runtime.mProf_Malloc
+         0     0% 93.69%      0.02s   0.9%  runtime.mallocgcLarge
+         0     0% 93.69%      0.02s   0.9%  runtime.mallocgcSmallNoscan
+         0     0% 93.69%      0.02s   0.9%  runtime.markroot
+         0     0% 93.69%      0.02s   0.9%  runtime.markroot.func1
+         0     0% 93.69%      0.28s 12.61%  runtime.mcall
+         0     0% 93.69%      0.03s  1.35%  runtime.morestack
+         0     0% 93.69%      0.20s  9.01%  runtime.netpoll
+         0     0% 93.69%      0.03s  1.35%  runtime.newstack
+         0     0% 93.69%      0.20s  9.01%  runtime.notesleep
+         0     0% 93.69%      1.13s 50.90%  runtime.notewakeup
+         0     0% 93.69%      0.04s  1.80%  runtime.osyield (inline)
+         0     0% 93.69%      0.25s 11.26%  runtime.park_m
+         0     0% 93.69%      0.05s  2.25%  runtime.preemptM
+         0     0% 93.69%      0.03s  1.35%  runtime.preemptone
+         0     0% 93.69%      0.04s  1.80%  runtime.profilealloc
+         0     0% 93.69%      1.06s 47.75%  runtime.ready
+         0     0% 93.69%      0.03s  1.35%  runtime.runSafePointFn
+         0     0% 93.69%      0.03s  1.35%  runtime.scanSpan
+         0     0% 93.69%      0.29s 13.06%  runtime.schedule
+         0     0% 93.69%      0.21s  9.46%  runtime.semasleep
+         0     0% 93.69%      1.15s 51.80%  runtime.semawakeup
+         0     0% 93.69%      0.05s  2.25%  runtime.signalM (inline)
+         0     0% 93.69%      0.21s  9.46%  runtime.startTheWorldWithSema
+         0     0% 93.69%      1.10s 49.55%  runtime.startm
+         0     0% 93.69%      0.04s  1.80%  runtime.stkbucket
+         0     0% 93.69%      0.21s  9.46%  runtime.stopm
+         0     0% 93.69%      0.02s   0.9%  runtime.suspendG
+         0     0% 93.69%      0.16s  7.21%  runtime.sysUsed (inline)
+         0     0% 93.69%      0.16s  7.21%  runtime.sysUsedOS (inline)
+         0     0% 93.69%      1.58s 71.17%  runtime.systemstack
+         0     0% 93.69%      0.02s   0.9%  runtime.unlock (inline)
+         0     0% 93.69%      0.02s   0.9%  runtime.unlock2
+         0     0% 93.69%      0.02s   0.9%  runtime.unlock2Wake
+         0     0% 93.69%      0.02s   0.9%  runtime.unlockWithRank (inline)
+         0     0% 93.69%      1.09s 49.10%  runtime.wakep

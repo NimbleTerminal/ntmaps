@@ -64,6 +64,11 @@ tasks:
     cmds:
       - go -C examples test -run '^$' -bench BenchmarkMap3D -benchmem -benchtime=1s -count=3 ./mapview3d
 
+  bench-mapview3d-gpu:
+    desc: 'Measure native GPU map snapshots; fail if rendering falls back to software'
+    cmds:
+      - go -C examples test -tags webgpu -run '^$' -bench '^BenchmarkMap3DGPU$' -benchmem -benchtime=144x -count=3 ./mapview3d
+
   build-ex-mapview3d:
     desc: 'Build the textured 3D map example'
     cmds:

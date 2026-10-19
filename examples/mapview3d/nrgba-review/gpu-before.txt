@@ -1,0 +1,30 @@
+goos: darwin
+goarch: arm64
+pkg: github.com/NimbleMarkets/ntcharts3d
+cpu: Apple M5 Max
+BenchmarkPresentation/direct/camera-18         	     144	   3194630 ns/op	         0 coalesced	       144.0 completed	       144.0 direct-frames	   2443536 output-ns/frame	      1276 prepare-ns/op	     50422 protocol-B/frame	    710820 render-ns/frame	       144.0 requested	         0 shm-frames	     13422 view-B/frame	 3739190 B/op	  206000 allocs/op
+--- BENCH: BenchmarkPresentation/direct/camera-18
+    presentation_bench_test.go:290: raster=(640,320) renderer=WebGPU picture=1 transport={Generation:3 Presented:3 Busy:false Err:<nil> Format:zlib Medium:direct} aniso=4 shrink=0 frames=1
+    presentation_bench_test.go:290: raster=(640,320) renderer=WebGPU picture=1 transport={Generation:146 Presented:146 Busy:false Err:<nil> Format:zlib Medium:direct} aniso=4 shrink=0 frames=144
+BenchmarkPresentation/direct/camera-18         	     144	   3208979 ns/op	         0 coalesced	       144.0 completed	       144.0 direct-frames	   2462243 output-ns/frame	       958.6 prepare-ns/op	     50422 protocol-B/frame	    707477 render-ns/frame	       144.0 requested	         0 shm-frames	     13422 view-B/frame	 3738137 B/op	  206005 allocs/op
+--- BENCH: BenchmarkPresentation/direct/camera-18
+    presentation_bench_test.go:290: raster=(640,320) renderer=WebGPU picture=1 transport={Generation:3 Presented:3 Busy:false Err:<nil> Format:zlib Medium:direct} aniso=4 shrink=0 frames=1
+    presentation_bench_test.go:290: raster=(640,320) renderer=WebGPU picture=1 transport={Generation:146 Presented:146 Busy:false Err:<nil> Format:zlib Medium:direct} aniso=4 shrink=0 frames=144
+BenchmarkPresentation/direct/camera-18         	     144	   3203723 ns/op	         0 coalesced	       144.0 completed	       144.0 direct-frames	   2467802 output-ns/frame	       930.8 prepare-ns/op	     50422 protocol-B/frame	    698623 render-ns/frame	       144.0 requested	         0 shm-frames	     13422 view-B/frame	 3738084 B/op	  206005 allocs/op
+--- BENCH: BenchmarkPresentation/direct/camera-18
+    presentation_bench_test.go:290: raster=(640,320) renderer=WebGPU picture=1 transport={Generation:3 Presented:3 Busy:false Err:<nil> Format:zlib Medium:direct} aniso=4 shrink=0 frames=1
+    presentation_bench_test.go:290: raster=(640,320) renderer=WebGPU picture=1 transport={Generation:146 Presented:146 Busy:false Err:<nil> Format:zlib Medium:direct} aniso=4 shrink=0 frames=144
+BenchmarkPresentation/direct/texture-18        	     144	   4677350 ns/op	         0 coalesced	       144.0 completed	       144.0 direct-frames	   2215169 output-ns/frame	    175304 prepare-ns/op	     35663 protocol-B/frame	   2249359 render-ns/frame	       144.0 requested	         0 shm-frames	     13422 view-B/frame	 7460106 B/op	  206464 allocs/op
+--- BENCH: BenchmarkPresentation/direct/texture-18
+    presentation_bench_test.go:290: raster=(640,320) renderer=WebGPU picture=1 transport={Generation:3 Presented:3 Busy:false Err:<nil> Format:zlib Medium:direct} aniso=4 shrink=0 frames=1
+    presentation_bench_test.go:290: raster=(640,320) renderer=WebGPU picture=1 transport={Generation:146 Presented:146 Busy:false Err:<nil> Format:zlib Medium:direct} aniso=4 shrink=0 frames=144
+BenchmarkPresentation/direct/texture-18        	     144	   4718015 ns/op	         0 coalesced	       144.0 completed	       144.0 direct-frames	   2272512 output-ns/frame	    180459 prepare-ns/op	     35663 protocol-B/frame	   2225404 render-ns/frame	       144.0 requested	         0 shm-frames	     13422 view-B/frame	 7459210 B/op	  206463 allocs/op
+--- BENCH: BenchmarkPresentation/direct/texture-18
+    presentation_bench_test.go:290: raster=(640,320) renderer=WebGPU picture=1 transport={Generation:3 Presented:3 Busy:false Err:<nil> Format:zlib Medium:direct} aniso=4 shrink=0 frames=1
+    presentation_bench_test.go:290: raster=(640,320) renderer=WebGPU picture=1 transport={Generation:146 Presented:146 Busy:false Err:<nil> Format:zlib Medium:direct} aniso=4 shrink=0 frames=144
+BenchmarkPresentation/direct/texture-18        	     144	   4702871 ns/op	         0 coalesced	       144.0 completed	       144.0 direct-frames	   2264424 output-ns/frame	    181696 prepare-ns/op	     35663 protocol-B/frame	   2218969 render-ns/frame	       144.0 requested	         0 shm-frames	     13422 view-B/frame	 7459288 B/op	  206463 allocs/op
+--- BENCH: BenchmarkPresentation/direct/texture-18
+    presentation_bench_test.go:290: raster=(640,320) renderer=WebGPU picture=1 transport={Generation:3 Presented:3 Busy:false Err:<nil> Format:zlib Medium:direct} aniso=4 shrink=0 frames=1
+    presentation_bench_test.go:290: raster=(640,320) renderer=WebGPU picture=1 transport={Generation:146 Presented:146 Busy:false Err:<nil> Format:zlib Medium:direct} aniso=4 shrink=0 frames=144
+PASS
+ok  	github.com/NimbleMarkets/ntcharts3d	4.285s

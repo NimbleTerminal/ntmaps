@@ -1,0 +1,18 @@
+goos: darwin
+goarch: arm64
+pkg: nimbleterminal.dev/ntpicture
+cpu: Apple M5 Max
+BenchmarkKittyRGBPacking/640x320/RGBA-18         	    1522	    152797 ns/op	  614405 B/op	       1 allocs/op
+BenchmarkKittyRGBPacking/640x320/RGBA-18         	    1692	    142991 ns/op	  614401 B/op	       1 allocs/op
+BenchmarkKittyRGBPacking/640x320/RGBA-18         	    1664	    141969 ns/op	  614401 B/op	       1 allocs/op
+BenchmarkKittyRGBPacking/640x320/NRGBA-18        	     142	   1665176 ns/op	 1433607 B/op	  204801 allocs/op
+BenchmarkKittyRGBPacking/640x320/NRGBA-18        	     144	   1672112 ns/op	 1433607 B/op	  204801 allocs/op
+BenchmarkKittyRGBPacking/640x320/NRGBA-18        	     142	   1669010 ns/op	 1433609 B/op	  204801 allocs/op
+BenchmarkKittyRGBPacking/640x320/NRGBASubimage-18         	     142	   1670810 ns/op	 1433613 B/op	  204801 allocs/op
+BenchmarkKittyRGBPacking/640x320/NRGBASubimage-18         	     141	   1685921 ns/op	 1433612 B/op	  204801 allocs/op
+BenchmarkKittyRGBPacking/640x320/NRGBASubimage-18         	     141	   1679101 ns/op	 1433610 B/op	  204801 allocs/op
+BenchmarkKittyRGBPacking/640x320/Generic-18               	      78	   3078197 ns/op	 1433606 B/op	  204801 allocs/op
+BenchmarkKittyRGBPacking/640x320/Generic-18               	      78	   3074119 ns/op	 1433609 B/op	  204801 allocs/op
+BenchmarkKittyRGBPacking/640x320/Generic-18               	      78	   3074684 ns/op	 1433603 B/op	  204801 allocs/op
+PASS
+ok  	nimbleterminal.dev/ntpicture	3.008s

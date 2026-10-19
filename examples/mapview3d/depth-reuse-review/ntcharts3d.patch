@@ -1,0 +1,178 @@
+diff --git a/camera.go b/camera.go
+index 1e85fd1..25f9609 100644
+--- a/camera.go
++++ b/camera.go
+@@ -67,7 +67,7 @@ func (c Camera) basis() (eye, right, up, forward nt3dmath.Vec3) {
+ 	return
+ }
+ 
+-func (c Camera) Matrix(aspect float32) nt3dmath.Mat4 { return nt3d.Camera(c.valid()).Matrix(aspect) }
++func (c Camera) Matrix(aspect float32) nt3dmath.Mat4 { return c.engineCamera().Matrix(aspect) }
+ 
+ // RayFromCell returns a ray through a cell center, accounting for cell dimensions.
+ func (c Camera) RayFromCell(x, y, cols, rows, cellW, cellH int) nt3dmath.Ray {
+@@ -75,5 +75,12 @@ func (c Camera) RayFromCell(x, y, cols, rows, cellW, cellH int) nt3dmath.Ray {
+ }
+ 
+ func (c Camera) ray(x, y float32, cols, rows, cw, ch int) nt3dmath.Ray {
+-	return nt3d.Camera(c.valid()).RayFromPixel(x*float32(cw), y*float32(ch), cols*cw, rows*ch)
++	return c.engineCamera().RayFromPixel(x*float32(cw), y*float32(ch), cols*cw, rows*ch)
++}
++
++// Map fields explicitly so added engine camera features do not couple the
++// chart's public orbit-camera layout to the engine's struct layout.
++func (c Camera) engineCamera() nt3d.Camera {
++	c = c.valid()
++	return nt3d.Camera{Alpha: c.Alpha, Beta: c.Beta, Distance: c.Distance, Target: c.Target, Projection: c.Projection, AutoRotate: c.AutoRotate, ResumeAfter: c.ResumeAfter}
+ }
+diff --git a/model.go b/model.go
+index b9993d0..926eeb6 100644
+--- a/model.go
++++ b/model.go
+@@ -3,6 +3,7 @@
+ package ntcharts3d
+ 
+ import (
++	"errors"
+ 	"fmt"
+ 	"image/color"
+ 	"sync/atomic"
+@@ -43,6 +44,7 @@ type Model struct {
+ 	colors                       Palette
+ 	background                   color.RGBA
+ 	renderer                     Renderer
++	software                     *softwareRenderer
+ 	renderMode                   RenderMode
+ 	requestedRenderMode          RenderMode
+ 	width, height, maxPoints     int
+@@ -77,6 +79,7 @@ func New(width, height int, opts ...Option) *Model {
+ 		dirty:              true,
+ 		kittyFormat:        picture.KittyFormatZlib,
+ 		renderer:           &gpuRenderer{},
++		software:           &softwareRenderer{},
+ 		colorLegendVisible: true,
+ 	}
+ 	for _, o := range opts {
+@@ -209,15 +212,20 @@ func (m *Model) Dispose() tea.Cmd {
+ 	return cmd
+ }
+ 
+-// Close releases GPU resources after the event loop exits. Call Dispose while
+-// the loop is running to execute terminal placement cleanup.
++// Close releases GPU and software resources after the event loop exits. It is
++// idempotent and waits for active renders; queued software jobs are rejected.
++// Like other Model methods it must not overlap event-loop mutations, but may
++// overlap rendering commands. Call Dispose while the loop is running to execute
++// terminal placement cleanup.
+ func (m *Model) Close() error {
+ 	m.Dispose()
+ 	if m.ownZones {
+ 		m.zones.Close()
+ 	}
++	var gpuErr error
+ 	if m.renderer != nil {
+-		return m.renderer.Close()
++		gpuErr = m.renderer.Close()
++		m.renderer = nil
+ 	}
+-	return nil
++	return errors.Join(gpuErr, m.software.Close())
+ }
+diff --git a/render_software.go b/render_software.go
+index 074a9bd..d3d8267 100644
+--- a/render_software.go
++++ b/render_software.go
+@@ -2,8 +2,10 @@
+ package ntcharts3d
+ 
+ import (
++	"errors"
+ 	"image"
+ 	"nimbleterminal.dev/nt3d"
++	"sync"
+ )
+ 
+ func abs(v float32) float32 {
+@@ -16,3 +18,38 @@ func abs(v float32) float32 {
+ func renderSoftware(f Frame) (image.Image, error) {
+ 	return nt3d.NewSoftwareRenderer().Render(engineFrame(f))
+ }
++
++// softwareRenderer owns fallback resources independently of the GPU adapter.
++// The lock also protects old nt3d versions: Snapshot can overlap a command.
++// Model/frame construction remains on the event loop; no callbacks run here.
++type softwareRenderer struct {
++	mu     sync.Mutex
++	engine nt3d.Renderer
++	closed bool
++}
++
++func (r *softwareRenderer) Render(f Frame) (image.Image, error) {
++	r.mu.Lock()
++	defer r.mu.Unlock()
++	if r.closed {
++		return nil, errors.New("ntcharts3d: software renderer closed")
++	}
++	if r.engine == nil {
++		r.engine = nt3d.NewSoftwareRenderer()
++	}
++	return r.engine.Render(engineFrame(f))
++}
++func (r *softwareRenderer) Close() error {
++	r.mu.Lock()
++	defer r.mu.Unlock()
++	if r.closed {
++		return nil
++	}
++	r.closed = true
++	if r.engine != nil {
++		err := r.engine.Close()
++		r.engine = nil
++		return err
++	}
++	return nil
++}
+diff --git a/schedule.go b/schedule.go
+index aa9628c..897a2fa 100644
+--- a/schedule.go
++++ b/schedule.go
+@@ -157,6 +157,7 @@ func (m *Model) schedule() tea.Cmd {
+ 	resolution := m.resolution()
+ 	f := m.frame()
+ 	id, seq, renderMode, r, cols, rows := m.id, m.seq, m.renderMode, m.renderer, m.plotWidth(), m.plotHeight()
++	software := m.software
+ 	return tea.Batch(resolution, func() tea.Msg {
+ 		start := time.Now()
+ 		var img image.Image
+@@ -174,7 +175,7 @@ func (m *Model) schedule() tea.Cmd {
+ 		}
+ 		if renderMode == Software {
+ 			var renderErr error
+-			img, renderErr = renderSoftware(f)
++			img, renderErr = software.Render(f)
+ 			if renderErr != nil {
+ 				err = renderErr
+ 			}
+diff --git a/snapshot.go b/snapshot.go
+index 050eec5..04c7c7c 100644
+--- a/snapshot.go
++++ b/snapshot.go
+@@ -21,7 +21,9 @@ import (
+ // no image to give.
+ //
+ // Snapshot returns when the image is drawn. Like the chart's other methods,
+-// it must not be called while another goroutine changes the chart.
++// it must not be called while another goroutine changes the chart. Rendering
++// is serialized with scheduled render commands; returned images remain owned
++// by the caller across later renders and Close.
+ func (m *Model) Snapshot(width, height int) (image.Image, RenderMode, error) {
+ 	mode := m.requestedRenderMode
+ 	switch {
+@@ -39,6 +41,6 @@ func (m *Model) Snapshot(width, height int) (image.Image, RenderMode, error) {
+ 			return img, WebGPU, nil
+ 		}
+ 	}
+-	img, err := renderSoftware(f)
++	img, err := m.software.Render(f)
+ 	return img, Software, err
+ }

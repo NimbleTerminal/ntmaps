@@ -1,0 +1,59 @@
+package ntcharts3d
+
+import (
+	"image"
+	"os"
+	"os/exec"
+	"runtime"
+	"sort"
+	"strconv"
+	"strings"
+	"testing"
+	"time"
+)
+
+func TestReviewGPUSustained(t *testing.T) {
+	if reviewMode() != WebGPU {
+		t.Skip("explicit GPU run only")
+	}
+	p, src := presentationFixture(t, "direct", "camera", 80, 22)
+ p.allowResize=true
+	sample := func(label string) {
+		runtime.GC()
+		var m runtime.MemStats
+		runtime.ReadMemStats(&m)
+		rss, _ := exec.Command("/bin/ps", "-o", "rss=", "-p", strconv.Itoa(os.Getpid())).Output()
+		t.Logf("%s heap_live=%d heap_objects=%d goroutines=%d rss_KiB=%s", label, m.HeapAlloc, m.HeapObjects, runtime.NumGoroutine(), strings.TrimSpace(string(rss)))
+	}
+	sample("warm")
+	var durations []time.Duration
+	for block := 0; block < 10; block++ {
+		size := []image.Point{{80, 22}, {160, 42}, {40, 12}, {80, 22}}[block%4]
+		p.size = image.Pt(size.X*8, (size.Y-2)*16)
+		p.run(p.m.SetSize(size.X, size.Y))
+		for i := 0; i < 144; i++ {
+			start := time.Now()
+			c := p.m.Camera()
+			c.Beta += 5
+			p.run(p.m.SetCamera(c))
+			if i%72 == 0 {
+				tex, err := NewTexture(src)
+				if err != nil {
+					t.Fatal(err)
+				}
+				p.run(p.m.SetSeriesTexture("map", tex))
+			}
+			durations = append(durations, time.Since(start))
+		}
+		p.size = image.Pt(640, 320)
+		p.run(p.m.SetSize(80, 22))
+		sample("block" + strconv.Itoa(block))
+	}
+	sort.Slice(durations, func(i, j int) bool { return durations[i] < durations[j] })
+	t.Logf("1440 camera operations, 20 texture replacements, changing raster: p50=%v p95=%v max=%v rendered=%d completed=%d", durations[len(durations)/2], durations[len(durations)*95/100], durations[len(durations)-1], p.rendered, p.completed)
+	p.run(p.m.Dispose())
+	if err := p.m.Close(); err != nil {
+		t.Fatal(err)
+	}
+	sample("closed")
+}
