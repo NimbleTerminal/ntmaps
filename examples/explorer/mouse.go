@@ -2,17 +2,17 @@ package main
 
 import (
 	"image"
-	"math"
 
 	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
+
+	"nimbleterminal.dev/ntmaps"
 )
 
 type dragOwner uint8
 
 const (
 	dragNone dragOwner = iota
-	dragMap
 	dragCity
 )
 
@@ -44,25 +44,6 @@ func (m *model) listRect() image.Rectangle {
 	return image.Rect(1, 1, 1+L.leftInnerW, 1+L.listInnerH)
 }
 
-// The chart scans its own zones in pane coordinates. Translate the complete
-// mouse event, including release/motion outside the pane, without losing type,
-// button or modifiers. The app's sidebar and border are not part of that frame.
-func localMouse(msg tea.MouseMsg, origin image.Point) tea.MouseMsg {
-	v := msg.Mouse()
-	v.X -= origin.X
-	v.Y -= origin.Y
-	switch msg.(type) {
-	case tea.MouseClickMsg:
-		return tea.MouseClickMsg(v)
-	case tea.MouseReleaseMsg:
-		return tea.MouseReleaseMsg(v)
-	case tea.MouseWheelMsg:
-		return tea.MouseWheelMsg(v)
-	case tea.MouseMotionMsg:
-		return tea.MouseMotionMsg(v)
-	}
-	return msg
-}
 func (m *model) cancelDrag() tea.Cmd {
 	owner := m.pointer.owner
 	m.pointer = pointerState{}
@@ -85,24 +66,24 @@ func (m *model) mouse(msg tea.MouseMsg) tea.Cmd {
 		owner := m.pointer.owner
 		m.pointer = pointerState{}
 		if owner == dragCity && m.cityPane != nil {
-			_, cmd := m.cityPane.Update(localMouse(msg, m.mapRect().Min))
+			_, cmd := m.cityPane.Update(ntmaps.OffsetMouse(msg, m.mapRect().Min.X, m.mapRect().Min.Y))
 			return cmd
+		}
+		if m.mv.Dragging() {
+			return m.mapMouse(msg)
 		}
 		return nil
 	}
 	if _, motion := msg.(tea.MouseMotionMsg); motion && m.pointer.owner != dragNone && v.Button != tea.MouseLeft {
 		return m.cancelDrag()
 	}
-	if m.pointer.owner == dragMap {
-		if _, motion := msg.(tea.MouseMotionMsg); motion {
-			dx, dy := p.X-m.pointer.last.X, p.Y-m.pointer.last.Y
-			m.pointer.last = p
-			return m.dragMap(dx, dy)
-		}
+	if m.mv.Dragging() {
+		// The map keeps the drag even when the pointer leaves it.
+		return m.mapMouse(msg)
 	}
 	if m.pointer.owner == dragCity && m.cityPane != nil {
 		if _, motion := msg.(tea.MouseMotionMsg); motion {
-			_, cmd := m.cityPane.Update(localMouse(msg, m.mapRect().Min))
+			_, cmd := m.cityPane.Update(ntmaps.OffsetMouse(msg, m.mapRect().Min.X, m.mapRect().Min.Y))
 			return cmd
 		}
 	}
@@ -143,7 +124,7 @@ func (m *model) mouse(msg tea.MouseMsg) tea.Cmd {
 		if !p.In(m.cityPlotRect()) {
 			// A motion outside the chart clears hover, but can't start a drag/zoom.
 			if _, motion := msg.(tea.MouseMotionMsg); motion {
-				_, cmd := m.cityPane.Update(localMouse(msg, m.mapRect().Min))
+				_, cmd := m.cityPane.Update(ntmaps.OffsetMouse(msg, m.mapRect().Min.X, m.mapRect().Min.Y))
 				return cmd
 			}
 			return nil
@@ -151,7 +132,7 @@ func (m *model) mouse(msg tea.MouseMsg) tea.Cmd {
 		if _, click := msg.(tea.MouseClickMsg); click && v.Button == tea.MouseLeft {
 			m.pointer = pointerState{owner: dragCity, last: p}
 		}
-		_, cmd := m.cityPane.Update(localMouse(msg, m.mapRect().Min))
+		_, cmd := m.cityPane.Update(ntmaps.OffsetMouse(msg, m.mapRect().Min.X, m.mapRect().Min.Y))
 		return cmd
 	}
 	r := m.mapRect()
@@ -159,49 +140,13 @@ func (m *model) mouse(msg tea.MouseMsg) tea.Cmd {
 	if !p.In(r) {
 		return nil
 	}
-	switch msg.(type) {
-	case tea.MouseClickMsg:
-		if v.Button == tea.MouseLeft {
-			m.pointer = pointerState{owner: dragMap, last: p}
-		}
-	case tea.MouseWheelMsg:
-		switch v.Button {
-		case tea.MouseWheelUp:
-			return m.zoomMap(1)
-		case tea.MouseWheelDown:
-			return m.zoomMap(-1)
-		}
-	}
-	return nil
+	return m.mapMouse(msg)
 }
 
-// the widget's geographic canvas uses 8x16 map pixels per terminal cell, before
-// oversampling (whose extra zoom cancels the extra density). Preserve that
-// scale and optical crop when translating a grab-and-drag into a new center.
-func (m *model) dragMap(dx, dy int) tea.Cmd {
-	if dx == 0 && dy == 0 {
-		return nil
-	}
-	lat, lon := m.mv.Center()
-	lat = max(-85.0511287798066, min(85.0511287798066, lat))
-	world := 256 * math.Exp2(float64(m.mv.Zoom()))
-	crop := math.Exp2(float64(m.mv.OpticalZoom()))
-	x := (lon+180)/360*world - float64(dx)*8/crop
-	y := (1-math.Asinh(math.Tan(lat*math.Pi/180))/math.Pi)/2*world - float64(dy)*16/crop
-	x = math.Mod(math.Mod(x, world)+world, world)
-	y = max(0, min(world, y))
-	lon = x/world*360 - 180
-	lat = math.Atan(math.Sinh(math.Pi*(1-2*y/world))) * 180 / math.Pi
-	m.mv.SetLatLng(lat, lon, m.mv.Zoom())
-	return m.mv.Init()
-}
-
-func (m *model) zoomMap(delta int) tea.Cmd {
-	zoom := max(2, min(19, m.mv.Zoom()+delta))
-	if zoom == m.mv.Zoom() {
-		return nil
-	}
-	lat, lon := m.mv.Center()
-	m.mv.SetLatLng(lat, lon, zoom)
-	return m.mv.Init()
+// mapMouse forwards a mouse event to the map widget in its own cell
+// coordinates; the widget pans on drag and zooms on the wheel.
+func (m *model) mapMouse(msg tea.MouseMsg) tea.Cmd {
+	var cmd tea.Cmd
+	m.mv, cmd = m.mv.Update(ntmaps.OffsetMouse(msg, m.mapRect().Min.X, m.mapRect().Min.Y))
+	return cmd
 }

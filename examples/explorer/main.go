@@ -406,10 +406,11 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, cmd
 		}
 		switch v.String() {
-		case "+", "=":
-			return m, m.zoomMap(1)
-		case "-", "_":
-			return m, m.zoomMap(-1)
+		case "+", "=", "-", "_":
+			// The widget clamps zoom to the source's range.
+			var cmd tea.Cmd
+			m.mv, cmd = m.mv.Update(v)
+			return m, cmd
 		case "g":
 			mode := ntmaps.RenderKitty
 			if m.mv.RenderMode() == mode {

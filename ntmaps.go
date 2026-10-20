@@ -250,6 +250,7 @@ type Model struct {
 	smoothPan bool
 	prefetch  int
 	panState  *panState
+	drag      dragState
 
 	// preferKitty mirrors Config.PreferKitty. renderModeChosen is set once
 	// the mode has been picked, by the auto-switch or by SetRenderMode, so
@@ -1123,6 +1124,9 @@ func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case tea.MouseMsg:
+		return m.mouse(msg)
+
 	case tea.KeyMsg:
 		var hit bool
 
@@ -1136,14 +1140,10 @@ func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 		case key.Matches(msg, m.KeyMap.Left):
 			return m.arrowPan(-2*osmPxPerCellW, 0)
 		case key.Matches(msg, m.KeyMap.ZoomIn):
-			if m.zoom < m.info().Max() {
-				m.zoom += 1
-			}
+			m.zoom = m.clampZoom(m.zoom + 1)
 			hit = true
 		case key.Matches(msg, m.KeyMap.ZoomOut):
-			if m.zoom > minZoom {
-				m.zoom -= 1
-			}
+			m.zoom = m.clampZoom(m.zoom - 1)
 			hit = true
 		}
 		if hit {

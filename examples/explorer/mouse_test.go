@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"image"
-	"math"
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
@@ -125,25 +124,6 @@ func TestMapMouseDragZoomAndRelease(t *testing.T) {
 	m.Update(wheelAt(image.Pt(0, 0), tea.MouseWheelDown))
 	if m.mv.Zoom() != zoom {
 		t.Fatal("border scroll affected map")
-	}
-}
-func TestMapDragOpticalScaleAndWorldBounds(t *testing.T) {
-	m := fixture(t)
-	m.mv.SetLatLng(0, 0, 16)
-	m.dragMap(4, 0)
-	_, normal := m.mv.Center()
-	m.mv.SetLatLng(0, 0, 16)
-	m.mv.SetOpticalZoom(1)
-	m.dragMap(4, 0)
-	_, cropped := m.mv.Center()
-	if math.Abs(cropped-normal/2) > 1e-8 {
-		t.Fatal("optical magnification changed drag distance")
-	}
-	m.mv.SetLatLng(85, 179.999, 16)
-	m.dragMap(-1000000, 1000000)
-	lat, lon := m.mv.Center()
-	if math.IsNaN(lat) || math.Abs(lat) > 85.052 || lon < -180 || lon > 180 {
-		t.Fatalf("drag left Mercator bounds %g,%g", lat, lon)
 	}
 }
 func TestSidebarMouseSelectsWithoutPanningMap(t *testing.T) {

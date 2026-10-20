@@ -48,6 +48,10 @@
 - The attribution row under the map follows the current source instead of
   always crediting OpenStreetMap (`AttributionText` is removed), and the arrow
   keys zoom between 1 and the source's `MaxZoom` instead of 2 and 16.
+- Mouse support in the widget: left drag pans, the wheel zooms around the
+  cursor, events are read in the widget's cell coordinates, and hosts get
+  `OffsetMouse` and `Dragging()` for routing. The explorer forwards its map
+  events instead of carrying its own drag and zoom code.
 
 ## v0.3.0 (2026-10-19)
 

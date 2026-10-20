@@ -56,7 +56,7 @@ func main() {
 }
 ```
 
-Pan with arrows or `hjkl`, zoom with `+`/`-`. The widget owns those bindings — no parent wiring needed.
+Pan with arrows or `hjkl`, zoom with `+`/`-`. The widget owns those bindings — no parent wiring needed. Mouse works too once the host enables reporting (`tea.MouseModeCellMotion` in its View): drag to pan, wheel to zoom around the cursor. The widget reads mouse events in its own cell coordinates, so a host that draws the map away from the terminal origin translates them with `ntmaps.OffsetMouse(msg, x, y)` before forwarding, and can keep routing motion to the map with `Dragging()` after the pointer leaves it.
 
 ## Demo
 
