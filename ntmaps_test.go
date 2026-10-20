@@ -10,6 +10,8 @@ import (
 	"charm.land/lipgloss/v2"
 	picture "nimbleterminal.dev/ntpicture"
 	"nimbleterminal.dev/ntpicture/legacy"
+
+	"nimbleterminal.dev/ntmaps/tile"
 )
 
 func TestNewInitializesDefaultState(t *testing.T) {
@@ -36,7 +38,7 @@ func TestNewInitializesDefaultState(t *testing.T) {
 	if m.loc != "" {
 		t.Fatalf("expected empty location, got %q", m.loc)
 	}
-	if !m.provider.Valid() {
+	if !tile.Fetchable(m.source) {
 		t.Fatal("expected tile provider to be initialized")
 	}
 	// Until the first render completes, View shows a centered "Loading…"
@@ -161,7 +163,7 @@ func TestCacheHitDuringStaleInFlight(t *testing.T) {
 
 	// Pre-populate the cache so the next renderMapCmd takes the synchronous hit.
 	cachedImg := newSolidImage(color.RGBA{R: 1, G: 2, B: 3, A: 255})
-	key := makeRenderKey(m.lat, m.lng, m.zoom, m.cols, m.picRows(), m.provider.Name, m.oversample, m.maxAspectRatio, m.letterboxColor, m.markers)
+	key := makeRenderKey(m.lat, m.lng, m.zoom, m.cols, m.picRows(), m.info().Name, m.oversample, m.maxAspectRatio, m.letterboxColor, m.markers)
 	m.cache.put(key, cachedImg)
 
 	// Cache-hit transition.
@@ -193,7 +195,7 @@ func TestRenderMapCmdHitsCacheSynchronously(t *testing.T) {
 	// Pre-populate the cache with the entry that the current state would
 	// look up.
 	cachedImg := newSolidImage(color.RGBA{R: 1, G: 2, B: 3, A: 255})
-	key := makeRenderKey(m.lat, m.lng, m.zoom, m.cols, m.picRows(), m.provider.Name, m.oversample, m.maxAspectRatio, m.letterboxColor, m.markers)
+	key := makeRenderKey(m.lat, m.lng, m.zoom, m.cols, m.picRows(), m.info().Name, m.oversample, m.maxAspectRatio, m.letterboxColor, m.markers)
 	m.cache.put(key, cachedImg)
 
 	startGen := *m.renderGen

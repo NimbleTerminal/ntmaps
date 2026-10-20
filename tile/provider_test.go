@@ -37,10 +37,10 @@ func TestEmptyProviderIsInvalid(t *testing.T) {
 	if p.TileURL(0, 0, 0) != "" {
 		t.Fatal("empty provider should produce no URL")
 	}
-	if p.Size() != 256 || p.Max() != 19 {
-		t.Fatalf("defaults = %d/%d, want 256/19", p.Size(), p.Max())
+	if p.Info().Size() != 256 || p.Info().Max() != 19 {
+		t.Fatalf("defaults = %d/%d, want 256/19", p.Info().Size(), p.Info().Max())
 	}
-	if p.Fill() != DefaultPlaceholder {
+	if p.Info().Fill() != DefaultPlaceholder {
 		t.Fatal("empty provider should use the default placeholder")
 	}
 }
@@ -54,10 +54,10 @@ func TestBuiltinsAreValidAndHTTPS(t *testing.T) {
 			t.Fatalf("%q: URL %q is not https", p.Name, u)
 		}
 	}
-	if CartoDark().Fill() == DefaultPlaceholder {
+	if CartoDark().Info().Fill() == DefaultPlaceholder {
 		t.Fatal("dark style should not use the light placeholder")
 	}
-	if _, _, _, a := CartoDark().Fill().RGBA(); a != 0xffff {
+	if _, _, _, a := CartoDark().Info().Fill().RGBA(); a != 0xffff {
 		t.Fatal("placeholder must be opaque")
 	}
 }

@@ -14,7 +14,7 @@ func worldPixels(lat, lng float64, zoom, tileSize int) (x, y, world float64) {
 }
 
 func (m *Model) panPixels(dx, dy float64) {
-	tileSize := m.provider.Size()
+	tileSize := m.info().Size()
 	x, y, _ := worldPixels(m.lat, m.lng, m.zoom, tileSize)
 	// Compensate for optical zoom to keep the on-screen pan distance constant.
 	factor := float64(opticalCropFactor(m.opticalZoom))
@@ -41,7 +41,7 @@ type panPresentedMsg struct{ owner *panState }
 
 func (m *Model) currentRenderKey() renderKey {
 	os, _ := m.effectiveOversample()
-	return makeRenderKey(m.lat, m.lng, m.zoom, m.cols, m.picRows(), m.provider.Name,
+	return makeRenderKey(m.lat, m.lng, m.zoom, m.cols, m.picRows(), m.info().Name,
 		os, m.maxAspectRatio, m.letterboxColor, m.markers)
 }
 

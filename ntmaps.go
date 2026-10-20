@@ -220,8 +220,9 @@ type Model struct {
 
 	initialized bool
 
-	provider  tile.Provider
+	source    tile.Source
 	loader    *tile.Loader
+	userAgent string
 	lat       float64
 	lng       float64
 	loc       string
@@ -483,6 +484,7 @@ func NewWithConfig(cfg Config) Model {
 		smoothPan:      cfg.SmoothPan,
 		preferKitty:    cfg.PreferKitty,
 		loader:         cfg.Loader,
+		userAgent:      cfg.UserAgent,
 	}
 	if m.loader == nil {
 		dir := cfg.TileCacheDir
@@ -493,7 +495,6 @@ func NewWithConfig(cfg Config) Model {
 			dir = ""
 		}
 		m.loader = tile.NewLoader(tile.Options{
-			UserAgent: cfg.UserAgent,
 			MemoryCap: cfg.TileCacheCap,
 			Dir:       dir,
 		})
@@ -532,7 +533,7 @@ func log2(n int) int {
 
 func (m *Model) setInitialValues() {
 	m.KeyMap = DefaultKeyMap()
-	m.provider = tile.OpenStreetMap()
+	m.setSource(tile.OpenStreetMap())
 	m.tileStyle = OpenStreetMaps
 	if m.loader == nil {
 		m.loader = tile.NewLoader(tile.Options{Dir: tile.DefaultDir()})
@@ -745,7 +746,7 @@ func (m Model) effectiveOversample() (factor, boost int) {
 		factor = 1
 	}
 	boost = log2(factor)
-	for m.zoom+boost > m.provider.Max() && factor > 1 {
+	for m.zoom+boost > m.info().Max() && factor > 1 {
 		factor >>= 1
 		boost--
 	}
@@ -997,23 +998,35 @@ func (m Model) TileStyle() Style { return m.tileStyle }
 
 // SetStyle switches to a built-in tile provider and re-renders.
 func (m *Model) SetStyle(style Style) tea.Cmd {
-	m.provider = style.Provider()
+	m.setSource(style.Provider())
 	m.tileStyle = style
 	return m.renderMapCmd()
 }
 
-// TileProvider returns the provider tiles are fetched from.
-func (m Model) TileProvider() tile.Provider { return m.provider }
+// TileSource returns the source tiles are fetched from.
+func (m Model) TileSource() tile.Source { return m.source }
 
-// SetTileProvider switches to any tile provider, such as a keyed service
-// or a local tile server, and re-renders. A provider with an empty URL
-// renders its placeholder color and fetches nothing. The provider's Name
-// keys both caches, so give distinct providers distinct names.
-func (m *Model) SetTileProvider(p tile.Provider) tea.Cmd {
-	m.provider = p
+// SetTileSource switches to any tile source, such as a keyed tile server
+// or a local file, and re-renders. A nil source, or a tile.Provider with
+// an empty URL, renders only the placeholder color and fetches nothing.
+// The source's Name keys both caches, so give distinct sources distinct
+// names. A Provider without a UserAgent gets Config.UserAgent.
+func (m *Model) SetTileSource(src tile.Source) tea.Cmd {
+	m.setSource(src)
 	m.tileStyle = StyleCustom
 	return m.renderMapCmd()
 }
+
+func (m *Model) setSource(src tile.Source) {
+	if p, ok := src.(tile.Provider); ok && p.UserAgent == "" && m.userAgent != "" {
+		p.UserAgent = m.userAgent
+		src = p
+	}
+	m.source = src
+}
+
+// info describes the current source; a nil source has zero Info.
+func (m Model) info() tile.Info { return infoOf(m.source) }
 
 // prefetchRings clamps Config.Prefetch: 0 means one ring, negative none,
 // and at most four.
@@ -1039,17 +1052,17 @@ func (m Model) animating() bool {
 // canceled by the next render; tiles that render also needs keep
 // downloading through the loader's waiter count.
 func (m *Model) prefetchCmd(geom viewGeometry) tea.Cmd {
-	if m.prefetch <= 0 || m.loader == nil || !geom.provider.Valid() || geom.w <= 0 || geom.h <= 0 {
+	if m.prefetch <= 0 || m.loader == nil || !tile.Fetchable(geom.source) || geom.w <= 0 || geom.h <= 0 {
 		return nil
 	}
-	size := geom.provider.Size()
+	size := infoOf(geom.source).Size()
 	pad := 2 * m.prefetch * size
 	var ids []tile.ID
 	for _, pl := range tile.Cover(geom.cx, geom.cy, geom.w+pad, geom.h+pad, geom.zoom, size) {
 		if !pl.InWorld {
 			continue
 		}
-		if _, ok := m.loader.Cached(geom.provider, pl.ID); !ok {
+		if _, ok := m.loader.Cached(geom.source, pl.ID); !ok {
 			ids = append(ids, pl.ID)
 		}
 	}
@@ -1064,9 +1077,9 @@ func (m *Model) prefetchCmd(geom viewGeometry) tea.Cmd {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	m.job.prefetch = cancel
-	loader, provider := m.loader, geom.provider
+	loader, source := m.loader, geom.source
 	return func() tea.Msg {
-		_ = loader.FetchAll(ctx, provider, ids, nil)
+		_ = loader.FetchAll(ctx, source, ids, nil)
 		return nil
 	}
 }
@@ -1075,14 +1088,14 @@ func (m *Model) prefetchCmd(geom viewGeometry) tea.Cmd {
 // loader's memory, or there is nothing to fetch at all, so a render can
 // complete synchronously.
 func (m Model) tilesCached(placements []tile.Placement) bool {
-	if !m.provider.Valid() || m.loader == nil {
+	if !tile.Fetchable(m.source) || m.loader == nil {
 		return true
 	}
 	for _, pl := range placements {
 		if !pl.InWorld {
 			continue
 		}
-		if _, ok := m.loader.Cached(m.provider, pl.ID); !ok {
+		if _, ok := m.loader.Cached(m.source, pl.ID); !ok {
 			return false
 		}
 	}
@@ -1296,7 +1309,7 @@ func (m *Model) renderMapCmd() tea.Cmd {
 	effectiveOversample, zoomBoost := m.effectiveOversample()
 
 	markers := append([]Marker(nil), m.markers...)
-	key := makeRenderKey(m.lat, m.lng, m.zoom, m.cols, picRows, m.provider.Name, effectiveOversample, m.maxAspectRatio, m.letterboxColor, markers)
+	key := makeRenderKey(m.lat, m.lng, m.zoom, m.cols, picRows, m.info().Name, effectiveOversample, m.maxAspectRatio, m.letterboxColor, markers)
 
 	// Whatever happens next supersedes a render still fetching tiles.
 	m.job.cancel()
@@ -1331,9 +1344,9 @@ func (m *Model) renderMapCmd() tea.Cmd {
 	// pre-scale (Kitty) and ansimage's fit (Glyph) are both no-ops and
 	// the two render modes show identical layout.
 	mapW, mapH := targetMapDims(cellRectW, cellRectH, m.maxAspectRatio)
-	cx, cy, _ := tile.Project(m.lat, m.lng, tileZoom, m.provider.Size())
+	cx, cy, _ := tile.Project(m.lat, m.lng, tileZoom, m.info().Size())
 	geom := viewGeometry{
-		provider: m.provider, zoom: tileZoom, w: mapW, h: mapH, cx: cx, cy: cy,
+		source: m.source, zoom: tileZoom, w: mapW, h: mapH, cx: cx, cy: cy,
 		markers: markers, cellRectW: cellRectW, cellRectH: cellRectH, letterbox: m.letterboxColor,
 	}
 	job := newRenderJob(gen, key, m.loader, geom)

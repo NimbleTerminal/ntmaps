@@ -17,7 +17,7 @@ import (
 func animatedTestModel() Model {
 	m := NewWithConfig(Config{Cols: 20, Rows: 11, SmoothPan: true, DisableDiskCache: true, Prefetch: -1})
 	m.SetLatLng(0, 0, 15)
-	m.provider = tile.Provider{}
+	m.source = tile.Provider{}
 	return m
 }
 
@@ -25,7 +25,7 @@ func TestPrefetchRingMakesNeighborPanSynchronous(t *testing.T) {
 	s := newTestTiles(t)
 	m := NewWithConfig(Config{Cols: 20, Rows: 5, RenderDebounce: -1, DisableDiskCache: true})
 	m.SetLatLng(40.7415, -73.989, 12)
-	m.SetTileProvider(s.provider())
+	m.SetTileSource(s.provider())
 	msgs := runRender(t, m.renderMapCmd())
 	m, cmd := m.Update(msgs[len(msgs)-1])
 	if cmd == nil {
@@ -34,7 +34,7 @@ func TestPrefetchRingMakesNeighborPanSynchronous(t *testing.T) {
 	before := s.requests.Load()
 
 	// Run the prefetch directly (Update wrapped it in a Batch).
-	geom := viewGeometry{provider: m.provider, zoom: m.zoom, w: m.cols * osmPxPerCellW, h: m.picRows() * osmPxPerCellH}
+	geom := viewGeometry{source: m.source, zoom: m.zoom, w: m.cols * osmPxPerCellW, h: m.picRows() * osmPxPerCellH}
 	geom.cx, geom.cy, _ = tile.Project(m.lat, m.lng, m.zoom, 256)
 	prefetch := m.prefetchCmd(geom)
 	if prefetch == nil {
@@ -71,8 +71,8 @@ func TestPrefetchIsCanceledByNewRender(t *testing.T) {
 	defer close(s.hold)
 	m := NewWithConfig(Config{Cols: 20, Rows: 5, RenderDebounce: -1, DisableDiskCache: true})
 	m.SetLatLng(40.7415, -73.989, 12)
-	m.SetTileProvider(s.provider())
-	geom := viewGeometry{provider: m.provider, zoom: m.zoom, w: 160, h: 64}
+	m.SetTileSource(s.provider())
+	geom := viewGeometry{source: m.source, zoom: m.zoom, w: 160, h: 64}
 	geom.cx, geom.cy, _ = tile.Project(m.lat, m.lng, m.zoom, 256)
 	prefetch := m.prefetchCmd(geom)
 	done := make(chan struct{})
@@ -98,8 +98,8 @@ func TestNoPrefetchWhenDisabledOrEmptyProvider(t *testing.T) {
 	if NewWithConfig(Config{Prefetch: 9}).prefetch != 4 || New(1, 1).prefetch != 1 {
 		t.Fatal("prefetch should clamp to 1..4")
 	}
-	m.SetTileProvider(tile.Provider{})
-	geom := viewGeometry{provider: m.provider, w: 160, h: 64}
+	m.SetTileSource(tile.Provider{})
+	geom := viewGeometry{source: m.source, w: 160, h: 64}
 	if m.prefetchCmd(geom) != nil {
 		t.Fatal("empty provider should not prefetch")
 	}
@@ -167,7 +167,7 @@ func TestAnimationFramesSkipDebounceAndRenderCache(t *testing.T) {
 	defer close(s.hold)
 	m := NewWithConfig(Config{Cols: 20, Rows: 5, SmoothPan: true, DisableDiskCache: true, Prefetch: -1})
 	m.SetLatLng(40.7415, -73.989, 12)
-	m.SetTileProvider(s.provider())
+	m.SetTileSource(s.provider())
 	m, _ = m.arrowPan(16, 0)
 	if !m.animating() {
 		t.Fatal("arrow should start the spring")

@@ -21,11 +21,11 @@ const progressInterval = 100 * time.Millisecond
 // portion of the source image: the pixel size of the map, the world pixel
 // at its center, and the tile zoom.
 type viewGeometry struct {
-	provider tile.Provider
-	zoom     int // tile zoom, after any oversample boost
-	w, h     int // map portion in pixels (before letterbox)
-	cx, cy   float64
-	markers  []Marker
+	source  tile.Source
+	zoom    int // tile zoom, after any oversample boost
+	w, h    int // map portion in pixels (before letterbox)
+	cx, cy  float64
+	markers []Marker
 
 	// cellRectW/H and letterbox pad the map portion to the full cell
 	// rectangle; they equal w/h when MaxAspectRatio is off.
@@ -34,17 +34,18 @@ type viewGeometry struct {
 }
 
 func (g viewGeometry) placements() []tile.Placement {
-	return tile.Cover(g.cx, g.cy, g.w, g.h, g.zoom, g.provider.Size())
+	return tile.Cover(g.cx, g.cy, g.w, g.h, g.zoom, infoOf(g.source).Size())
 }
 
 // compose paints the map from whatever lookup can supply, draws markers
 // and the attribution strip, and pads to the cell rectangle. It returns
 // the in-world tiles that were missing.
 func (g viewGeometry) compose(placements []tile.Placement, lookup func(tile.ID) (image.Image, bool)) (image.Image, []tile.ID) {
+	info := infoOf(g.source)
 	img := image.NewRGBA(image.Rect(0, 0, g.w, g.h))
-	missing := composeTiles(img, placements, g.provider, lookup)
-	drawMarkers(img, g.markers, g.cx, g.cy, g.zoom, g.provider.Size())
-	drawMapAttribution(img, g.provider.Attribution)
+	missing := composeTiles(img, placements, info, lookup)
+	drawMarkers(img, g.markers, g.cx, g.cy, g.zoom, info.Size())
+	drawMapAttribution(img, info.Attribution)
 	return composeLetterbox(img, g.cellRectW, g.cellRectH, g.letterbox), missing
 }
 
@@ -105,7 +106,7 @@ func (j *renderJob) lookup(id tile.ID) (image.Image, bool) {
 	if j.loader == nil {
 		return nil, false
 	}
-	return j.loader.Cached(j.geom.provider, id)
+	return j.loader.Cached(j.geom.source, id)
 }
 
 func (j *renderJob) render() (image.Image, []tile.ID) {
@@ -118,7 +119,7 @@ func (j *renderJob) render() (image.Image, []tile.ID) {
 // fetches for the rest, and returns the first image.
 func (j *renderJob) start() tea.Msg {
 	img, missing := j.render()
-	if len(missing) == 0 || !j.geom.provider.Valid() || j.loader == nil {
+	if len(missing) == 0 || !tile.Fetchable(j.geom.source) || j.loader == nil {
 		return mapImageMsg{gen: j.gen, key: j.key, img: img}
 	}
 	j.lastEmit = time.Now()
@@ -127,7 +128,7 @@ func (j *renderJob) start() tea.Msg {
 }
 
 func (j *renderJob) fetch(missing []tile.ID) {
-	err := j.loader.FetchAll(j.ctx, j.geom.provider, missing, func(tile.ID, image.Image) { j.wake() })
+	err := j.loader.FetchAll(j.ctx, j.geom.source, missing, func(tile.ID, image.Image) { j.wake() })
 	j.mu.Lock()
 	j.finished = true
 	j.fetchErr = err

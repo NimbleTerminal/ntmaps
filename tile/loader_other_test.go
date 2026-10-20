@@ -7,13 +7,14 @@ import (
 	"testing"
 )
 
-func TestFetchSendsUserAgent(t *testing.T) {
+func TestProviderSendsUserAgent(t *testing.T) {
 	s := newTileServer(t)
-	l := NewLoader(Options{UserAgent: "ntmaps-test/1.0 (+https://example.test)"})
-	if _, err := l.Fetch(context.Background(), s.provider(), ID{1, 0, 0}); err != nil {
+	p := s.provider()
+	p.UserAgent = "ntmaps-test/1.0 (+https://example.test)"
+	if _, err := NewLoader(Options{}).Fetch(context.Background(), p, ID{1, 0, 0}); err != nil {
 		t.Fatal(err)
 	}
-	if ua := s.userAgent.Load(); ua == nil || *ua != "ntmaps-test/1.0 (+https://example.test)" {
+	if ua := s.userAgent.Load(); ua == nil || *ua != p.UserAgent {
 		t.Fatalf("server saw User-Agent %v", ua)
 	}
 	s2 := newTileServer(t)

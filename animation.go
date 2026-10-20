@@ -36,7 +36,7 @@ func (m *Model) arrowPan(dx, dy float64) (Model, tea.Cmd) {
 	if start {
 		a.serial++
 		a.active = true
-		a.x, a.y, a.world = worldPixels(m.lat, m.lng, m.zoom, m.provider.Size())
+		a.x, a.y, a.world = worldPixels(m.lat, m.lng, m.zoom, m.info().Size())
 		a.tx, a.ty = a.x, a.y
 		a.vx, a.vy = 0, 0
 		a.last, a.key = time.Now(), key

@@ -17,8 +17,8 @@
   synchronously with no fetch and no Loading badge. Tiles are cached in memory
   and, natively, on disk under the user cache directory, and requests carry an
   identifying User-Agent. New `Config` fields `Loader`, `TileCacheCap`,
-  `TileCacheDir`, `DisableDiskCache`, and `UserAgent`; new `SetTileProvider`
-  and `TileProvider` for any XYZ server, with `TileStyle` reporting
+  `TileCacheDir`, `DisableDiskCache`, and `UserAgent`; new `SetTileSource`
+  and `TileSource` for any tile source, with `TileStyle` reporting
   `StyleCustom`. The `go-staticmaps` replace directive is gone from both modules.
 - Breaking: `StamenToner` and `StamenTerrain` (service shut down) and
   `OpenCycleMap` (http only, key-gated upstream) are removed from `Style`, so

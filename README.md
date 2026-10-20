@@ -94,10 +94,10 @@ pending shared-memory images.
 
 `ntmaps.SetStyle(...)` switches between the built-in providers: `Wikimedia`, `OpenStreetMaps`, `OpenTopoMap`, `CartoLight`, `CartoDark`, `ArcgisWorldImagery`. Each comes with the upstream provider's terms-of-use and attribution requirements — read them before shipping a public app. The attribution strip drawn along the bottom of the map follows the selected provider.
 
-Any XYZ tile server works through `ntmaps.SetTileProvider` and the `nimbleterminal.dev/ntmaps/tile` package, including keyed services:
+Any XYZ tile server works through `ntmaps.SetTileSource` and the `nimbleterminal.dev/ntmaps/tile` package, including keyed services:
 
 ```go
-mv.SetTileProvider(tile.Provider{
+mv.SetTileSource(tile.Provider{
     Name:        "thunderforest-outdoors",
     URL:         "https://{s}.tile.thunderforest.com/outdoors/{z}/{x}/{y}.png?apikey=" + key,
     Shards:      []string{"a", "b", "c"},

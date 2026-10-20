@@ -28,7 +28,7 @@ func TestComposeTilesReportsMissingAndFillsPlaceholder(t *testing.T) {
 		{ID: tile.ID{Z: 1, X: 0, Y: -1}, Offset: image.Pt(0, -256), InWorld: false},
 	}
 	dst := image.NewRGBA(image.Rect(0, 0, 512, 256))
-	missing := composeTiles(dst, placements, p, func(id tile.ID) (image.Image, bool) {
+	missing := composeTiles(dst, placements, p.Info(), func(id tile.ID) (image.Image, bool) {
 		img, ok := have[id]
 		return img, ok
 	})
@@ -47,7 +47,7 @@ func TestComposeTilesClipsPartialTiles(t *testing.T) {
 	p := tile.Provider{Name: "t", URL: "x"}
 	dst := image.NewRGBA(image.Rect(0, 0, 100, 100))
 	placements := tile.Cover(300.7, 300.7, 100, 100, 2, 256)
-	missing := composeTiles(dst, placements, p, func(id tile.ID) (image.Image, bool) {
+	missing := composeTiles(dst, placements, p.Info(), func(id tile.ID) (image.Image, bool) {
 		if id == (tile.ID{Z: 2, X: 1, Y: 1}) {
 			return solidTile(color.RGBA{0, 0, 255, 255}), true
 		}

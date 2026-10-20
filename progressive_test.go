@@ -61,7 +61,7 @@ func progressiveModel(t *testing.T, s *testTiles) Model {
 	t.Helper()
 	m := NewWithConfig(Config{Cols: 20, Rows: 5, RenderDebounce: -1, DisableDiskCache: true})
 	m.SetLatLng(40.7415, -73.989, 12)
-	m.SetTileProvider(s.provider())
+	m.SetTileSource(s.provider())
 	return m
 }
 
@@ -158,7 +158,7 @@ func TestCachedTilesRenderSynchronously(t *testing.T) {
 
 func TestEmptyProviderRendersPlaceholderWithoutFetching(t *testing.T) {
 	m := NewWithConfig(Config{Cols: 20, Rows: 5, RenderDebounce: -1, DisableDiskCache: true})
-	m.SetTileProvider(tile.Provider{Placeholder: color.RGBA{1, 2, 3, 255}})
+	m.SetTileSource(tile.Provider{Placeholder: color.RGBA{1, 2, 3, 255}})
 	if m.TileStyle() != StyleCustom {
 		t.Fatalf("TileStyle = %v, want StyleCustom", m.TileStyle())
 	}
@@ -226,13 +226,13 @@ func TestAllTileFetchesFailingReportsError(t *testing.T) {
 
 func TestSetStyleSwitchesProvider(t *testing.T) {
 	m := New(10, 3)
-	if m.TileProvider().Name != tile.OpenStreetMap().Name || m.TileStyle() != OpenStreetMaps {
-		t.Fatalf("default provider = %q style %v", m.TileProvider().Name, m.TileStyle())
+	if m.TileSource().Info().Name != tile.OpenStreetMap().Name || m.TileStyle() != OpenStreetMaps {
+		t.Fatalf("default provider = %q style %v", m.TileSource().Info().Name, m.TileStyle())
 	}
-	m.SetTileProvider(tile.Provider{})
+	m.SetTileSource(tile.Provider{})
 	m.SetStyle(CartoDark)
-	if m.TileProvider().Name != tile.CartoDark().Name || m.TileStyle() != CartoDark {
-		t.Fatalf("after SetStyle: provider = %q style %v", m.TileProvider().Name, m.TileStyle())
+	if m.TileSource().Info().Name != tile.CartoDark().Name || m.TileStyle() != CartoDark {
+		t.Fatalf("after SetStyle: provider = %q style %v", m.TileSource().Info().Name, m.TileStyle())
 	}
 	for _, st := range []Style{Wikimedia, OpenStreetMaps, OpenTopoMap, CartoLight, CartoDark, ArcgisWorldImagery} {
 		if !st.Provider().Valid() {
@@ -243,7 +243,7 @@ func TestSetStyleSwitchesProvider(t *testing.T) {
 
 func TestOversampleCapsAtProviderMaxZoom(t *testing.T) {
 	m := NewWithConfig(Config{Cols: 10, Rows: 3, Oversample: 4, DisableDiskCache: true})
-	m.SetTileProvider(tile.Provider{Name: "lowzoom", URL: "x/{z}/{x}/{y}", MaxZoom: 10})
+	m.SetTileSource(tile.Provider{Name: "lowzoom", URL: "x/{z}/{x}/{y}", MaxZoom: 10})
 	m.SetLatLng(0, 0, 10)
 	if factor, boost := m.effectiveOversample(); factor != 1 || boost != 0 {
 		t.Fatalf("effectiveOversample at the provider cap = %d/%d, want 1/0", factor, boost)

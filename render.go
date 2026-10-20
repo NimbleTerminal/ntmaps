@@ -19,9 +19,9 @@ import (
 // the world, are filled with the provider's placeholder. It returns the
 // in-world tiles that were missing, in placement order, so the caller can
 // fetch them.
-func composeTiles(dst *image.RGBA, placements []tile.Placement, p tile.Provider, lookup func(tile.ID) (image.Image, bool)) []tile.ID {
-	size := p.Size()
-	fill := &image.Uniform{C: p.Fill()}
+func composeTiles(dst *image.RGBA, placements []tile.Placement, info tile.Info, lookup func(tile.ID) (image.Image, bool)) []tile.ID {
+	size := info.Size()
+	fill := &image.Uniform{C: info.Fill()}
 	var missing []tile.ID
 	for _, pl := range placements {
 		r := image.Rect(pl.Offset.X, pl.Offset.Y, pl.Offset.X+size, pl.Offset.Y+size)
@@ -35,6 +35,14 @@ func composeTiles(dst *image.RGBA, placements []tile.Placement, p tile.Provider,
 		draw.Draw(dst, r, fill, image.Point{}, draw.Src)
 	}
 	return missing
+}
+
+// infoOf returns src's Info, or the zero Info for a nil source.
+func infoOf(src tile.Source) tile.Info {
+	if src == nil {
+		return tile.Info{}
+	}
+	return src.Info()
 }
 
 // inWorldCount is the number of placements that name real tiles.

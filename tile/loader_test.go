@@ -219,8 +219,8 @@ func TestFetchNotFound(t *testing.T) {
 }
 
 func TestFetchRejectsEmptyProvider(t *testing.T) {
-	if _, err := NewLoader(Options{}).Fetch(context.Background(), Provider{}, ID{}); !errors.Is(err, ErrNoProvider) {
-		t.Fatalf("got %v, want ErrNoProvider", err)
+	if _, err := NewLoader(Options{}).Fetch(context.Background(), Provider{}, ID{}); !errors.Is(err, ErrNoSource) {
+		t.Fatalf("got %v, want ErrNoSource", err)
 	}
 }
 
@@ -304,5 +304,48 @@ func TestConcurrencyLimitIsGlobal(t *testing.T) {
 	wg.Wait()
 	if n := s.requests.Load(); n != 5 {
 		t.Fatalf("server saw %d requests after release, want 5", n)
+	}
+}
+
+// funcSource is a Source made of a function, as an offline file or an
+// in-memory generator would be.
+type funcSource struct {
+	name  string
+	calls atomic.Int32
+	tile  func(ID) (image.Image, error)
+}
+
+func (f *funcSource) Info() Info { return Info{Name: f.name, Placeholder: color.Black} }
+func (f *funcSource) Tile(ctx context.Context, id ID) (image.Image, error) {
+	f.calls.Add(1)
+	return f.tile(id)
+}
+
+func TestLoaderCachesAnySource(t *testing.T) {
+	src := &funcSource{name: "gen", tile: func(id ID) (image.Image, error) {
+		if id.Z == 404 {
+			return nil, ErrNotFound
+		}
+		img := image.NewRGBA(image.Rect(0, 0, 256, 256))
+		img.Set(0, 0, color.RGBA{R: 1, G: 2, B: 3, A: 255})
+		return img, nil
+	}}
+	l := NewLoader(Options{Dir: t.TempDir()})
+	img, err := l.Fetch(context.Background(), src, ID{Z: 3, X: 1, Y: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	checkTile(t, img)
+	if _, err := l.Fetch(context.Background(), src, ID{Z: 3, X: 1, Y: 1}); err != nil || src.calls.Load() != 1 {
+		t.Fatalf("second fetch: err=%v calls=%d, want cached", err, src.calls.Load())
+	}
+	if _, err := l.Fetch(context.Background(), src, ID{Z: 404}); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("got %v, want ErrNotFound", err)
+	}
+	if Fetchable(src) != true || Fetchable(nil) || Fetchable(Provider{}) || !Fetchable(OpenStreetMap()) {
+		t.Fatal("Fetchable misjudged a source")
+	}
+	if _, err := l.Fetch(context.Background(), nil, ID{}); !errors.Is(err, ErrNoSource) {
+		t.Fatalf("nil source: got %v, want ErrNoSource", err)
 	}
 }
