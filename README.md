@@ -90,6 +90,22 @@ The demo starts in Kitty rendering when the terminal supports it; press `g` to t
 over SSH. Call `mv.Close()` after your Bubble Tea program exits to release
 pending shared-memory images.
 
+## Static images
+
+`ntmaps.Render` composes one map image with no terminal involved, for scripts, documentation, and tests:
+
+```go
+img, err := ntmaps.Render(ctx, ntmaps.RenderOptions{
+    Source: tile.CartoLight(),
+    Lat: 40.7415, Lng: -73.989, Zoom: 15,
+    Width: 1024, Height: 512,
+    Markers: []ntmaps.Marker{{Lat: 40.7415, Lng: -73.989}},
+    UserAgent: "my-report/1.0 (+https://example.com)",
+})
+```
+
+It fetches every tile the view needs through the same cache the widget uses, keeps the placeholder where a tile fails, and returns an error only when nothing at all could be shown. `NoAttribution` drops the credit strip for callers that credit the source elsewhere.
+
 ## Markers and paths
 
 `SetMarkers` places pins (red, 16 px by default) and `SetPaths` draws polylines (blue, 3 px by default) such as a GPX track or a route; both take geographic coordinates and are drawn into the map image at full resolution, with anti-aliased edges. A path crossing the antimeridian takes the short way around. Call `Init` or any other render trigger after changing them.

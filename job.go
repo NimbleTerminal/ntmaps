@@ -32,6 +32,7 @@ type viewGeometry struct {
 	// rectangle; they equal w/h when MaxAspectRatio is off.
 	cellRectW, cellRectH int
 	letterbox            color.Color
+	noAttribution        bool
 }
 
 func (g viewGeometry) placements() []tile.Placement {
@@ -47,7 +48,9 @@ func (g viewGeometry) compose(placements []tile.Placement, lookup func(tile.ID) 
 	missing := composeTiles(img, placements, info, lookup)
 	drawPaths(img, g.paths, g.cx, g.cy, g.zoom, info.Size())
 	drawMarkers(img, g.markers, g.cx, g.cy, g.zoom, info.Size())
-	drawMapAttribution(img, info.Attribution)
+	if !g.noAttribution {
+		drawMapAttribution(img, info.Attribution)
+	}
 	return composeLetterbox(img, g.cellRectW, g.cellRectH, g.letterbox), missing
 }
 

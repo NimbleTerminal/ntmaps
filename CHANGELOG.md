@@ -55,6 +55,8 @@
 - Paths: `SetPaths`/`ClearPaths` draw anti-aliased polylines with round caps
   and joins, taking the short way across the antimeridian, and participate
   in the render cache key by hash.
+- `Render` composes a static map image from `RenderOptions` with no terminal
+  or Bubble Tea involved, sharing the tile cache and drawing code.
 
 ## v0.3.0 (2026-10-19)
 
