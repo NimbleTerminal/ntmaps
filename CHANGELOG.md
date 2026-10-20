@@ -14,7 +14,7 @@
   camera movement; no public API is exposed yet.
 - Add live software/GPU switching to the 3D demo with `t`, and show the active
   renderer and fallback errors without resetting the map or camera.
-- Move map rendering from NTCharts picture to ntpicture v0.1.0's legacy API,
+- Move map rendering from NTCharts picture to ntpicture v0.1.1's legacy API,
   retaining the existing map API and buffered-panning behavior.
 - Upgrade the 3D map demo to ntcharts3d v0.3.1 (nt3d v0.2.0/ntpicture), share terminal
   discovery with the map source, and dispose chart placements before quitting.
@@ -24,6 +24,10 @@
   prevent demo startup; keyboard controls remain available.
 - Use released texture fast paths to eliminate per-pixel texture allocations.
 - Preserve glyph caching around the ntpicture v0.1.0 legacy bridge regression.
+- deps: update ntcharts3d to v0.3.2, nt3d to v0.3.1, ntpicture to v0.1.1,
+  go-booba to v0.10.3, the Bubble Tea WASM fork to `aa0ac3f1b5fe`,
+  `actions/setup-node` to v7, and the remaining transitive dependencies to their
+  latest compatible versions.
 
 ## v0.2.0 (2026-09-29)
 

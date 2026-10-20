@@ -102,7 +102,7 @@ pending shared-memory images.
 
 To start in Kitty whenever it is available, set `mapview.Config{PreferKitty: true}`. The model begins in Glyph and switches once the terminal's Kitty-support probe succeeds; it never overrides a mode chosen with `SetRenderMode`.
 
-The WASM browser demo requests Kitty shared-memory transport through booba v0.10.1 and starts in Kitty rendering; press `g` to switch to glyphs. Native demos default to direct transmission, including over SSH. Other consumers can opt in with `mapview.Config{KittyMedium: mapview.KittyMediumSharedMemory}` when their terminal or browser bridge supports it. Shared-memory allocation or bridge failures fall back to direct transmission.
+The WASM browser demo requests Kitty shared-memory transport through booba v0.10.3 and starts in Kitty rendering; press `g` to switch to glyphs. Native demos default to direct transmission, including over SSH. Other consumers can opt in with `mapview.Config{KittyMedium: mapview.KittyMediumSharedMemory}` when their terminal or browser bridge supports it. Shared-memory allocation or bridge failures fall back to direct transmission.
 
 ## Bubble Tea version
 
@@ -282,7 +282,7 @@ Made with :heart: and :fire: by the team behind [Nimble.Markets](https://nimble.
 ## Development and browser demos
 
 The root module contains the map widget. `examples/go.mod` owns ntcharts3d
-v0.3.1 (with nt3d v0.2.0) and go-booba v0.10.1; library users do not inherit the demo or GPU
+v0.3.2 (with nt3d v0.3.1) and go-booba v0.10.3; library users do not inherit the demo or GPU
 dependencies. ntcharts3d uses published nt3d and ntpicture modules. The root
 module path remains `github.com/NimbleMarkets/ntcharts-osm`.
 

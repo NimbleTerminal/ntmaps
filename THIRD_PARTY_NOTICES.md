@@ -115,7 +115,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## github.com/NimbleMarkets/go-booba v0.10.1
+## github.com/NimbleMarkets/go-booba v0.10.3
 
 ```
 MIT License
@@ -149,7 +149,7 @@ The following files are under their respective licenses:
   * ./etc/booba.png remains **All Rights Reserved** by Neomantra Corp.  You may use it only in unmodified form and only as part of this project (e.g., in forks or distributions of the project).  You may **not** extract it for unrelated use, modify it, or redistribute it separately without explicit permission.
 ```
 
-## github.com/NimbleMarkets/ntcharts3d v0.3.1
+## github.com/NimbleMarkets/ntcharts3d v0.3.2
 
 ```
 MIT License
@@ -491,7 +491,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## github.com/go-webgpu/goffi v0.6.4
+## github.com/go-webgpu/goffi v0.6.7
 
 ```
 MIT License
@@ -583,7 +583,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## github.com/gogpu/naga v0.19.0
+## github.com/gogpu/naga v0.20.3
 
 ```
 MIT License
@@ -923,7 +923,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## github.com/mazznoer/csscolorparser v0.1.8
+## github.com/mazznoer/csscolorparser v0.2.0
 
 ```
 MIT License
@@ -975,7 +975,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## github.com/neomantra/bubbletea/v2 v2.0.0-20261009201241-c397c32a5074
+## github.com/neomantra/bubbletea/v2 v2.0.0-20261014185126-aa0ac3f1b5fe
 
 ```
 MIT License
@@ -1376,7 +1376,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ```
 
-## golang.org/x/net v0.59.0
+## golang.org/x/net v0.61.0
 
 ```
 Copyright 2009 The Go Authors.
@@ -1504,7 +1504,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ```
 
-## nimbleterminal.dev/nt3d v0.2.0
+## nimbleterminal.dev/nt3d v0.3.1
 
 ```
 MIT License
@@ -1530,7 +1530,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## nimbleterminal.dev/ntcanvas v0.1.0
+## nimbleterminal.dev/ntcanvas v0.1.1
 
 ```
 MIT License
@@ -1591,7 +1591,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## nimbleterminal.dev/ntpicture v0.1.0
+## nimbleterminal.dev/ntpicture v0.1.1
 
 ```
 MIT License

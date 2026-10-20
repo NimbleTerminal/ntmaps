@@ -1,7 +1,7 @@
 # NimbleTerminal migration notes
 
-This repository uses published ntpicture v0.1.0, ntcharts3d v0.3.1, nt3d v0.2.0,
-and booba v0.10.1. No sibling checkout replacements are required.
+This repository uses published ntpicture v0.1.1, ntcharts3d v0.3.2, nt3d v0.3.1,
+and booba v0.10.3. No sibling checkout replacements are required.
 
 ## ntpicture compatibility is a two-import migration
 
