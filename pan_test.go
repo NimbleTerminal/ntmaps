@@ -1,7 +1,6 @@
 package ntmaps
 
 import (
-	"errors"
 	"image"
 	"image/color"
 	"math"
@@ -9,178 +8,106 @@ import (
 	"testing"
 	"time"
 
-	tea "charm.land/bubbletea/v2"
-	"nimbleterminal.dev/ntpicture/legacy"
-
 	"nimbleterminal.dev/ntmaps/tile"
+	"nimbleterminal.dev/ntpicture/legacy"
 )
 
-func bufferedTestModel() Model {
-	m := NewWithConfig(Config{Cols: 20, Rows: 11, PanBuffer: 1})
+// animatedTestModel pans with the spring over a provider that has no
+// tiles, so every frame composes synchronously and nothing is fetched.
+func animatedTestModel() Model {
+	m := NewWithConfig(Config{Cols: 20, Rows: 11, SmoothPan: true, DisableDiskCache: true, Prefetch: -1})
 	m.SetLatLng(0, 0, 15)
 	m.provider = tile.Provider{}
 	return m
 }
 
-func seedPanBuffer(m *Model) {
-	key := m.currentRenderKey()
-	w, h := targetMapDims(key.cols*osmPxPerCellW*key.oversample, key.rows*osmPxPerCellH*key.oversample, key.maxAspectRatio)
-	padding := 256
-	img := image.NewRGBA(image.Rect(0, 0, w+2*padding, h+2*padding))
-	for y := 0; y < img.Bounds().Dy(); y++ {
-		for x := 0; x < img.Bounds().Dx(); x++ {
-			img.SetRGBA(x, y, color.RGBA{uint8(x % 251), uint8(y % 251), 0, 255})
+func TestPrefetchRingMakesNeighborPanSynchronous(t *testing.T) {
+	s := newTestTiles(t)
+	m := NewWithConfig(Config{Cols: 20, Rows: 5, RenderDebounce: -1, DisableDiskCache: true})
+	m.SetLatLng(40.7415, -73.989, 12)
+	m.SetTileProvider(s.provider())
+	msgs := runRender(t, m.renderMapCmd())
+	m, cmd := m.Update(msgs[len(msgs)-1])
+	if cmd == nil {
+		t.Fatal("completing a render should schedule the prefetch")
+	}
+	before := s.requests.Load()
+
+	// Run the prefetch directly (Update wrapped it in a Batch).
+	geom := viewGeometry{provider: m.provider, zoom: m.zoom, w: m.cols * osmPxPerCellW, h: m.picRows() * osmPxPerCellH}
+	geom.cx, geom.cy, _ = tile.Project(m.lat, m.lng, m.zoom, 256)
+	prefetch := m.prefetchCmd(geom)
+	if prefetch == nil {
+		t.Fatal("expected ring tiles to fetch")
+	}
+	_ = prefetch()
+	after := s.requests.Load()
+	if after <= before {
+		t.Fatal("prefetch fetched nothing")
+	}
+
+	// A full tile width in any direction now composes from memory.
+	for _, d := range [][2]float64{{256, 0}, {-512, 0}, {256, 256}, {0, -512}} {
+		m.panPixels(d[0], d[1])
+		m.renderMapCmd()
+		if m.inFlight() || m.job.current != nil {
+			t.Fatalf("pan by %v was not synchronous", d)
+		}
+		if got := centerPixel(m.Image()); got != tileGreen {
+			t.Fatalf("pan by %v: center = %v, want tile color", d, got)
 		}
 	}
-	x, y, world := worldPixels(key.lat, key.lng, key.zoom+log2(key.oversample), 256)
-	m.panState.buffer = &panBuffer{key: key, img: img, centerX: x, centerY: y,
-		world: world, mapW: w, mapH: h, padding: padding, tileSize: 256}
-}
-
-func TestBufferedPanUpdatesWithoutFetch(t *testing.T) {
-	m := bufferedTestModel()
-	seedPanBuffer(&m)
-	if cmd := m.renderMapCmd(); cmd != nil {
-		t.Fatal("interior buffer view unexpectedly dispatched work")
+	if n := s.requests.Load(); n != after {
+		t.Fatalf("pans within the ring fetched %d tiles", n-after)
 	}
-	var cmd tea.Cmd
-	m, cmd = m.Update(tea.KeyPressMsg{Code: tea.KeyRight})
-	if cmd != nil || m.panState.busy || m.inFlight() {
-		t.Fatal("nearby pan should apply synchronously without fetching or loading")
-	}
-	got := color.RGBAModel.Convert(m.Image().At(0, 0)).(color.RGBA)
-	want := color.RGBA{uint8((256 + 16) % 251), uint8(256 % 251), 0, 255}
-	if got != want {
-		t.Fatalf("panned source origin = %v, want %v", got, want)
+	if m.prefetchCmd(geom) != nil {
+		t.Fatal("a fully cached ring should need no prefetch")
 	}
 }
 
-func TestBufferedInitPublishesImageThroughValueReceiver(t *testing.T) {
-	m := bufferedTestModel()
-	seedPanBuffer(&m)
-	m.Init()
-	if m.Image() == nil {
-		t.Fatal("value-receiver Init lost the synchronously cropped image")
-	}
-	// Optical zoom should reuse the buffered image.
-	gen := *m.renderGen
-	if cmd := m.SetOpticalZoom(1); cmd != nil || *m.renderGen != gen {
-		t.Fatal("optical zoom failed to reuse Init's buffered source")
-	}
-}
-
-func TestBufferedPanPrefetchesBeforeEdge(t *testing.T) {
-	m := bufferedTestModel()
-	seedPanBuffer(&m)
-	m.panPixels(144, 0)
-	cmd := m.renderMapCmd()
-	if cmd == nil || !m.panState.busy || m.sourceImage == nil || m.inFlight() {
-		t.Fatal("near-edge view should display immediately and refill in the background")
-	}
-	for i := 0; i < 3; i++ {
-		m.panPixels(16, 0)
-		if next := m.renderMapCmd(); next != nil {
-			t.Fatal("another tile render started while the first was active")
-		}
-	}
-	lat, lng := m.Center()
-	m, _ = m.Update(cmd())
-	if gotLat, gotLng := m.Center(); gotLat != lat || gotLng != lng {
-		t.Fatal("background completion reset the camera to its old target")
-	}
-	if m.inFlight() || m.panState.displayed != m.currentRenderKey() {
-		t.Fatal("background result was not cropped for the latest position")
-	}
-}
-
-func TestBufferedFetchCoalescesWithoutWaitingForSilence(t *testing.T) {
-	m := bufferedTestModel()
-	first := m.renderMapCmd()
-	if first == nil || !m.panState.busy {
-		t.Fatal("first request must start immediately")
-	}
-	for i := 0; i < 5; i++ {
-		m.panPixels(16, 0)
-		if cmd := m.renderMapCmd(); cmd != nil {
-			t.Fatal("input spawned concurrent tile renders")
-		}
-	}
-	m, _ = m.Update(first())
-	if m.inFlight() || m.sourceImage == nil || m.panState.displayed != m.currentRenderKey() {
-		t.Fatal("in-flight result did not satisfy the newer camera position")
-	}
-
-	// A scheduled fetch should use the latest position.
-	m.panPixels(512, 0)
-	m.panState.lastStart = time.Now()
-	tick := m.renderMapCmd()
-	if tick == nil || !m.panState.waiting {
-		t.Fatal("expected a scheduled throttle tick")
-	}
-	for i := 0; i < 5; i++ {
-		m.panPixels(16, 0)
-		if cmd := m.renderMapCmd(); cmd != nil {
-			t.Fatal("input replaced the already scheduled tick")
-		}
-	}
-	m.panState.lastStart = time.Now().Add(-panRenderInterval)
-	m, fetch := m.Update(panRenderTickMsg{owner: m.panState})
-	if fetch == nil || !m.panState.busy || m.panState.waiting {
-		t.Fatal("tick did not start a render during continued input")
-	}
-	msg := fetch().(bufferImageMsg)
-	if msg.buffer.key != m.currentRenderKey() {
-		t.Fatal("tick rendered an old captured target")
-	}
-}
-
-func TestBufferRejectsChangedStyleAndOtherOwners(t *testing.T) {
-	m := bufferedTestModel()
-	first := m.renderMapCmd()
-	msg := first().(bufferImageMsg)
-	other := bufferedTestModel()
-	other, cmd := other.Update(msg)
-	if cmd != nil || other.panState.buffer != nil {
-		t.Fatal("another model accepted this buffer")
-	}
-	m.provider = tile.CartoDark()
-	m.panState.lastStart = time.Now().Add(-panRenderInterval)
-	m, cmd = m.Update(msg)
-	if m.sourceImage != nil || cmd == nil || !m.panState.busy {
-		t.Fatal("stale style must not display; the latest style must be fetched")
-	}
-}
-
-func TestBackgroundRefillErrorKeepsVisibleMap(t *testing.T) {
-	m := bufferedTestModel()
-	seedPanBuffer(&m)
-	m.panPixels(144, 0)
+func TestPrefetchIsCanceledByNewRender(t *testing.T) {
+	s := newTestTiles(t)
+	s.hold = make(chan struct{})
+	defer close(s.hold)
+	m := NewWithConfig(Config{Cols: 20, Rows: 5, RenderDebounce: -1, DisableDiskCache: true})
+	m.SetLatLng(40.7415, -73.989, 12)
+	m.SetTileProvider(s.provider())
+	geom := viewGeometry{provider: m.provider, zoom: m.zoom, w: 160, h: 64}
+	geom.cx, geom.cy, _ = tile.Project(m.lat, m.lng, m.zoom, 256)
+	prefetch := m.prefetchCmd(geom)
+	done := make(chan struct{})
+	go func() { defer close(done); _ = prefetch() }()
+	time.Sleep(20 * time.Millisecond)
+	m.SetLatLng(51.5, -0.12, 12)
 	m.renderMapCmd()
-	visible := m.Image()
-	m, cmd := m.Update(bufferImageMsg{owner: m.panState,
-		buffer: &panBuffer{key: m.currentRenderKey()}, err: errors.New("refill failed")})
-	if m.errMsg != "" || m.Image() != visible || cmd != nil || m.panState.busy {
-		t.Fatal("failed refill hid the visible map or caused a retry loop")
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("prefetch kept running after a new render")
+	}
+	if m.job.prefetch != nil && m.job.current == nil {
+		t.Fatal("job slot should not keep a canceled prefetch without a render")
 	}
 }
 
-func TestBufferCropAcrossDateline(t *testing.T) {
-	m := bufferedTestModel()
-	m.SetLatLng(0, 179.9999, 15)
-	seedPanBuffer(&m)
-	m.panPixels(16, 0)
-	if m.lng > 0 {
-		t.Fatal("expected eastward pan to cross the dateline")
+func TestNoPrefetchWhenDisabledOrEmptyProvider(t *testing.T) {
+	m := NewWithConfig(Config{Cols: 20, Rows: 5, Prefetch: -1, DisableDiskCache: true})
+	if m.prefetch != 0 {
+		t.Fatalf("prefetch rings = %d, want 0", m.prefetch)
 	}
-	r, ok := m.panState.buffer.viewport(m.currentRenderKey())
-	if !ok || r.Min.X != 272 {
-		t.Fatalf("dateline crop = %v, covered %v", r, ok)
+	if NewWithConfig(Config{Prefetch: 9}).prefetch != 4 || New(1, 1).prefetch != 1 {
+		t.Fatal("prefetch should clamp to 1..4")
+	}
+	m.SetTileProvider(tile.Provider{})
+	geom := viewGeometry{provider: m.provider, w: 160, h: 64}
+	if m.prefetchCmd(geom) != nil {
+		t.Fatal("empty provider should not prefetch")
 	}
 }
 
 func TestPanUsesScreenPixelsAtDifferentLatitudes(t *testing.T) {
 	for _, lat := range []float64{0, 60, 80} {
-		m := bufferedTestModel()
+		m := animatedTestModel()
 		m.SetLatLng(lat, 10, 15)
 		x, y, _ := worldPixels(m.lat, m.lng, m.zoom, 256)
 		m.panPixels(16, -16)
@@ -189,7 +116,7 @@ func TestPanUsesScreenPixelsAtDifferentLatitudes(t *testing.T) {
 			t.Fatalf("latitude %g: pan moved (%g,%g) pixels", lat, nx-x, ny-y)
 		}
 	}
-	m := bufferedTestModel()
+	m := animatedTestModel()
 	m.SetLatLng(tile.MaxLatitude, 0, 15)
 	m.panPixels(0, -16)
 	if math.Abs(m.lat-tile.MaxLatitude) > 1e-9 {
@@ -197,17 +124,24 @@ func TestPanUsesScreenPixelsAtDifferentLatitudes(t *testing.T) {
 	}
 }
 
-func TestBufferedKittyPresentsFramesDuringRapidInput(t *testing.T) {
+func TestKittyPresentsFramesDuringRapidInput(t *testing.T) {
 	forceKittySupported(t)
-	m := bufferedTestModel()
+	m := animatedTestModel()
 	m.pic.Toggle()
-	seedPanBuffer(&m)
+	// A marker moves across the placeholder, so each pan is a new image.
+	m.SetMarkers([]Marker{{Lat: 0, Lng: 0}})
 	first := m.renderMapCmd()
+	if first == nil {
+		t.Fatal("expected a presentation Cmd in Kitty mode")
+	}
 	for i := 0; i < 5; i++ {
 		m.panPixels(16, 0)
 		if cmd := m.renderMapCmd(); cmd != nil {
 			t.Fatal("pan invalidated the encoding in flight")
 		}
+	}
+	if m.panState.pending == nil {
+		t.Fatal("latest image should be queued behind the frame in flight")
 	}
 	frame := first().(panPictureMsg).msg.(legacy.KittyFrameMsg)
 	if cmd := m.pic.Update(frame); cmd == nil {
@@ -221,6 +155,32 @@ func TestBufferedKittyPresentsFramesDuringRapidInput(t *testing.T) {
 	next := latest().(panPictureMsg).msg.(legacy.KittyFrameMsg)
 	if next.APC == frame.APC || m.pic.Update(next) == nil {
 		t.Fatal("latest pan was not encoded and accepted")
+	}
+	if m.panState.pending != nil {
+		t.Fatal("queue should be empty after presenting the latest image")
+	}
+}
+
+func TestAnimationFramesSkipDebounceAndRenderCache(t *testing.T) {
+	s := newTestTiles(t)
+	s.hold = make(chan struct{})
+	defer close(s.hold)
+	m := NewWithConfig(Config{Cols: 20, Rows: 5, SmoothPan: true, DisableDiskCache: true, Prefetch: -1})
+	m.SetLatLng(40.7415, -73.989, 12)
+	m.SetTileProvider(s.provider())
+	m, _ = m.arrowPan(16, 0)
+	if !m.animating() {
+		t.Fatal("arrow should start the spring")
+	}
+	cmd := m.renderMapCmd()
+	if cmd == nil {
+		t.Fatal("expected a fetch Cmd")
+	}
+	if _, ok := cmd().(mapImageMsg); !ok {
+		t.Fatal("an animating render should dispatch its job without a debounce tick")
+	}
+	if len(m.cache.entries) != 0 {
+		t.Fatal("frames during the animation must not fill the render cache")
 	}
 }
 
@@ -248,13 +208,11 @@ func TestGlyphCacheSurvivesValueReceiverView(t *testing.T) {
 	}
 }
 
-func BenchmarkBufferedPan(b *testing.B) {
-	m := bufferedTestModel()
-	seedPanBuffer(&m)
+func BenchmarkCachedPan(b *testing.B) {
+	m := animatedTestModel()
 	m.renderMapCmd()
 	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for i := 0; b.Loop(); i++ {
 		dx := 16.0
 		if i%2 != 0 {
 			dx = -16

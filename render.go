@@ -1,13 +1,11 @@
 package ntmaps
 
 import (
-	"context"
 	"image"
 	"image/color"
 	"image/draw"
 	"math"
 	"strings"
-	"sync"
 
 	"github.com/fogleman/gg"
 
@@ -96,46 +94,6 @@ func inWorldCount(placements []tile.Placement) int {
 		}
 	}
 	return n
-}
-
-// renderBuffer composes a w×h map centered on world pixel (cx, cy),
-// fetching every missing tile first. It is the non-progressive path used
-// by buffered panning, which shows the previous buffer until this one is
-// complete. The error is set only when no tile at all could be shown.
-func renderBuffer(ctx context.Context, loader *tile.Loader, provider tile.Provider, markers []Marker, cx, cy float64, zoom, w, h int) (image.Image, error) {
-	size := provider.Size()
-	placements := tile.Cover(cx, cy, w, h, zoom, size)
-	img := image.NewRGBA(image.Rect(0, 0, w, h))
-
-	var mu sync.Mutex
-	local := make(map[tile.ID]image.Image)
-	lookup := func(id tile.ID) (image.Image, bool) {
-		mu.Lock()
-		t, ok := local[id]
-		mu.Unlock()
-		if ok {
-			return t, true
-		}
-		if loader != nil {
-			return loader.Cached(provider, id)
-		}
-		return nil, false
-	}
-	missing := composeTiles(img, placements, provider, lookup)
-	if len(missing) > 0 && provider.Valid() && loader != nil {
-		err := loader.FetchAll(ctx, provider, missing, func(id tile.ID, t image.Image) {
-			mu.Lock()
-			local[id] = t
-			mu.Unlock()
-		})
-		if err != nil && len(local) == 0 && len(missing) == inWorldCount(placements) {
-			return nil, err
-		}
-		yieldToJS()
-		composeTiles(img, placements, provider, lookup)
-	}
-	drawMarkers(img, markers, cx, cy, zoom, size)
-	return img, nil
 }
 
 // drawMapAttribution draws the provider credit in a translucent strip

@@ -276,3 +276,33 @@ func TestDefaultUserAgentNamesNtmaps(t *testing.T) {
 		t.Fatalf("unexpected user agent %q", ua)
 	}
 }
+
+func TestConcurrencyLimitIsGlobal(t *testing.T) {
+	s := newTileServer(t)
+	s.hold = make(chan struct{})
+	l := NewLoader(Options{Concurrency: 2})
+	p := s.provider()
+	var wg sync.WaitGroup
+	for i := 0; i < 5; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			_, _ = l.Fetch(context.Background(), p, ID{Z: 9, X: i, Y: 0})
+		}(i)
+	}
+	<-s.started
+	<-s.started
+	select {
+	case <-s.started:
+		t.Fatal("a third download started past the concurrency limit")
+	case <-time.After(50 * time.Millisecond):
+	}
+	if n := s.requests.Load(); n != 2 {
+		t.Fatalf("server saw %d requests, want 2", n)
+	}
+	close(s.hold)
+	wg.Wait()
+	if n := s.requests.Load(); n != 5 {
+		t.Fatalf("server saw %d requests after release, want 5", n)
+	}
+}

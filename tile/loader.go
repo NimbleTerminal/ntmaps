@@ -68,6 +68,10 @@ type Loader struct {
 	dir    string
 	conc   int
 
+	// sem bounds downloads across every caller, so a background prefetch
+	// cannot starve the render that is on screen.
+	sem chan struct{}
+
 	mu       sync.Mutex
 	mem      *lru
 	inflight map[cacheKey]*download
@@ -98,6 +102,7 @@ func NewLoader(o Options) *Loader {
 	if l.conc <= 0 {
 		l.conc = defaultConcurrency
 	}
+	l.sem = make(chan struct{}, l.conc)
 	switch {
 	case o.MemoryCap == 0:
 		l.mem = newLRU(defaultMemoryCap)
@@ -182,7 +187,15 @@ func (l *Loader) Fetch(ctx context.Context, p Provider, id ID) (image.Image, err
 }
 
 func (l *Loader) run(ctx context.Context, d *download, k cacheKey, p Provider, id ID) {
-	img, err := l.load(ctx, p, id)
+	var img image.Image
+	var err error
+	select {
+	case l.sem <- struct{}{}:
+		img, err = l.load(ctx, p, id)
+		<-l.sem
+	case <-ctx.Done():
+		err = ctx.Err()
+	}
 	l.mu.Lock()
 	if err == nil && l.mem != nil {
 		l.mem.put(k, img)
@@ -269,11 +282,11 @@ func writeFileAtomic(path string, data []byte) error {
 	return os.Rename(name, path)
 }
 
-// FetchAll fetches every id with bounded concurrency, calling onTile for
-// each tile as it lands. Calls to onTile are serialized and should not
-// block for long. It returns nil when at least one tile
-// loaded or ids is empty; otherwise the first error, which is ctx.Err()
-// when the context ended first.
+// FetchAll fetches every id, calling onTile for each tile as it lands.
+// Downloads share the Loader's concurrency limit. Calls to onTile are
+// serialized and should not block for long. It returns nil when at least
+// one tile loaded or ids is empty; otherwise the first error, which is
+// ctx.Err() when the context ended first.
 func (l *Loader) FetchAll(ctx context.Context, p Provider, ids []ID, onTile func(ID, image.Image)) error {
 	if len(ids) == 0 {
 		return nil
@@ -284,16 +297,13 @@ func (l *Loader) FetchAll(ctx context.Context, p Provider, ids []ID, onTile func
 		loaded   int
 		firstErr error
 	)
-	sem := make(chan struct{}, l.conc)
 	for _, id := range ids {
 		if ctx.Err() != nil {
 			break
 		}
 		wg.Add(1)
-		sem <- struct{}{}
 		go func(id ID) {
 			defer wg.Done()
-			defer func() { <-sem }()
 			img, err := l.Fetch(ctx, p, id)
 			mu.Lock()
 			defer mu.Unlock()

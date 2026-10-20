@@ -11,9 +11,7 @@ import (
 )
 
 func TestSpringPanSettlesWithoutOvershoot(t *testing.T) {
-	m := bufferedTestModel()
-	m.smoothPan = true
-	seedPanBuffer(&m)
+	m := animatedTestModel()
 	m.renderMapCmd()
 	x, _, _ := worldPixels(m.lat, m.lng, m.zoom, 256)
 	m, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyRight})
@@ -28,7 +26,8 @@ func TestSpringPanSettlesWithoutOvershoot(t *testing.T) {
 			t.Fatalf("non-monotonic motion: %f -> %f", previous, position)
 		}
 		previous = position
-		if cmd := m.renderMapCmd(); cmd != nil || m.panState.busy {
+		m.renderMapCmd()
+		if m.inFlight() || m.job.current != nil {
 			t.Fatal("interior animation fetched tiles")
 		}
 	}
@@ -38,8 +37,7 @@ func TestSpringPanSettlesWithoutOvershoot(t *testing.T) {
 }
 
 func TestSpringRetargetKeepsVelocityAndOneTimer(t *testing.T) {
-	m := bufferedTestModel()
-	m.smoothPan = true
+	m := animatedTestModel()
 	m, _ = m.arrowPan(16, 0)
 	m.advancePanAnimation(1.0 / 60)
 	v, serial, target := m.panState.motion.vx, m.panState.motion.serial, m.panState.motion.tx
@@ -54,8 +52,7 @@ func TestSpringRetargetKeepsVelocityAndOneTimer(t *testing.T) {
 }
 
 func TestSpringDatelineAndLatitudeClamp(t *testing.T) {
-	m := bufferedTestModel()
-	m.smoothPan = true
+	m := animatedTestModel()
 	m.SetLatLng(tile.MaxLatitude, 179.9999, 15)
 	m, _ = m.arrowPan(16, -16)
 	for i := 0; i < 120 && m.panState.motion.active; i++ {
@@ -67,9 +64,7 @@ func TestSpringDatelineAndLatitudeClamp(t *testing.T) {
 }
 
 func TestSpringTicksRouteAndCancelOnNewLocation(t *testing.T) {
-	m := bufferedTestModel()
-	m.smoothPan = true
-	seedPanBuffer(&m)
+	m := animatedTestModel()
 	m, _ = m.arrowPan(16, 0)
 	msg := panAnimationMsg{owner: m.panState, serial: m.panState.motion.serial}
 	if !IsMapOwnMsg(msg) {

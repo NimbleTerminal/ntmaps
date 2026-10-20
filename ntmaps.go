@@ -1,6 +1,7 @@
 package ntmaps
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -143,7 +144,7 @@ type debouncedFetchMsg struct {
 // "should the widget's Update see this?" predicate, use [IsMapUpdate].
 func IsMapOwnMsg(msg tea.Msg) bool {
 	switch msg.(type) {
-	case MapCoordinates, mapImageMsg, debouncedFetchMsg, bufferImageMsg, panRenderTickMsg, panPictureMsg, panPresentedMsg, panAnimationMsg:
+	case MapCoordinates, mapImageMsg, debouncedFetchMsg, panPictureMsg, panPresentedMsg, panAnimationMsg:
 		return true
 	}
 	return false
@@ -295,9 +296,9 @@ type Model struct {
 	pic    *legacy.Model
 	errMsg string
 
-	smoothPan      bool
-	panBufferTiles int
-	panState       *panState
+	smoothPan bool
+	prefetch  int
+	panState  *panState
 
 	// preferKitty mirrors Config.PreferKitty. renderModeChosen is set once
 	// the mode has been picked, by the auto-switch or by SetRenderMode, so
@@ -309,13 +310,14 @@ type Model struct {
 // Config configures a Model at construction.
 type Config struct {
 	// SmoothPan animates arrow movement with a critically damped spring.
-	// Requires PanBuffer > 0; disabled by default.
+	// Frames compose from cached tiles; see Prefetch. Disabled by default.
 	SmoothPan bool
 
-	// PanBuffer sets the buffered border width in tiles, clamped to 0..4.
-	// Zero disables buffering. Panning crops the buffer and refills it near
-	// an edge. Fetches run one at a time and ignore RenderDebounce.
-	PanBuffer int
+	// Prefetch is how many tile widths beyond each edge of the view are
+	// fetched in the background once a render completes, so the next pan
+	// finds its tiles in memory and paints at once. Zero means 1; negative
+	// disables prefetching; values above 4 are clamped.
+	Prefetch int
 
 	// KittyMedium selects direct transmission (default) or shared memory.
 	// Shared memory requires a compatible local terminal or browser bridge;
@@ -477,7 +479,7 @@ func NewWithConfig(cfg Config) Model {
 		maxAspectRatio: mar,
 		letterboxColor: lbc,
 		renderDebounce: cfg.RenderDebounce,
-		panBufferTiles: max(0, min(4, cfg.PanBuffer)),
+		prefetch:       prefetchRings(cfg.Prefetch),
 		smoothPan:      cfg.SmoothPan,
 		preferKitty:    cfg.PreferKitty,
 		loader:         cfg.Loader,
@@ -771,9 +773,6 @@ func (m Model) Zoom() int { return m.zoom }
 // rendered yet. It is the un-cropped source — optical zoom is applied
 // downstream — so hosts can use it for a screenshot or export.
 func (m Model) Image() image.Image {
-	if m.panBufferTiles > 0 && m.panState != nil {
-		return m.panState.visible
-	}
 	return m.sourceImage
 }
 
@@ -1016,6 +1015,62 @@ func (m *Model) SetTileProvider(p tile.Provider) tea.Cmd {
 	return m.renderMapCmd()
 }
 
+// prefetchRings clamps Config.Prefetch: 0 means one ring, negative none,
+// and at most four.
+func prefetchRings(n int) int {
+	switch {
+	case n == 0:
+		return 1
+	case n < 0:
+		return 0
+	default:
+		return min(4, n)
+	}
+}
+
+// animating reports whether the smooth-pan spring is moving the view.
+func (m Model) animating() bool {
+	return m.panState != nil && m.panState.motion.active
+}
+
+// prefetchCmd fetches the ring of tiles beyond the edges of the view
+// described by geom in the background, so the next pan paints from
+// memory. It returns nil when there is nothing to fetch. The fetch is
+// canceled by the next render; tiles that render also needs keep
+// downloading through the loader's waiter count.
+func (m *Model) prefetchCmd(geom viewGeometry) tea.Cmd {
+	if m.prefetch <= 0 || m.loader == nil || !geom.provider.Valid() || geom.w <= 0 || geom.h <= 0 {
+		return nil
+	}
+	size := geom.provider.Size()
+	pad := 2 * m.prefetch * size
+	var ids []tile.ID
+	for _, pl := range tile.Cover(geom.cx, geom.cy, geom.w+pad, geom.h+pad, geom.zoom, size) {
+		if !pl.InWorld {
+			continue
+		}
+		if _, ok := m.loader.Cached(geom.provider, pl.ID); !ok {
+			ids = append(ids, pl.ID)
+		}
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	if m.job == nil {
+		m.job = &jobSlot{}
+	}
+	if m.job.prefetch != nil {
+		m.job.prefetch()
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	m.job.prefetch = cancel
+	loader, provider := m.loader, geom.provider
+	return func() tea.Msg {
+		_ = loader.FetchAll(ctx, provider, ids, nil)
+		return nil
+	}
+}
+
 // tilesCached reports whether every in-world placement is already in the
 // loader's memory, or there is nothing to fetch at all, so a render can
 // complete synchronously.
@@ -1101,38 +1156,11 @@ func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 			return m, nil
 		}
 		m.panState.encoding = false
-		if m.panState.presentationDirty {
-			m.panState.presentationDirty = false
-			return m, m.presentPanImage(opticalCrop(m.panState.visible, opticalCropFactor(m.opticalZoom)))
+		if pending := m.panState.pending; pending != nil {
+			m.panState.pending = nil
+			return m, m.presentImage(pending)
 		}
 		return m, nil
-
-	case bufferImageMsg:
-		if msg.owner != m.panState {
-			return m, nil
-		}
-		m.panState.busy = false
-		if msg.err != nil {
-			if msg.buffer != nil && msg.buffer.key != m.currentRenderKey() {
-				return m, m.renderMapCmd()
-			}
-			if m.panState.displayedSet && m.panState.displayed == m.currentRenderKey() {
-				// Keep the visible map if a background refill fails.
-				return m, nil
-			}
-			m.errMsg = msg.err.Error()
-			*m.lastAccepted = *m.renderGen
-			return m, nil
-		}
-		m.panState.buffer = msg.buffer
-		return m, m.renderMapCmd()
-
-	case panRenderTickMsg:
-		if msg.owner != m.panState || !m.panState.waiting {
-			return m, nil
-		}
-		m.panState.waiting = false
-		return m, m.renderMapCmd()
 
 	case tea.KeyMsg:
 		var hit bool
@@ -1191,18 +1219,22 @@ func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 		// Remember the un-cropped source so a later SetOpticalZoom can
 		// re-crop without going back to the network.
 		m.sourceImage = msg.img
-		cmd := m.pic.SetImage(opticalCrop(msg.img, opticalCropFactor(m.opticalZoom)))
+		cmd := m.presentImage(opticalCrop(msg.img, opticalCropFactor(m.opticalZoom)))
 		if msg.partial {
 			// More tiles are coming: show what we have, keep the
 			// Loading badge up, and wait for the next repaint.
 			return m, tea.Batch(cmd, msg.next)
 		}
 		*m.lastAccepted = msg.gen
+		var geom viewGeometry
+		if m.job != nil && m.job.current != nil {
+			geom = m.job.current.geom
+		}
 		m.job.cancel()
-		if m.cache != nil && msg.img != nil {
+		if m.cache != nil && msg.img != nil && !m.animating() {
 			m.cache.put(msg.key, msg.img)
 		}
-		return m, cmd
+		return m, tea.Batch(cmd, m.prefetchCmd(geom))
 
 	case MapCoordinates:
 		m.loc = ""
@@ -1247,9 +1279,6 @@ func (m *Model) renderMapCmd() tea.Cmd {
 	picRows := m.picRows()
 	if picRows <= 0 {
 		return nil
-	}
-	if m.panBufferTiles > 0 {
-		return m.renderBufferedMapCmd()
 	}
 
 	if m.renderGen == nil {
@@ -1316,11 +1345,11 @@ func (m *Model) renderMapCmd() tea.Cmd {
 		img, _ := geom.compose(job.places, job.lookup)
 		job.cancel()
 		*m.lastAccepted = gen
-		if m.cache != nil {
+		if m.cache != nil && !m.animating() {
 			m.cache.put(key, img)
 		}
 		m.sourceImage = img
-		return m.pic.SetImage(opticalCrop(img, opticalCropFactor(m.opticalZoom)))
+		return tea.Batch(m.presentImage(opticalCrop(img, opticalCropFactor(m.opticalZoom))), m.prefetchCmd(geom))
 	}
 
 	m.job.current = job
@@ -1331,7 +1360,10 @@ func (m *Model) renderMapCmd() tea.Cmd {
 	// against the latest renderGen and only fires the fetch for the most
 	// recent request, so a rapid burst spawns N ticks but only 1 fetch.
 	// Negative renderDebounce disables debouncing (fires fetch immediately).
-	if m.renderDebounce <= 0 {
+	// Animation frames skip it too: every frame cancels the previous job,
+	// so a debounced job would never start while the spring is moving,
+	// whereas an immediate one lets the next frame join its downloads.
+	if m.renderDebounce <= 0 || m.animating() {
 		return fetch
 	}
 	return tea.Tick(m.renderDebounce, func(time.Time) tea.Msg {

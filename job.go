@@ -48,17 +48,27 @@ func (g viewGeometry) compose(placements []tile.Placement, lookup func(tile.ID) 
 	return composeLetterbox(img, g.cellRectW, g.cellRectH, g.letterbox), missing
 }
 
-// jobSlot holds the render job currently allowed to deliver images.
-// It is a pointer on Model so every value copy sees the same job and a
-// newer render can cancel it.
+// jobSlot holds the render job currently allowed to deliver images and
+// the background prefetch, if any. It is a pointer on Model so every
+// value copy sees the same job and a newer render can cancel both.
 type jobSlot struct {
-	current *renderJob
+	current  *renderJob
+	prefetch context.CancelFunc
 }
 
+// cancel stops the current render job and the prefetch. Tiles another
+// caller is still waiting for keep downloading.
 func (s *jobSlot) cancel() {
-	if s != nil && s.current != nil {
+	if s == nil {
+		return
+	}
+	if s.current != nil {
 		s.current.cancel()
 		s.current = nil
+	}
+	if s.prefetch != nil {
+		s.prefetch()
+		s.prefetch = nil
 	}
 }
 

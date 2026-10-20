@@ -25,6 +25,12 @@
   the remaining constants have new values; the oversample zoom cap follows the
   provider's `MaxZoom`; the attribution strip follows the selected provider;
   and the first frame of a render may show placeholder tiles while fetching.
+- Replace the oversized pan buffer with a prefetch ring: after a render
+  completes, the tiles one ring beyond the view (`Config.Prefetch`, default 1)
+  are fetched in the background, and every pan, animated or not, composes
+  from the tile cache. `Config.PanBuffer` is removed and `SmoothPan` no longer
+  depends on it. Kitty back-pressure now applies to every presentation, and
+  tile downloads share one concurrency limit per loader.
 
 ## v0.3.0 (2026-10-19)
 

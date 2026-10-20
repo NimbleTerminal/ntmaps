@@ -188,8 +188,7 @@ func initialModel(medium ntmaps.KittyMedium, loader *neighborhood.Loader, render
 	// extra geographic coverage. Glyph mode is unaffected visually.
 	cfg := ntmaps.Config{Oversample: 2, KittyMedium: medium, PreferKitty: true}
 	if runtime.GOOS != "js" {
-		// Buffer nearby tiles for smooth panning and refill in the background.
-		cfg.PanBuffer = 1
+		// Animate arrow pans; the prefetch ring keeps the next tiles in memory.
 		cfg.SmoothPan = true
 	}
 	mv := ntmaps.NewWithConfig(cfg)

@@ -25,7 +25,7 @@ type panAnimationMsg struct {
 }
 
 func (m *Model) arrowPan(dx, dy float64) (Model, tea.Cmd) {
-	if !m.smoothPan || m.panBufferTiles == 0 {
+	if !m.smoothPan {
 		m.panPixels(dx, dy)
 		cmd := m.renderMapCmd()
 		return *m, cmd
