@@ -91,7 +91,7 @@ tasks:
     cmds:
       - go -C examples build -mod=readonly -o ../bin/ntmaps-mapview ./mapview
     sources:
-      - mapview/**/*.go
+      - "*.go"
       - examples/mapview/*.go
       - go.mod
       - go.sum
@@ -172,7 +172,7 @@ tasks:
   ci:
     desc: 'Check formatting, dependencies, native tests, and browser demos'
     cmds:
-      - test -z "$(gofmt -l mapview examples internal)"
+      - test -z "$(gofmt -l .)"
       - go mod tidy -diff
       - go -C examples mod tidy -diff
       - go mod verify

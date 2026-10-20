@@ -16,23 +16,23 @@ import (
 	tea "charm.land/bubbletea/v2"
 	chart "github.com/NimbleMarkets/ntcharts3d"
 	"github.com/charmbracelet/x/ansi"
-	"nimbleterminal.dev/ntmaps/mapview"
+	"nimbleterminal.dev/ntmaps"
 	picture "nimbleterminal.dev/ntpicture"
 )
 
 type model struct {
-	source        mapview.Model
+	source        ntmaps.Model
 	chart         *chart.Model
-	places        []mapview.Place
+	places        []ntmaps.Place
 	place         int
 	textureSource image.Image
 	err           error
 	width         int
 }
 
-func newModel(places []mapview.Place, medium picture.KittyMedium, renderer chart.RenderMode) *model {
+func newModel(places []ntmaps.Place, medium picture.KittyMedium, renderer chart.RenderMode) *model {
 	// Keep a square map texture across terminal resizes. Camera changes only redraw 3D.
-	source := mapview.NewWithConfig(mapview.Config{Cols: 64, Rows: 33, PanBuffer: 1})
+	source := ntmaps.NewWithConfig(ntmaps.Config{Cols: 64, Rows: 33, PanBuffer: 1})
 	view := chart.New(80, 21, chart.WithRenderMode(renderer), chart.WithTerminalSession(legacy.DefaultTerminalSession()), chart.WithKittyMedium(medium),
 		chart.WithAxes(chart.Axes{X: chart.Axis{Hidden: true}, Y: chart.Axis{Hidden: true}, Z: chart.Axis{Hidden: true}}))
 	view.SetColorLegendVisible(false)
@@ -53,7 +53,7 @@ func (m *model) selectPlace(index int) {
 	m.place = (index + len(m.places)) % len(m.places)
 	p := m.places[m.place]
 	m.source.SetLatLng(p.Lat, p.Lon, p.Zoom)
-	m.source.SetMarkers([]mapview.Marker{{Lat: p.Lat, Lng: p.Lon}})
+	m.source.SetMarkers([]ntmaps.Marker{{Lat: p.Lat, Lng: p.Lon}})
 }
 
 func (m *model) Init() tea.Cmd { return tea.Batch(m.source.Init(), m.chart.Init()) }
@@ -185,7 +185,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, "renderer must be software or gpu")
 		os.Exit(2)
 	}
-	places, err := mapview.EmbeddedPlaces()
+	places, err := ntmaps.EmbeddedPlaces()
 	if err != nil || len(places) == 0 {
 		fmt.Fprintln(os.Stderr, "cannot load places:", err)
 		os.Exit(1)

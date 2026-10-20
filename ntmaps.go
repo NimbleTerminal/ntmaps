@@ -1,4 +1,4 @@
-package mapview
+package ntmaps
 
 import (
 	"encoding/json"
@@ -25,7 +25,7 @@ import (
 )
 
 // RenderMode is an alias for picture.PictureMode so callers can keep using
-// mapview.RenderGlyph / mapview.RenderKitty.
+// ntmaps.RenderGlyph / ntmaps.RenderKitty.
 type RenderMode = picture.PictureMode
 
 const (
@@ -42,8 +42,8 @@ const (
 )
 
 // FitMode is an alias for picture.FitMode so callers can use
-// mapview.FitContain / mapview.FitFill / mapview.FitCover without importing
-// the picture package. mapview's renderer pre-sizes the composed image to
+// ntmaps.FitContain / ntmaps.FitFill / ntmaps.FitCover without importing
+// the picture package. the widget's renderer pre-sizes the composed image to
 // the cell-rect's pixel AR via composeLetterbox, so the fit setting is
 // usually a no-op visually — it becomes meaningful when the terminal
 // reports a cell-pixel ratio that diverges from picture's 1:2 default
@@ -71,7 +71,7 @@ const (
 )
 
 // MapCoordinates is the geocoder-result message a parent forwards into Update
-// to recenter the map. Setting Err makes mapview surface it via errMsg / View.
+// to recenter the map. Setting Err makes ntmaps surface it via errMsg / View.
 type MapCoordinates struct {
 	Lat float64
 	Lng float64
@@ -104,15 +104,15 @@ type debouncedFetchMsg struct {
 	fetch tea.Cmd
 }
 
-// IsMapOwnMsg reports whether msg is one of mapview's own internal messages
+// IsMapOwnMsg reports whether msg is one of the widget's own internal messages
 // (MapCoordinates input, async tile-render results, debounce ticks). These
-// belong to a single mapview instance — route them only to the Model that
+// belong to a single ntmaps instance — route them only to the Model that
 // produced or expects them.
 //
 // Use this when you have multiple picture-using components in the same
 // program and need to disambiguate "this message is mine" from "this is a
 // shared picture runtime message everyone should see". For the broader
-// "should mapview's Update see this?" predicate, use [IsMapUpdate].
+// "should the widget's Update see this?" predicate, use [IsMapUpdate].
 func IsMapOwnMsg(msg tea.Msg) bool {
 	switch msg.(type) {
 	case MapCoordinates, mapImageMsg, debouncedFetchMsg, bufferImageMsg, panRenderTickMsg, panPictureMsg, panPresentedMsg, panAnimationMsg:
@@ -121,7 +121,7 @@ func IsMapOwnMsg(msg tea.Msg) bool {
 	return false
 }
 
-// IsMapUpdate reports whether msg is a message mapview's Update needs to see.
+// IsMapUpdate reports whether msg is a message the widget's Update needs to see.
 // Parents containing other focusable widgets must forward matching messages
 // regardless of focus, otherwise async render results are lost.
 //
@@ -134,7 +134,7 @@ func IsMapOwnMsg(msg tea.Msg) bool {
 // across multiple picture owners" for the pattern.
 //
 // legacy.IsPictureMsg covers KittyFrameMsg AND uv.CellSizeEvent (the
-// terminal's reply to legacy.RequestCellSize, which mapview.Init dispatches
+// terminal's reply to legacy.RequestCellSize, which ntmaps.Init dispatches
 // via m.pic.Init), so consumers gating forwarding on this helper still route
 // the cell-size reply through to picture's auto-apply.
 func IsMapUpdate(msg tea.Msg) bool {
@@ -245,7 +245,7 @@ type Model struct {
 	// picInitDone (heap-allocated for value-receiver Init) records whether
 	// pic.Init() has been dispatched. The pic.Init terminal queries
 	// (RequestCellSize / QueryKittySupport) only need to happen once per
-	// session; consumers that re-invoke mapview.Init() as a "re-render
+	// session; consumers that re-invoke ntmaps.Init() as a "re-render
 	// trigger" (e.g. on selection change) shouldn't keep re-issuing them.
 	picInitDone *bool
 
@@ -337,7 +337,7 @@ type Config struct {
 	//	2.0         → allow up to 2:1 in either direction
 	//	4.0         → permissive cap; only extreme AR triggers letterbox
 	//
-	// Both render modes letterbox identically: mapview composes the
+	// Both render modes letterbox identically: ntmaps composes the
 	// letterbox bands into the source image *before* picture renders, so
 	// Glyph and Kitty toggle to the same shape.
 	MaxAspectRatio float64

@@ -16,27 +16,27 @@ import (
 	chart "github.com/NimbleMarkets/ntcharts3d"
 	"github.com/charmbracelet/x/ansi"
 	zone "github.com/lrstanley/bubblezone/v2"
+	"nimbleterminal.dev/ntmaps"
 	"nimbleterminal.dev/ntmaps/examples/internal/cityview"
 	"nimbleterminal.dev/ntmaps/examples/internal/demorun"
 	"nimbleterminal.dev/ntmaps/examples/internal/neighborhood"
 	"nimbleterminal.dev/ntmaps/internal/city"
-	"nimbleterminal.dev/ntmaps/mapview"
 )
 
-func styleName(s mapview.Style) string {
+func styleName(s ntmaps.Style) string {
 	switch s {
-	case mapview.ArcgisWorldImagery:
+	case ntmaps.ArcgisWorldImagery:
 		return "Satellite"
 	default:
 		return "Graphics"
 	}
 }
 
-func fitName(f mapview.FitMode) string {
+func fitName(f ntmaps.FitMode) string {
 	switch f {
-	case mapview.FitFill:
+	case ntmaps.FitFill:
 		return "Fill"
-	case mapview.FitCover:
+	case ntmaps.FitCover:
 		return "Cover"
 	default:
 		return "Contain"
@@ -50,8 +50,8 @@ var (
 	footerStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("242"))
 )
 
-// placeItem adapts mapview.Place to the bubbles/list DefaultItem interface.
-type placeItem struct{ p mapview.Place }
+// placeItem adapts ntmaps.Place to the bubbles/list DefaultItem interface.
+type placeItem struct{ p ntmaps.Place }
 
 func (i placeItem) Title() string {
 	if i.p.Recommended {
@@ -63,8 +63,8 @@ func (i placeItem) Description() string { return i.p.Description }
 func (i placeItem) FilterValue() string { return i.p.Name }
 
 // mapKeyMap binds the map to arrow keys; zoom stays on +/-.
-func mapKeyMap() mapview.KeyMap {
-	return mapview.KeyMap{
+func mapKeyMap() ntmaps.KeyMap {
+	return ntmaps.KeyMap{
 		Up:      key.NewBinding(key.WithKeys("up"), key.WithHelp("↑", "up")),
 		Right:   key.NewBinding(key.WithKeys("right"), key.WithHelp("→", "right")),
 		Down:    key.NewBinding(key.WithKeys("down"), key.WithHelp("↓", "down")),
@@ -140,26 +140,26 @@ type model struct {
 	itemPrefix            string
 	cityPane              *cityview.Model
 	loader                *neighborhood.Loader
-	medium                mapview.KittyMedium
+	medium                ntmaps.KittyMedium
 	renderer              chart.RenderMode
-	mapMode               mapview.RenderMode
+	mapMode               ntmaps.RenderMode
 	in3D, loading, closed bool
 	loadErr               error
 	request               uint64
 	cancel                context.CancelFunc
 	cityKey               string
 	cached                bool
-	mv                    mapview.Model
-	places                []mapview.Place
+	mv                    ntmaps.Model
+	places                []ntmaps.Place
 	list                  list.Model
 	help                  help.Model
 	keys                  appKeys
-	lastPlace             mapview.Place // most recently auto-applied selection
+	lastPlace             ntmaps.Place // most recently auto-applied selection
 	width, height         int
 }
 
-func initialModel(medium mapview.KittyMedium, loader *neighborhood.Loader, renderer chart.RenderMode) *model {
-	places, err := mapview.EmbeddedPlaces()
+func initialModel(medium ntmaps.KittyMedium, loader *neighborhood.Loader, renderer chart.RenderMode) *model {
+	places, err := ntmaps.EmbeddedPlaces()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "load places: %v\n", err)
 		os.Exit(1)
@@ -169,7 +169,7 @@ func initialModel(medium mapview.KittyMedium, loader *neighborhood.Loader, rende
 		os.Exit(1)
 	}
 
-	places = append([]mapview.Place{{Name: "Flatiron district", Description: "Bundled neighborhood: real building footprints and heights around Flatiron, Manhattan. Press v for 3D.", Lat: 40.7415, Lon: -73.989, Zoom: 17}}, places...)
+	places = append([]ntmaps.Place{{Name: "Flatiron district", Description: "Bundled neighborhood: real building footprints and heights around Flatiron, Manhattan. Press v for 3D.", Lat: 40.7415, Lon: -73.989, Zoom: 17}}, places...)
 	items := make([]list.Item, len(places))
 	for i, p := range places {
 		items[i] = placeItem{p: p}
@@ -186,20 +186,20 @@ func initialModel(medium mapview.KittyMedium, loader *neighborhood.Loader, rende
 	// Oversample: 2 gives a 2× pixel-density tile-canvas at +1 OSM zoom,
 	// which Kitty terminals downscale to a noticeably sharper image at no
 	// extra geographic coverage. Glyph mode is unaffected visually.
-	cfg := mapview.Config{Oversample: 2, KittyMedium: medium, PreferKitty: true}
+	cfg := ntmaps.Config{Oversample: 2, KittyMedium: medium, PreferKitty: true}
 	if runtime.GOOS != "js" {
 		// Buffer nearby tiles for smooth panning and refill in the background.
 		cfg.PanBuffer = 1
 		cfg.SmoothPan = true
 	}
-	mv := mapview.NewWithConfig(cfg)
+	mv := ntmaps.NewWithConfig(cfg)
 	mv.KeyMap = mapKeyMap()
 	mv.SetLatLng(first.Lat, first.Lon, first.Zoom)
-	mv.SetMarkers([]mapview.Marker{{Lat: first.Lat, Lng: first.Lon}})
+	mv.SetMarkers([]ntmaps.Marker{{Lat: first.Lat, Lng: first.Lon}})
 
 	return &model{
 		zones: zones, itemPrefix: prefix,
-		loader: loader, medium: medium, renderer: renderer, mapMode: mapview.RenderGlyph,
+		loader: loader, medium: medium, renderer: renderer, mapMode: ntmaps.RenderGlyph,
 		mv:        mv,
 		places:    places,
 		list:      l,
@@ -219,7 +219,7 @@ func (m *model) syncMapToSelection() tea.Cmd {
 	m.cancelDrag()
 	m.lastPlace = it.p
 	m.mv.SetLatLng(it.p.Lat, it.p.Lon, it.p.Zoom)
-	m.mv.SetMarkers([]mapview.Marker{{Lat: it.p.Lat, Lng: it.p.Lon}})
+	m.mv.SetMarkers([]ntmaps.Marker{{Lat: it.p.Lat, Lng: it.p.Lon}})
 	if m.in3D {
 		return m.requestCity(false)
 	}
@@ -289,7 +289,7 @@ func (m *model) toggleView() tea.Cmd {
 	if m.in3D {
 		m.mapMode = m.mv.RenderMode()
 		var hide tea.Cmd
-		hide = m.mv.SetRenderMode(mapview.RenderGlyph)
+		hide = m.mv.SetRenderMode(ntmaps.RenderGlyph)
 		return tea.Sequence(hide, m.requestCity(false))
 	}
 	ready := !m.loading && m.loadErr == nil
@@ -312,8 +312,8 @@ func (m *model) quit() tea.Cmd {
 	m.closed = true
 	m.stopLoad()
 	var cleanup []tea.Cmd
-	if m.mv.RenderMode() == mapview.RenderKitty {
-		cleanup = append(cleanup, m.mv.SetRenderMode(mapview.RenderGlyph))
+	if m.mv.RenderMode() == ntmaps.RenderKitty {
+		cleanup = append(cleanup, m.mv.SetRenderMode(ntmaps.RenderGlyph))
 	}
 	if m.cityPane != nil {
 		cleanup = append(cleanup, m.cityPane.Dispose())
@@ -413,24 +413,24 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "-", "_":
 			return m, m.zoomMap(-1)
 		case "g":
-			mode := mapview.RenderKitty
+			mode := ntmaps.RenderKitty
 			if m.mv.RenderMode() == mode {
-				mode = mapview.RenderGlyph
+				mode = ntmaps.RenderGlyph
 			}
 			return m, m.mv.SetRenderMode(mode)
 		case "s":
-			next := mapview.OpenStreetMaps
-			if m.mv.TileStyle() != mapview.ArcgisWorldImagery {
-				next = mapview.ArcgisWorldImagery
+			next := ntmaps.OpenStreetMaps
+			if m.mv.TileStyle() != ntmaps.ArcgisWorldImagery {
+				next = ntmaps.ArcgisWorldImagery
 			}
 			return m, m.mv.SetStyle(next)
 		case "f":
-			next := mapview.FitContain
+			next := ntmaps.FitContain
 			switch m.mv.Fit() {
-			case mapview.FitContain:
-				next = mapview.FitFill
-			case mapview.FitFill:
-				next = mapview.FitCover
+			case ntmaps.FitContain:
+				next = ntmaps.FitFill
+			case ntmaps.FitFill:
+				next = ntmaps.FitCover
 			}
 			return m, m.mv.SetFit(next)
 		case "]":
@@ -561,7 +561,7 @@ func (m *model) View() tea.View {
 	}
 
 	mode := "Glyph"
-	if m.mv.RenderMode() == mapview.RenderKitty {
+	if m.mv.RenderMode() == ntmaps.RenderKitty {
 		mode = "Kitty"
 	}
 	lat, lng := m.mv.Center()
@@ -598,9 +598,9 @@ func main() {
 	offline := flag.Bool("offline", false, "use cached/bundled neighborhoods only")
 	cacheDir := flag.String("cache-dir", defaultCacheDir(), "neighborhood cache directory; empty disables disk cache")
 	flag.Parse()
-	medium := mapview.KittyMediumDirect
+	medium := ntmaps.KittyMediumDirect
 	if *mediumFlag == "shm" {
-		medium = mapview.KittyMediumSharedMemory
+		medium = ntmaps.KittyMediumSharedMemory
 	} else if *mediumFlag != "direct" {
 		fmt.Fprintln(os.Stderr, "medium must be direct or shm")
 		os.Exit(2)

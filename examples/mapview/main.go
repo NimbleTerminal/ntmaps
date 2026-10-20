@@ -11,19 +11,19 @@ import (
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
+	"nimbleterminal.dev/ntmaps"
 	"nimbleterminal.dev/ntmaps/examples/internal/demorun"
-	"nimbleterminal.dev/ntmaps/mapview"
 )
 
 type model struct {
-	mapView mapview.Model
+	mapView ntmaps.Model
 	width   int
 }
 
-func newModel(medium mapview.KittyMedium, lat, lon float64, zoom int) *model {
-	mv := mapview.NewWithConfig(mapview.Config{Cols: 80, Rows: 23, PreferKitty: true, KittyMedium: medium})
+func newModel(medium ntmaps.KittyMedium, lat, lon float64, zoom int) *model {
+	mv := ntmaps.NewWithConfig(ntmaps.Config{Cols: 80, Rows: 23, PreferKitty: true, KittyMedium: medium})
 	mv.SetLatLng(lat, lon, zoom)
-	mv.SetMarkers([]mapview.Marker{{Lat: lat, Lng: lon}})
+	mv.SetMarkers([]ntmaps.Marker{{Lat: lat, Lng: lon}})
 	return &model{mv, 80}
 }
 func (m *model) Init() tea.Cmd { return m.mapView.Init() }
@@ -36,14 +36,14 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch v.String() {
 		case "q", "ctrl+c":
 			var cleanup tea.Cmd
-			if m.mapView.RenderMode() == mapview.RenderKitty {
-				cleanup = m.mapView.SetRenderMode(mapview.RenderGlyph)
+			if m.mapView.RenderMode() == ntmaps.RenderKitty {
+				cleanup = m.mapView.SetRenderMode(ntmaps.RenderGlyph)
 			}
 			return m, tea.Sequence(cleanup, tea.Quit)
 		case "g":
-			mode := mapview.RenderKitty
+			mode := ntmaps.RenderKitty
 			if m.mapView.RenderMode() == mode {
-				mode = mapview.RenderGlyph
+				mode = ntmaps.RenderGlyph
 			}
 			return m, m.mapView.SetRenderMode(mode)
 		}
@@ -70,9 +70,9 @@ func main() {
 	lon := flag.Float64("lon", -73.989, "map center longitude")
 	zoom := flag.Int("zoom", 16, "map zoom")
 	flag.Parse()
-	medium := mapview.KittyMediumDirect
+	medium := ntmaps.KittyMediumDirect
 	if *mediumFlag == "shm" {
-		medium = mapview.KittyMediumSharedMemory
+		medium = ntmaps.KittyMediumSharedMemory
 	} else if *mediumFlag != "direct" {
 		fmt.Fprintln(os.Stderr, "medium must be direct or shm")
 		os.Exit(2)

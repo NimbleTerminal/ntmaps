@@ -1,4 +1,4 @@
-package mapview
+package ntmaps
 
 import (
 	"image"
@@ -291,7 +291,7 @@ func TestOpticalCrop_Geometry(t *testing.T) {
 }
 
 // TestOpticalCrop_ParityFixForRealisticSize covers the bug that was
-// shifting the rendered map at high optical zoom on the typical mapview
+// shifting the rendered map at high optical zoom on the typical ntmaps
 // source size. 640×368 at factor 16 would have ch = 23 with (h-ch) = 345
 // (odd), placing the crop half a source pixel off-center vertically. The
 // upscale by factor 16 amplified that to a full cell of drift in Kitty

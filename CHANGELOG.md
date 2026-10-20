@@ -5,8 +5,9 @@
 - Rename the project from `ntcharts-osm` to `ntmaps` and move it to the
   NimbleTerminal organization. The Go module path is now
   `nimbleterminal.dev/ntmaps` (previously `github.com/NimbleMarkets/ntcharts-osm`);
-  the `mapview` package API is unchanged. Example binaries are now named
-  `ntmaps-*`, the explorer neighborhood cache moved to `ntmaps/neighborhoods-v1`
+  the `mapview` package moves to the module root as package `ntmaps`, so
+  `mapview.New` becomes `ntmaps.New` and so on; the API is otherwise
+  unchanged. Example binaries are now named `ntmaps-*`, the explorer neighborhood cache moved to `ntmaps/neighborhoods-v1`
   under the user cache directory, and the browser demo lives at
   https://nimbleterminal.github.io/ntmaps/.
 

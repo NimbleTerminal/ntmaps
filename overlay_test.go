@@ -1,4 +1,4 @@
-package mapview
+package ntmaps
 
 import (
 	"image/color"

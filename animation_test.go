@@ -1,4 +1,4 @@
-package mapview
+package ntmaps
 
 import (
 	"math"
@@ -71,7 +71,7 @@ func TestSpringTicksRouteAndCancelOnNewLocation(t *testing.T) {
 	m, _ = m.arrowPan(16, 0)
 	msg := panAnimationMsg{owner: m.panState, serial: m.panState.motion.serial}
 	if !IsMapOwnMsg(msg) {
-		t.Fatal("animation tick must route to mapview")
+		t.Fatal("animation tick must route to ntmaps")
 	}
 	m.panState.motion.last = time.Now().Add(-panFrameInterval)
 	m, cmd := m.Update(msg)

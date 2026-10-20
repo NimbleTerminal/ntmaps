@@ -8,12 +8,12 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	chart "github.com/NimbleMarkets/ntcharts3d"
-	"nimbleterminal.dev/ntmaps/mapview"
+	"nimbleterminal.dev/ntmaps"
 	picture "nimbleterminal.dev/ntpicture"
 )
 
 func TestRendererTogglePreservesMapAndCamera(t *testing.T) {
-	m := newModel([]mapview.Place{{Name: "Test", Lat: 40, Lon: 10, Zoom: 10}}, picture.KittyMediumDirect, chart.Software)
+	m := newModel([]ntmaps.Place{{Name: "Test", Lat: 40, Lon: 10, Zoom: 10}}, picture.KittyMediumDirect, chart.Software)
 	defer m.chart.Close()
 	defer m.source.Close()
 	m.Update(tea.KeyPressMsg{Code: tea.KeyRight})
@@ -37,7 +37,7 @@ func TestRendererTogglePreservesMapAndCamera(t *testing.T) {
 }
 
 func TestCameraAndMapControlsAreIndependent(t *testing.T) {
-	m := newModel([]mapview.Place{{Name: "Test", Lat: 40, Lon: 10, Zoom: 10}}, picture.KittyMediumDirect, chart.Software)
+	m := newModel([]ntmaps.Place{{Name: "Test", Lat: 40, Lon: 10, Zoom: 10}}, picture.KittyMediumDirect, chart.Software)
 	defer m.chart.Close()
 	defer m.source.Close()
 	lat, lng := m.source.Center()

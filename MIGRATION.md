@@ -14,22 +14,22 @@ The old NTCharts picture package does not map to a single replacement import:
 | Process-global capability helpers | `nimbleterminal.dev/ntpicture/legacy` |
 | `PictureMode`, `FitMode`, `KittyMedium`, capability enums | `nimbleterminal.dev/ntpicture` |
 
-mapview retains the legacy frame API because its buffered-pan generation and
+ntmaps retains the legacy frame API because its buffered-pan generation and
 presentation coordination already depend on it. This is a compatibility
 migration, not conversion to the root `Picture` asynchronous presentation API.
-Existing public mapview aliases remain available. Hosts must execute commands
+Existing public ntmaps aliases remain available. Hosts must execute commands
 returned by Update, including terminal capability notifications.
 
 ## Resolved upstream bug: legacy View lost its glyph cache
 
 In ntpicture v0.1.0, `legacybridge.ModelView` called View on a copy of the
 stored model and discarded its populated glyph cache, so every unchanged View
-re-read source pixels. mapview carried a `cachedPicture` adapter that cached the
+re-read source pixels. ntmaps carried a `cachedPicture` adapter that cached the
 presentation and invalidated it on image, size, fit, mode, and picture message
 changes.
 
 ntpicture v0.1.1 retains the cache across `legacy.Model.View` and `String`.
-The adapter is removed and mapview holds `*legacy.Model` directly;
+The adapter is removed and ntmaps holds `*legacy.Model` directly;
 `TestGlyphCacheSurvivesValueReceiverView` guards the behavior against the
 public legacy API.
 

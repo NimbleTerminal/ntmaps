@@ -1,5 +1,5 @@
 //go:build !js
 
-package mapview
+package ntmaps
 
 func yieldToJS() {}

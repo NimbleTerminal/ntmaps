@@ -1,4 +1,4 @@
-package mapview
+package ntmaps
 
 import (
 	_ "embed"

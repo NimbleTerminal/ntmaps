@@ -26,10 +26,10 @@ import (
     "os"
 
     tea "charm.land/bubbletea/v2"
-    "nimbleterminal.dev/ntmaps/mapview"
+    "nimbleterminal.dev/ntmaps"
 )
 
-type model struct{ mv mapview.Model }
+type model struct{ mv ntmaps.Model }
 
 func (m model) Init() tea.Cmd { return m.mv.Init() }
 
@@ -48,7 +48,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m model) View() tea.View { return m.mv.View() }
 
 func main() {
-    mv := mapview.New(0, 0)
+    mv := ntmaps.New(0, 0)
     mv.SetLatLng(40.6892, -74.0445, 13) // Statue of Liberty
     if _, err := tea.NewProgram(model{mv: mv}).Run(); err != nil {
         fmt.Println(err); os.Exit(1)
@@ -75,7 +75,7 @@ The animation targets 60 updates per second; actual display rate depends on
 the terminal and transport. Repeated arrows preserve velocity and move the
 target; zooming or selecting a location cancels the previous trajectory.
 Other consumers can enable this with
-`mapview.Config{PanBuffer: 1, SmoothPan: true}` (up to 4 tile widths per
+`ntmaps.Config{PanBuffer: 1, SmoothPan: true}` (up to 4 tile widths per
 side). It uses more memory and fetches surrounding tiles in exchange for
 responsive panning. Buffered rendering runs one tile render and one Kitty
 presentation at a time, coalescing input to the latest view without waiting
@@ -93,20 +93,20 @@ pending shared-memory images.
 
 ## Tile styles
 
-`mapview.SetStyle(...)` switches between nine tile providers from [`flopp/go-staticmaps`](https://github.com/flopp/go-staticmaps): `Wikimedia`, `OpenStreetMaps`, `OpenTopoMap`, `OpenCycleMap`, `CartoLight`, `CartoDark`, `StamenToner`, `StamenTerrain`, `ArcgisWorldImagery`. Each comes with the upstream provider's terms-of-use and attribution requirements — read them before shipping a public app.
+`ntmaps.SetStyle(...)` switches between nine tile providers from [`flopp/go-staticmaps`](https://github.com/flopp/go-staticmaps): `Wikimedia`, `OpenStreetMaps`, `OpenTopoMap`, `OpenCycleMap`, `CartoLight`, `CartoDark`, `StamenToner`, `StamenTerrain`, `ArcgisWorldImagery`. Each comes with the upstream provider's terms-of-use and attribution requirements — read them before shipping a public app.
 
 ## Render modes
 
 | Mode | What it does | Where it works |
 |---|---|---|
-| `mapview.RenderGlyph` (default) | Half-block ANSI from ntpicture | Any modern terminal |
-| `mapview.RenderKitty` | Full-resolution image via Kitty graphics protocol | Kitty, Ghostty, WezTerm |
+| `ntmaps.RenderGlyph` (default) | Half-block ANSI from ntpicture | Any modern terminal |
+| `ntmaps.RenderKitty` | Full-resolution image via Kitty graphics protocol | Kitty, Ghostty, WezTerm |
 
 `mv.SetRenderMode(mode)` returns a `tea.Cmd` that re-renders at the new mode. Toggling away from Kitty automatically deletes the uploaded image so no ghost stays in the terminal.
 
-To start in Kitty whenever it is available, set `mapview.Config{PreferKitty: true}`. The model begins in Glyph and switches once the terminal's Kitty-support probe succeeds; it never overrides a mode chosen with `SetRenderMode`.
+To start in Kitty whenever it is available, set `ntmaps.Config{PreferKitty: true}`. The model begins in Glyph and switches once the terminal's Kitty-support probe succeeds; it never overrides a mode chosen with `SetRenderMode`.
 
-The WASM browser demo requests Kitty shared-memory transport through booba v0.10.3 and starts in Kitty rendering; press `g` to switch to glyphs. Native demos default to direct transmission, including over SSH. Other consumers can opt in with `mapview.Config{KittyMedium: mapview.KittyMediumSharedMemory}` when their terminal or browser bridge supports it. Shared-memory allocation or bridge failures fall back to direct transmission.
+The WASM browser demo requests Kitty shared-memory transport through booba v0.10.3 and starts in Kitty rendering; press `g` to switch to glyphs. Native demos default to direct transmission, including over SSH. Other consumers can opt in with `ntmaps.Config{KittyMedium: ntmaps.KittyMediumSharedMemory}` when their terminal or browser bridge supports it. Shared-memory allocation or bridge failures fall back to direct transmission.
 
 ## Bubble Tea version
 
@@ -114,12 +114,12 @@ Targets Bubble Tea **v2** (`charm.land/bubbletea/v2`). No v1 backport.
 
 ## Routing messages across multiple picture owners
 
-`mapview.IsMapUpdate(msg)` is a **"may need this"** predicate, not an ownership predicate. It returns `true` for both mapview's own messages *and* for every `legacy.IsPictureMsg` (Kitty frames, cell-size events, capability probes). Picture messages are program-wide — they belong to the runtime, not to any one model.
+`ntmaps.IsMapUpdate(msg)` is a **"may need this"** predicate, not an ownership predicate. It returns `true` for both the widget's own messages *and* for every `legacy.IsPictureMsg` (Kitty frames, cell-size events, capability probes). Picture messages are program-wide — they belong to the runtime, not to any one model.
 
-If your program embeds `picture.Model` in more than one place (say, a `mapview.Model` *and* a `pictureurl.Model` rendering a product image), do NOT route picture messages with `else if` — broadcast them to every picture owner, otherwise one of them will starve:
+If your program embeds `picture.Model` in more than one place (say, a `ntmaps.Model` *and* a `pictureurl.Model` rendering a product image), do NOT route picture messages with `else if` — broadcast them to every picture owner, otherwise one of them will starve:
 
 ```go
-mapMsg := mapview.IsMapUpdate(msg)
+mapMsg := ntmaps.IsMapUpdate(msg)
 prodMsg := pictureurl.IsPictureMsg(msg)
 
 if mapMsg || prodMsg {
@@ -138,7 +138,7 @@ if mapMsg || prodMsg {
 }
 ```
 
-For the narrower "is this message owned by mapview alone" predicate (the `MapCoordinates` input, async tile-render results, debounce ticks), use `mapview.IsMapOwnMsg(msg)`. Each model's own `Update` already filters by instance ID where applicable, so broadcasting picture messages is safe.
+For the narrower "is this message owned by ntmaps alone" predicate (the `MapCoordinates` input, async tile-render results, debounce ticks), use `ntmaps.IsMapOwnMsg(msg)`. Each model's own `Update` already filters by instance ID where applicable, so broadcasting picture messages is safe.
 
 ## Examples and sample application
 
@@ -201,7 +201,7 @@ separate internal pieces; no new public library API is introduced.
 
 ## Flat textured-map fixture
 
-The `mapview3d` example displays `mapview.Image()` on an unlit ntcharts3d
+The `mapview3d` example displays `ntmaps.Image()` on an unlit ntcharts3d
 surface. It is a flat map in 3D, without terrain elevation. Camera movement
 reuses the texture; panning or changing map zoom updates it.
 
@@ -267,7 +267,7 @@ attribution are recorded in [examples/cityview3d/DATA.md](examples/cityview3d/DA
 
 - **WASM dependencies.** `wasm.work` selects Bubble Tea and clipboard forks with browser support. Native builds use upstream versions. The WASM task and CI select this workspace automatically; manual builds need `task build-wasm` (or select that workspace with `go -C examples build`).
 - **go-staticmaps fork for marker performance.** `go.mod` replaces `flopp/go-staticmaps` with [`neomantra/go-staticmaps`](https://github.com/neomantra/go-staticmaps) to fix offscreen marker wrapping and skip drawing invisible pins. These fixes reduce rendering delays when panning. We'll switch back when upstream includes them.
-- **Tile fetching is synchronous per render.** Each render builds its own `*sm.Context` inside a dispatched goroutine. With buffering off, generation counters discard stale results. With `PanBuffer` enabled, tile renders are serialized and completed buffers are cropped for the latest compatible camera position. Composited viewports are kept in a small per-Model LRU keyed on `(lat, lng, zoom, cols, rows, style, oversample, markers)` — revisiting a state hits the cache synchronously (no Loading overlay). Default cap is 16 entries; tune via `mapview.NewWithConfig(Config{CacheCap: N})` (`-1` disables this LRU; an explicitly enabled pan buffer remains active).
+- **Tile fetching is synchronous per render.** Each render builds its own `*sm.Context` inside a dispatched goroutine. With buffering off, generation counters discard stale results. With `PanBuffer` enabled, tile renders are serialized and completed buffers are cropped for the latest compatible camera position. Composited viewports are kept in a small per-Model LRU keyed on `(lat, lng, zoom, cols, rows, style, oversample, markers)` — revisiting a state hits the cache synchronously (no Loading overlay). Default cap is 16 entries; tune via `ntmaps.NewWithConfig(Config{CacheCap: N})` (`-1` disables this LRU; an explicitly enabled pan buffer remains active).
 - **Server-side supersample (`Config.Oversample`).** Raises the source-image pixel density without changing visible geographic coverage — `Oversample: N` (powers of 2) renders the same area at `N×` per-cell resolution and `+log2(N)` OSM tile zoom, so Kitty terminals can downscale a sharper source. `1` (default) keeps current behavior; `2` is a noticeable boost; `4` is hi-DPI quality at ~16× the tile fetches. Capped so the effective tile zoom never exceeds 19. Glyph mode pays the cost without visible benefit.
 - **Client-side optical zoom (`Config.OpticalZoom` / `mv.SetOpticalZoom(n)`).** Magnifies the *cached* source image by cropping the center `1/2^n` of each axis and letting the renderer scale it back up to the cell rectangle. No network, no tile-render goroutine — switching is instant. Pixelated at high N (it's digital zoom in spirit even though we call it optical), but useful for going past the OSM tile-zoom ceiling or just inspecting fine detail without re-fetching. Composes with `Oversample`: e.g. `Oversample: 2` + `OpticalZoom: 1` is a 2× zoomed view rendered from a 2× supersampled source.
 - **Aspect-ratio guardrail (`Config.MaxAspectRatio` / `Config.LetterboxColor`).** Maps display correctly at any cell-rect AR — every pixel sits at its true geographic location — but at extreme ARs (a 100×5 status bar, say) viewers find the result disorienting because their mental model of "a map" is roughly square. `MaxAspectRatio: 3.0` lets the cell rect's AR range up to 3:1 in either direction; beyond that, the map portion is rendered at the boundary AR centered in the cell rect, with the rest filled by `LetterboxColor` (default opaque black; `color.Transparent` shows the terminal background through the bars). The letterbox is composed into the source image *before* picture renders, so Glyph and Kitty show identical letterbox geometry — toggling render modes doesn't change layout. Default `0` keeps the current "fill the cell rect at any AR" behavior; opt in when your layout might land in extreme territory.

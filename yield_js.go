@@ -1,6 +1,6 @@
 //go:build js
 
-package mapview
+package ntmaps
 
 import "time"
 

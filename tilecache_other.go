@@ -1,6 +1,6 @@
 //go:build !js
 
-package mapview
+package ntmaps
 
 import sm "github.com/flopp/go-staticmaps"
 

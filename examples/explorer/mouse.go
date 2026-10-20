@@ -175,7 +175,7 @@ func (m *model) mouse(msg tea.MouseMsg) tea.Cmd {
 	return nil
 }
 
-// mapview's geographic canvas uses 8x16 map pixels per terminal cell, before
+// the widget's geographic canvas uses 8x16 map pixels per terminal cell, before
 // oversampling (whose extra zoom cancels the extra density). Preserve that
 // scale and optical crop when translating a grab-and-drag into a new center.
 func (m *model) dragMap(dx, dy int) tea.Cmd {
