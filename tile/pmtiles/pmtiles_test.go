@@ -68,30 +68,6 @@ type fixture struct {
 	tileCompress uint8
 }
 
-func encodeDirectory(entries []Entry) []byte {
-	var buf []byte
-	buf = binary.AppendUvarint(buf, uint64(len(entries)))
-	var last uint64
-	for _, e := range entries {
-		buf = binary.AppendUvarint(buf, e.TileID-last)
-		last = e.TileID
-	}
-	for _, e := range entries {
-		buf = binary.AppendUvarint(buf, uint64(e.RunLength))
-	}
-	for _, e := range entries {
-		buf = binary.AppendUvarint(buf, uint64(e.Length))
-	}
-	for i, e := range entries {
-		if i > 0 && e.Offset == entries[i-1].Offset+uint64(entries[i-1].Length) {
-			buf = binary.AppendUvarint(buf, 0)
-		} else {
-			buf = binary.AppendUvarint(buf, e.Offset+1)
-		}
-	}
-	return buf
-}
-
 func compress(data []byte, c uint8) []byte {
 	if c != CompressionGzip {
 		return data
@@ -138,14 +114,14 @@ func buildArchive(t *testing.T, tiles map[tile.ID][]byte, f fixture) []byte {
 	if f.leafSize > 0 && len(entries) > f.leafSize {
 		for i := 0; i < len(entries); i += f.leafSize {
 			chunk := entries[i:min(i+f.leafSize, len(entries))]
-			leaf := compress(encodeDirectory(chunk), f.compression)
+			leaf := compress(EncodeDirectory(chunk), f.compression)
 			root = append(root, Entry{TileID: chunk[0].TileID, Offset: uint64(len(leaves)), Length: uint32(len(leaf))})
 			leaves = append(leaves, leaf...)
 		}
 	} else {
 		root = entries
 	}
-	rootBytes := compress(encodeDirectory(root), f.compression)
+	rootBytes := compress(EncodeDirectory(root), f.compression)
 	meta := compress([]byte(`{"attribution":"Fixture (c) test","name":"flatiron"}`), f.compression)
 
 	h := make([]byte, HeaderSize)
@@ -377,7 +353,7 @@ func TestArchiveRejectsUnsupportedAndCorrupt(t *testing.T) {
 
 func TestDecodeDirectoryOffsets(t *testing.T) {
 	entries := []Entry{{TileID: 5, Offset: 0, Length: 10, RunLength: 1}, {TileID: 6, Offset: 10, Length: 5, RunLength: 2}, {TileID: 20, Offset: 100, Length: 1, RunLength: 0}}
-	got, err := DecodeDirectory(encodeDirectory(entries))
+	got, err := DecodeDirectory(EncodeDirectory(entries))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -397,5 +373,46 @@ func TestDecodeDirectoryOffsets(t *testing.T) {
 	}
 	if _, ok := find(got, 2); ok {
 		t.Fatal("find(2) should miss: before the first entry")
+	}
+}
+
+func TestWriteProducesAReadableArchive(t *testing.T) {
+	tiles := flatironTiles()
+	// Two tiles with identical content share one blob.
+	var first tile.ID
+	for first = range tiles {
+		break
+	}
+	dup := tile.ID{Z: first.Z, X: first.X + 10, Y: first.Y}
+	tiles[dup] = tiles[first]
+	var buf bytes.Buffer
+	if err := Write(&buf, tiles, WriteOptions{Name: "fx", Attribution: "Written (c)", LeafSize: 5}); err != nil {
+		t.Fatal(err)
+	}
+	a, err := New(bytes.NewReader(buf.Bytes()), Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if h := a.Header(); h.TileContents != uint64(len(tiles)-1) || h.TileEntries != uint64(len(tiles)) || h.MinZoom != 10 || h.MaxZoom != 12 || h.MinLon >= flatironLng || h.MaxLon <= flatironLng {
+		t.Fatalf("header = %+v", h)
+	}
+	if a.Info().Attribution != "Written (c)" || len(a.root) >= len(tiles) {
+		t.Fatalf("info = %+v root=%d", a.Info(), len(a.root))
+	}
+	for id := range tiles {
+		if id == dup {
+			continue
+		}
+		checkTile(t, a, id)
+	}
+	img, err := a.Tile(context.Background(), dup)
+	if err != nil || color.RGBAModel.Convert(img.At(1, 1)).(color.RGBA) != tileColor(first) {
+		t.Fatalf("deduplicated tile: %v", err)
+	}
+	if err := Write(&buf, nil, WriteOptions{}); err == nil {
+		t.Fatal("empty archive accepted")
+	}
+	if err := Write(&buf, map[tile.ID][]byte{{Z: 2, X: 9, Y: 0}: {1}}, WriteOptions{}); err == nil {
+		t.Fatal("out-of-range tile accepted")
 	}
 }

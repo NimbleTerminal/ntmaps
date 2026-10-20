@@ -166,6 +166,9 @@ func (l *Loader) load(ctx context.Context, src Source, id ID) (image.Image, erro
 		}
 	}
 	data, err := ds.TileData(ctx, id)
+	if errors.Is(err, ErrNoData) {
+		return src.Tile(ctx, id)
+	}
 	if err != nil {
 		return nil, err
 	}
