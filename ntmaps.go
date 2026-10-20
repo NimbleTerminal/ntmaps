@@ -2,16 +2,10 @@ package ntmaps
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"image"
 	"image/color"
 	"image/draw"
-	"io"
-	"net/http"
-	"net/url"
-	"strconv"
 	"strings"
 	"time"
 
@@ -22,6 +16,7 @@ import (
 	picture "nimbleterminal.dev/ntpicture"
 	"nimbleterminal.dev/ntpicture/legacy"
 
+	"nimbleterminal.dev/ntmaps/geocode"
 	"nimbleterminal.dev/ntmaps/tile"
 )
 
@@ -93,8 +88,9 @@ func (s Style) Provider() tile.Provider {
 	}
 }
 
-// MapCoordinates is the geocoder-result message a parent forwards into Update
-// to recenter the map. Setting Err makes ntmaps surface it via errMsg / View.
+// MapCoordinates recenters the map. SetLocation produces it from the
+// Geocoder, and a parent can send its own. Setting Err makes ntmaps show
+// it in place of the map.
 type MapCoordinates struct {
 	Lat float64
 	Lng float64
@@ -170,16 +166,6 @@ func IsMapUpdate(msg tea.Msg) bool {
 	return IsMapOwnMsg(msg) || legacy.IsPictureMsg(msg)
 }
 
-type NominatimResponse []struct {
-	PlaceID     int    `json:"place_id"`
-	License     string `json:"license"`
-	OSMType     string `json:"osm_type"`
-	OSMID       int    `json:"osm_id"`
-	Lat         string `json:"lat"`
-	Lon         string `json:"lon"`
-	DisplayName string `json:"display_name"`
-}
-
 type KeyMap struct {
 	Up      key.Binding
 	Right   key.Binding
@@ -223,6 +209,7 @@ type Model struct {
 	source    tile.Source
 	loader    *tile.Loader
 	userAgent string
+	geocoder  geocode.Geocoder
 	lat       float64
 	lng       float64
 	loc       string
@@ -441,10 +428,17 @@ type Config struct {
 	// DisableDiskCache keeps the built Loader from touching the disk.
 	DisableDiskCache bool
 
-	// UserAgent identifies the application to tile servers; their usage
-	// policies require one. Empty means tile.DefaultUserAgent, which names
-	// ntmaps and its version. Ignored when Loader is set.
+	// UserAgent identifies the application to tile and geocoding
+	// servers; their usage policies require one. Empty means
+	// tile.DefaultUserAgent, which names ntmaps and its version. It is
+	// applied to Providers set without their own and to the default
+	// Geocoder.
 	UserAgent string
+
+	// Geocoder resolves SetLocation queries. nil means a geocode.Nominatim
+	// against the public OpenStreetMap instance, paced to one request per
+	// second as its policy requires.
+	Geocoder geocode.Geocoder
 }
 
 // New returns a Model sized to cols × rows terminal cells with default
@@ -485,6 +479,7 @@ func NewWithConfig(cfg Config) Model {
 		preferKitty:    cfg.PreferKitty,
 		loader:         cfg.Loader,
 		userAgent:      cfg.UserAgent,
+		geocoder:       cfg.Geocoder,
 	}
 	if m.loader == nil {
 		dir := cfg.TileCacheDir
@@ -540,6 +535,9 @@ func (m *Model) setInitialValues() {
 	}
 	if m.job == nil {
 		m.job = &jobSlot{}
+	}
+	if m.geocoder == nil {
+		m.geocoder = &geocode.Nominatim{UserAgent: m.userAgent}
 	}
 	m.zoom = 15
 	m.lat = 25.0782266
@@ -1385,42 +1383,13 @@ func (m *Model) renderMapCmd() tea.Cmd {
 }
 
 func (m *Model) lookup(address string) tea.Cmd {
+	g := m.geocoder
 	return func() tea.Msg {
-		u := fmt.Sprintf(
-			"https://nominatim.openstreetmap.org/search?q=%s&format=json&polygon=1&addressdetails=1",
-			url.QueryEscape(address),
-		)
-
-		resp, err := http.Get(u)
+		res, err := g.Geocode(context.Background(), address)
 		if err != nil {
 			return MapCoordinates{Err: err}
 		}
-		defer resp.Body.Close()
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return MapCoordinates{Err: err}
-		}
-		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-			return MapCoordinates{Err: errors.New(string(body))}
-		}
-
-		var data NominatimResponse
-		if err := json.Unmarshal(body, &data); err != nil {
-			return MapCoordinates{Err: err}
-		}
-		if len(data) == 0 {
-			return MapCoordinates{Err: errors.New("location not found")}
-		}
-
-		lat, err := strconv.ParseFloat(data[0].Lat, 64)
-		if err != nil {
-			return MapCoordinates{Err: err}
-		}
-		lon, err := strconv.ParseFloat(data[0].Lon, 64)
-		if err != nil {
-			return MapCoordinates{Err: err}
-		}
-		return MapCoordinates{Lat: lat, Lng: lon}
+		return MapCoordinates{Lat: res.Lat, Lng: res.Lng}
 	}
 }
 

@@ -2,6 +2,8 @@ package ntmaps
 
 import (
 	"bytes"
+	"context"
+	"errors"
 	"image"
 	"image/color"
 	"image/png"
@@ -13,6 +15,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
+	"nimbleterminal.dev/ntmaps/geocode"
 	"nimbleterminal.dev/ntmaps/tile"
 )
 
@@ -251,5 +254,40 @@ func TestOversampleCapsAtProviderMaxZoom(t *testing.T) {
 	m.SetLatLng(0, 0, 8)
 	if factor, boost := m.effectiveOversample(); factor != 4 || boost != 2 {
 		t.Fatalf("effectiveOversample below the cap = %d/%d, want 4/2", factor, boost)
+	}
+}
+
+func TestSetLocationUsesConfiguredGeocoder(t *testing.T) {
+	var asked string
+	g := geocode.Func(func(ctx context.Context, q string) (geocode.Result, error) {
+		asked = q
+		if q == "nowhere" {
+			return geocode.Result{}, geocode.ErrNotFound
+		}
+		return geocode.Result{Lat: 51.5, Lng: -0.12}, nil
+	})
+	m := NewWithConfig(Config{Cols: 20, Rows: 5, Geocoder: g, DisableDiskCache: true})
+	m.SetTileSource(tile.Provider{})
+	m.SetLocation("london", 10)
+	// Any message triggers the one-shot lookup once SetLocation was called.
+	m, cmd := m.Update(struct{}{})
+	if cmd == nil {
+		t.Fatal("expected the lookup Cmd")
+	}
+	msg, ok := cmd().(MapCoordinates)
+	if !ok || msg.Err != nil || msg.Lat != 51.5 || msg.Lng != -0.12 || asked != "london" {
+		t.Fatalf("lookup produced %#v (asked %q)", msg, asked)
+	}
+	m, _ = m.Update(msg)
+	if lat, lng := m.Center(); lat != 51.5 || lng != -0.12 || m.Zoom() != 10 {
+		t.Fatalf("center = %v,%v z%d", lat, lng, m.Zoom())
+	}
+	m.SetLocation("nowhere", 10)
+	_, cmd = m.Update(struct{}{})
+	if msg := cmd().(MapCoordinates); !errors.Is(msg.Err, geocode.ErrNotFound) {
+		t.Fatalf("lookup error = %v, want ErrNotFound", msg.Err)
+	}
+	if New(1, 1).geocoder == nil {
+		t.Fatal("default geocoder should be set")
 	}
 }
