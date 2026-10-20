@@ -1,6 +1,6 @@
 # `ntcharts-osm` CHANGELOG
 
-## Unreleased
+## v0.3.0 (2026-10-19)
 
 - Fix explorer mouse reporting and pane-relative 3D coordinates; add 2D
   drag/wheel navigation, sidebar selection, and capture cleanup on view changes.
