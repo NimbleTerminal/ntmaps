@@ -20,6 +20,7 @@ import (
 	"nimbleterminal.dev/ntmaps/examples/internal/cityview"
 	"nimbleterminal.dev/ntmaps/examples/internal/demorun"
 	"nimbleterminal.dev/ntmaps/examples/internal/neighborhood"
+	curated "nimbleterminal.dev/ntmaps/examples/internal/places"
 	"nimbleterminal.dev/ntmaps/internal/city"
 	"nimbleterminal.dev/ntmaps/tile"
 )
@@ -49,8 +50,8 @@ var (
 	footerStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("242"))
 )
 
-// placeItem adapts ntmaps.Place to the bubbles/list DefaultItem interface.
-type placeItem struct{ p ntmaps.Place }
+// placeItem adapts curated.Place to the bubbles/list DefaultItem interface.
+type placeItem struct{ p curated.Place }
 
 func (i placeItem) Title() string {
 	if i.p.Recommended {
@@ -149,16 +150,16 @@ type model struct {
 	cityKey               string
 	cached                bool
 	mv                    ntmaps.Model
-	places                []ntmaps.Place
+	places                []curated.Place
 	list                  list.Model
 	help                  help.Model
 	keys                  appKeys
-	lastPlace             ntmaps.Place // most recently auto-applied selection
+	lastPlace             curated.Place // most recently auto-applied selection
 	width, height         int
 }
 
 func initialModel(medium ntmaps.KittyMedium, loader *neighborhood.Loader, renderer chart.RenderMode) *model {
-	places, err := ntmaps.EmbeddedPlaces()
+	places, err := curated.Embedded()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "load places: %v\n", err)
 		os.Exit(1)
@@ -168,7 +169,7 @@ func initialModel(medium ntmaps.KittyMedium, loader *neighborhood.Loader, render
 		os.Exit(1)
 	}
 
-	places = append([]ntmaps.Place{{Name: "Flatiron district", Description: "Bundled neighborhood: real building footprints and heights around Flatiron, Manhattan. Press v for 3D.", Lat: 40.7415, Lon: -73.989, Zoom: 17}}, places...)
+	places = append([]curated.Place{{Name: "Flatiron district", Description: "Bundled neighborhood: real building footprints and heights around Flatiron, Manhattan. Press v for 3D.", Lat: 40.7415, Lon: -73.989, Zoom: 17}}, places...)
 	items := make([]list.Item, len(places))
 	for i, p := range places {
 		items[i] = placeItem{p: p}

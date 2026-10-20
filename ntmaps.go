@@ -206,7 +206,7 @@ type Model struct {
 	// state (e.g. selecting a place that was viewed earlier) applies the
 	// previous image synchronously, avoiding the in-flight Loading overlay.
 	// Pointer for the same value-receiver-survival reason as the gen
-	// counters above. nil when caching is disabled (Config.CacheCap < 0).
+	// counters above. nil when caching is disabled (Config.RenderCacheCap < 0).
 	cache    *renderCache
 	cacheCap int // 0 means default; <0 disables; >0 sets the LRU size
 
@@ -289,7 +289,7 @@ type Config struct {
 	// hand it to SetSize anyway.
 	Cols, Rows int
 
-	// CacheCap tunes the LRU of composited tile images. Cache hits apply
+	// RenderCacheCap tunes the LRU of composited map images. Cache hits apply
 	// the previous image synchronously, so revisiting a state doesn't
 	// flash the Loading overlay. Each entry is roughly
 	// (cols × cellPixelW × Oversample) × (rows × cellPixelH × Oversample)
@@ -298,7 +298,7 @@ type Config struct {
 	// Zero means the default (defaultRenderCacheCap = 16). Negative
 	// disables caching entirely — every render goes through the goroutine
 	// path and every state change shows the Loading overlay.
-	CacheCap int
+	RenderCacheCap int
 
 	// Oversample is an optical-zoom factor for the source-image canvas.
 	// A value of N (1, 2, 4, …) multiplies the per-cell pixel resolution
@@ -413,7 +413,7 @@ func New(cols, rows int) Model {
 }
 
 // NewWithConfig returns a Model with the supplied Config. Zero fields are
-// filled with defaults; negative CacheCap disables caching. Oversample is
+// filled with defaults; negative RenderCacheCap disables caching. Oversample is
 // floored to the nearest power of 2 ≥ 1; OpticalZoom is clamped to ≥ 0;
 // MaxAspectRatio is clamped to ≥ 0 (0 = no AR constraint); LetterboxColor
 // defaults to opaque black.
@@ -433,7 +433,7 @@ func NewWithConfig(cfg Config) Model {
 	m := Model{
 		cols:           cfg.Cols,
 		rows:           cfg.Rows,
-		cacheCap:       cfg.CacheCap,
+		cacheCap:       cfg.RenderCacheCap,
 		oversample:     floorPow2(cfg.Oversample),
 		opticalZoom:    oz,
 		maxAspectRatio: mar,

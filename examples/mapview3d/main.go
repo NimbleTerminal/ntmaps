@@ -17,20 +17,21 @@ import (
 	chart "github.com/NimbleMarkets/ntcharts3d"
 	"github.com/charmbracelet/x/ansi"
 	"nimbleterminal.dev/ntmaps"
+	"nimbleterminal.dev/ntmaps/examples/internal/places"
 	picture "nimbleterminal.dev/ntpicture"
 )
 
 type model struct {
 	source        ntmaps.Model
 	chart         *chart.Model
-	places        []ntmaps.Place
+	places        []places.Place
 	place         int
 	textureSource image.Image
 	err           error
 	width         int
 }
 
-func newModel(places []ntmaps.Place, medium picture.KittyMedium, renderer chart.RenderMode) *model {
+func newModel(places []places.Place, medium picture.KittyMedium, renderer chart.RenderMode) *model {
 	// Keep a square map texture across terminal resizes. Camera changes only redraw 3D.
 	source := ntmaps.NewWithConfig(ntmaps.Config{Cols: 64, Rows: 33})
 	view := chart.New(80, 21, chart.WithRenderMode(renderer), chart.WithTerminalSession(legacy.DefaultTerminalSession()), chart.WithKittyMedium(medium),
@@ -185,7 +186,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, "renderer must be software or gpu")
 		os.Exit(2)
 	}
-	places, err := ntmaps.EmbeddedPlaces()
+	places, err := places.Embedded()
 	if err != nil || len(places) == 0 {
 		fmt.Fprintln(os.Stderr, "cannot load places:", err)
 		os.Exit(1)

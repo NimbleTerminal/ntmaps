@@ -57,6 +57,8 @@
   in the render cache key by hash.
 - `Render` composes a static map image from `RenderOptions` with no terminal
   or Bubble Tea involved, sharing the tile cache and drawing code.
+- Breaking: `Config.CacheCap` is now `RenderCacheCap`, and the demos' curated
+  `Place` list moves out of the library into examples/internal/places.
 
 ## v0.3.0 (2026-10-19)
 

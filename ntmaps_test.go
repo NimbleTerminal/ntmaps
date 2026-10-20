@@ -672,13 +672,13 @@ func TestEffectiveOversample(t *testing.T) {
 	}
 }
 
-// TestNewWithConfig_DisableCache verifies CacheCap < 0 leaves the cache nil
+// TestNewWithConfig_DisableCache verifies RenderCacheCap < 0 leaves the cache nil
 // and forces every renderMapCmd through the goroutine path. Useful for
 // consumers that want predictable memory or are already caching upstream.
 func TestNewWithConfig_DisableCache(t *testing.T) {
-	m := NewWithConfig(Config{Cols: 80, Rows: 24, CacheCap: -1})
+	m := NewWithConfig(Config{Cols: 80, Rows: 24, RenderCacheCap: -1})
 	if m.cache != nil {
-		t.Fatalf("expected cache to be nil with CacheCap=-1, got %#v", m.cache)
+		t.Fatalf("expected cache to be nil with RenderCacheCap=-1, got %#v", m.cache)
 	}
 
 	startGen := *m.renderGen
@@ -690,12 +690,12 @@ func TestNewWithConfig_DisableCache(t *testing.T) {
 	}
 }
 
-// TestNewWithConfig_CustomCacheCap verifies an explicit positive CacheCap
+// TestNewWithConfig_CustomCacheCap verifies an explicit positive RenderCacheCap
 // is honored.
 func TestNewWithConfig_CustomCacheCap(t *testing.T) {
-	m := NewWithConfig(Config{Cols: 80, Rows: 24, CacheCap: 4})
+	m := NewWithConfig(Config{Cols: 80, Rows: 24, RenderCacheCap: 4})
 	if m.cache == nil {
-		t.Fatal("expected cache to be allocated for CacheCap=4")
+		t.Fatal("expected cache to be allocated for RenderCacheCap=4")
 	}
 	if m.cache.cap != 4 {
 		t.Fatalf("expected cache cap 4, got %d", m.cache.cap)

@@ -1,4 +1,5 @@
-package ntmaps
+// Package places holds the curated points of interest the demos browse.
+package places
 
 import (
 	_ "embed"
@@ -18,8 +19,8 @@ type Place struct {
 	Recommended bool    `json:"recommended,omitempty"`
 }
 
-// EmbeddedPlaces returns the curated places shipped with the package.
-func EmbeddedPlaces() ([]Place, error) {
+// Embedded returns the curated places shipped with the demos.
+func Embedded() ([]Place, error) {
 	var places []Place
 	if err := json.Unmarshal(placesJSON, &places); err != nil {
 		return nil, err
