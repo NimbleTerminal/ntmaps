@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/NimbleMarkets/ntcharts-osm/examples/internal/cityview"
-	"github.com/NimbleMarkets/ntcharts-osm/internal/city"
+	"nimbleterminal.dev/ntmaps/examples/internal/cityview"
+	"nimbleterminal.dev/ntmaps/internal/city"
 )
 
 func dataset(t *testing.T) city.Dataset {

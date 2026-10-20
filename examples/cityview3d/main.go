@@ -14,10 +14,10 @@ import (
 
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
-	"github.com/NimbleMarkets/ntcharts-osm/examples/internal/cityview"
-	"github.com/NimbleMarkets/ntcharts-osm/examples/internal/demorun"
-	"github.com/NimbleMarkets/ntcharts-osm/internal/city"
 	chart "github.com/NimbleMarkets/ntcharts3d"
+	"nimbleterminal.dev/ntmaps/examples/internal/cityview"
+	"nimbleterminal.dev/ntmaps/examples/internal/demorun"
+	"nimbleterminal.dev/ntmaps/internal/city"
 	picture "nimbleterminal.dev/ntpicture"
 )
 

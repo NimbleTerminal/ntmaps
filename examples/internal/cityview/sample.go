@@ -3,7 +3,7 @@ package cityview
 import (
 	"bytes"
 	_ "embed"
-	"github.com/NimbleMarkets/ntcharts-osm/internal/city"
+	"nimbleterminal.dev/ntmaps/internal/city"
 )
 
 //go:embed neighborhood.json

@@ -14,7 +14,7 @@ Set Width 800
 Set Height 480
 
 Hide
-Type "./bin/ntcharts-osm-mapview"
+Type "./bin/ntmaps-mapview"
 Enter
 Show
 

@@ -13,14 +13,14 @@ import (
 	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
-	"github.com/NimbleMarkets/ntcharts-osm/examples/internal/cityview"
-	"github.com/NimbleMarkets/ntcharts-osm/examples/internal/demorun"
-	"github.com/NimbleMarkets/ntcharts-osm/examples/internal/neighborhood"
-	"github.com/NimbleMarkets/ntcharts-osm/internal/city"
-	"github.com/NimbleMarkets/ntcharts-osm/mapview"
 	chart "github.com/NimbleMarkets/ntcharts3d"
 	"github.com/charmbracelet/x/ansi"
 	zone "github.com/lrstanley/bubblezone/v2"
+	"nimbleterminal.dev/ntmaps/examples/internal/cityview"
+	"nimbleterminal.dev/ntmaps/examples/internal/demorun"
+	"nimbleterminal.dev/ntmaps/examples/internal/neighborhood"
+	"nimbleterminal.dev/ntmaps/internal/city"
+	"nimbleterminal.dev/ntmaps/mapview"
 )
 
 func styleName(s mapview.Style) string {
@@ -636,7 +636,7 @@ func defaultCacheDir() string {
 	if err != nil {
 		return ""
 	}
-	return filepath.Join(dir, "ntcharts-osm", "neighborhoods-v1")
+	return filepath.Join(dir, "ntmaps", "neighborhoods-v1")
 }
 func newLoader(dir string, offline bool) (*neighborhood.Loader, error) {
 	l := &neighborhood.Loader{Dir: dir}

@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"github.com/NimbleMarkets/ntcharts-osm/internal/city"
 	"io"
+	"nimbleterminal.dev/ntmaps/internal/city"
 )
 
 func readSource(r io.Reader) ([]byte, error) {

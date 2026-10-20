@@ -12,8 +12,8 @@ import (
 	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
-	"github.com/NimbleMarkets/ntcharts-osm/internal/city"
 	chart "github.com/NimbleMarkets/ntcharts3d"
+	"nimbleterminal.dev/ntmaps/internal/city"
 	"nimbleterminal.dev/ntpicture/legacy"
 )
 

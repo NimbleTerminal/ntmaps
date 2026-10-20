@@ -39,7 +39,7 @@ func wrap(model tea.Model, context, summary string, keys Keys, onError func(erro
 	return bubblehelp.NewModelWithFallback(model, func(tea.Model) bubblehelp.Description {
 		return bubblehelp.Description{
 			Context: context, Keys: keys,
-			Status: actions.ProgramStatus{App: "ntcharts-osm", Summary: summary},
+			Status: actions.ProgramStatus{App: "ntmaps", Summary: summary},
 		}
 	}, bubblehelp.ModelOptions{OnError: onError})
 }

@@ -3,9 +3,9 @@ package cityview
 import (
 	"image/color"
 
-	"github.com/NimbleMarkets/ntcharts-osm/internal/city"
 	chart "github.com/NimbleMarkets/ntcharts3d"
 	m3 "nimbleterminal.dev/nt3d/math"
+	"nimbleterminal.dev/ntmaps/internal/city"
 )
 
 type citySeries struct{ geometry chart.Geometry }

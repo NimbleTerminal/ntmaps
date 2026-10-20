@@ -149,7 +149,7 @@ func (c Client) Fetch(ctx context.Context, b Bounds) (Dataset, error) {
 	if err != nil {
 		return Dataset{}, err
 	}
-	req.Header.Set("User-Agent", "ntcharts-osm-city-prototype/0.1 (https://github.com/NimbleMarkets/ntcharts-osm)")
+	req.Header.Set("User-Agent", "ntmaps-city-prototype/0.1 (https://github.com/NimbleTerminal/ntmaps)")
 	req.Header.Set("Accept", "application/json")
 	client := c.HTTP
 	if client == nil {

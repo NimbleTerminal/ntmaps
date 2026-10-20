@@ -1,4 +1,4 @@
-module github.com/NimbleMarkets/ntcharts-osm
+module nimbleterminal.dev/ntmaps
 
 go 1.26.8
 

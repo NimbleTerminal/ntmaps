@@ -1,4 +1,4 @@
-# ntcharts-osm - Copyright (c) 2026 Neomantra Corp.
+# ntmaps - Copyright (c) 2026 Neomantra Corp.
 
 version: '3'
 
@@ -47,7 +47,7 @@ tasks:
   clean:
     desc: 'Clean built examples'
     cmds:
-      - rm -f bin/ntcharts-osm-mapview bin/ntcharts-osm-mapview3d bin/ntcharts-osm-cityview3d bin/ntcharts-osm-explorer
+      - rm -f bin/ntmaps-mapview bin/ntmaps-mapview3d bin/ntmaps-cityview3d bin/ntmaps-explorer
       - rm -rf .task
 
 ###############################################################################
@@ -74,22 +74,22 @@ tasks:
   build-ex-mapview3d:
     desc: 'Build the textured 3D map example'
     cmds:
-      - go -C examples build -mod=readonly -o ../bin/ntcharts-osm-mapview3d ./mapview3d
+      - go -C examples build -mod=readonly -o ../bin/ntmaps-mapview3d ./mapview3d
 
   build-ex-explorer:
     desc: 'Build the sample map explorer with 2D and 3D views'
     cmds:
-      - go -C examples build -mod=readonly -o ../bin/ntcharts-osm-explorer ./explorer
+      - go -C examples build -mod=readonly -o ../bin/ntmaps-explorer ./explorer
 
   build-ex-cityview3d:
     desc: 'Build the experimental building-footprint city viewer'
     cmds:
-      - go -C examples build -mod=readonly -o ../bin/ntcharts-osm-cityview3d ./cityview3d
+      - go -C examples build -mod=readonly -o ../bin/ntmaps-cityview3d ./cityview3d
 
   build-ex-mapview:
     desc: 'Build the mapview example'
     cmds:
-      - go -C examples build -mod=readonly -o ../bin/ntcharts-osm-mapview ./mapview
+      - go -C examples build -mod=readonly -o ../bin/ntmaps-mapview ./mapview
     sources:
       - mapview/**/*.go
       - examples/mapview/*.go
@@ -99,7 +99,7 @@ tasks:
       - examples/go.sum
       - examples/internal/**/*.go
     generates:
-      - bin/ntcharts-osm-mapview
+      - bin/ntmaps-mapview
 
 ###############################################################################
 # Demo gif (note: Kitty graphics do not render in VHS — this captures the
@@ -149,13 +149,13 @@ tasks:
         cmd: node scripts/smoke-demo.mjs {{.ITEM}}
 
   serve-wasm-site:
-    desc: 'Serve at http://localhost:8000/ntcharts-osm/'
+    desc: 'Serve at http://localhost:8000/ntmaps/'
     deps: [build-wasm-site]
     vars:
-      SERVE_DIR: /tmp/ntcharts-osm-site
+      SERVE_DIR: /tmp/ntmaps-site
     cmds:
       - mkdir -p "{{.SERVE_DIR}}"
-      - ln -sfn "$PWD/web" "{{.SERVE_DIR}}/ntcharts-osm"
+      - ln -sfn "$PWD/web" "{{.SERVE_DIR}}/ntmaps"
       - python3 -m http.server 8000 --directory "{{.SERVE_DIR}}"
 
   clean-wasm-site:

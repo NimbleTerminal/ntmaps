@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/NimbleMarkets/ntcharts-osm/internal/city"
+	"nimbleterminal.dev/ntmaps/internal/city"
 	"testing"
 )
 

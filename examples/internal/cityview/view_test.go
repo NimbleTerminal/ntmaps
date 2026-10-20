@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/NimbleMarkets/ntcharts-osm/internal/city"
 	chart "github.com/NimbleMarkets/ntcharts3d"
+	"nimbleterminal.dev/ntmaps/internal/city"
 	picture "nimbleterminal.dev/ntpicture"
 )
 

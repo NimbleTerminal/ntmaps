@@ -10,9 +10,9 @@ import (
 
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
-	"github.com/NimbleMarkets/ntcharts-osm/examples/internal/demorun"
-	"github.com/NimbleMarkets/ntcharts-osm/mapview"
 	"github.com/charmbracelet/x/ansi"
+	"nimbleterminal.dev/ntmaps/examples/internal/demorun"
+	"nimbleterminal.dev/ntmaps/mapview"
 )
 
 type model struct {

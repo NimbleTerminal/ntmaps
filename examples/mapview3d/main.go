@@ -1,4 +1,4 @@
-// ntcharts-osm - Copyright (c) 2026 Neomantra Corp.
+// ntmaps - Copyright (c) 2026 Neomantra Corp.
 
 package main
 
@@ -6,17 +6,17 @@ import (
 	"charm.land/bubbles/v2/key"
 	"flag"
 	"fmt"
-	"github.com/NimbleMarkets/ntcharts-osm/examples/internal/demorun"
 	"image"
+	"nimbleterminal.dev/ntmaps/examples/internal/demorun"
 	"nimbleterminal.dev/ntpicture/legacy"
 	"os"
 	"runtime"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/NimbleMarkets/ntcharts-osm/mapview"
 	chart "github.com/NimbleMarkets/ntcharts3d"
 	"github.com/charmbracelet/x/ansi"
+	"nimbleterminal.dev/ntmaps/mapview"
 	picture "nimbleterminal.dev/ntpicture"
 )
 

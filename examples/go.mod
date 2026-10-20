@@ -1,4 +1,4 @@
-module github.com/NimbleMarkets/ntcharts-osm/examples
+module nimbleterminal.dev/ntmaps/examples
 
 go 1.26.8
 
@@ -9,11 +9,11 @@ require (
 	charm.land/bubbletea/v2 v2.1.0
 	charm.land/lipgloss/v2 v2.0.6
 	github.com/NimbleMarkets/go-booba v0.10.3
-	github.com/NimbleMarkets/ntcharts-osm v0.0.0
 	github.com/NimbleMarkets/ntcharts3d v0.3.2
 	github.com/charmbracelet/x/ansi v0.11.9
 	github.com/lrstanley/bubblezone/v2 v2.0.0
 	nimbleterminal.dev/nt3d v0.3.1
+	nimbleterminal.dev/ntmaps v0.0.0
 	nimbleterminal.dev/ntpicture v0.1.1
 )
 
@@ -56,6 +56,6 @@ require (
 	nimbleterminal.dev/ntgpuimage v0.4.0 // indirect
 )
 
-replace github.com/NimbleMarkets/ntcharts-osm => ..
+replace nimbleterminal.dev/ntmaps => ..
 
 replace github.com/flopp/go-staticmaps => github.com/neomantra/go-staticmaps v0.0.0-20260929174452-d17d92771423

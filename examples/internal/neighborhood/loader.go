@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/NimbleMarkets/ntcharts-osm/internal/city"
+	"nimbleterminal.dev/ntmaps/internal/city"
 )
 
 const maxCacheBytes = 32 << 20

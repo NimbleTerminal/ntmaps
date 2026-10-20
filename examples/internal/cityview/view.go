@@ -4,11 +4,11 @@ package cityview
 import (
 	tea "charm.land/bubbletea/v2"
 	"fmt"
-	"github.com/NimbleMarkets/ntcharts-osm/internal/city"
 	chart "github.com/NimbleMarkets/ntcharts3d"
 	"github.com/charmbracelet/x/ansi"
 	"image/color"
 	"math"
+	"nimbleterminal.dev/ntmaps/internal/city"
 	picture "nimbleterminal.dev/ntpicture"
 	"nimbleterminal.dev/ntpicture/legacy"
 )

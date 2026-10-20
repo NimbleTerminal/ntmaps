@@ -10,7 +10,7 @@ const requested = new URLSearchParams(location.search).get('demo');
 const demo = Object.hasOwn(demos, requested) ? requested : 'explorer';
 const status = document.querySelector('#status');
 document.querySelector('#title').textContent = demos[demo];
-document.title = `${demos[demo]} · ntcharts-osm`;
+document.title = `${demos[demo]} · ntmaps`;
 const restart = new URL(location.href);
 restart.searchParams.set('demo', demo);
 document.querySelector('#restart').href = restart.href;

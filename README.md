@@ -1,18 +1,22 @@
-# ntcharts-osm — Terminal OpenStreetMap widget for Bubble Tea
+# ntmaps — Terminal OpenStreetMap widget for Bubble Tea
 
 <p>
-    <a href="https://github.com/NimbleMarkets/ntcharts-osm/tags"><img src="https://img.shields.io/github/tag/NimbleMarkets/ntcharts-osm.svg" alt="Latest Release"></a>
-    <a href="https://pkg.go.dev/github.com/NimbleMarkets/ntcharts-osm?tab=doc"><img src="https://godoc.org/github.com/NimbleMarkets/ntcharts-osm?status.svg" alt="GoDoc"></a>
-    <a href="https://github.com/NimbleMarkets/ntcharts-osm/blob/main/CODE_OF_CONDUCT.md"><img src="https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg"  alt="Code Of Conduct"></a>
+    <a href="https://github.com/NimbleTerminal/ntmaps/tags"><img src="https://img.shields.io/github/tag/NimbleTerminal/ntmaps.svg" alt="Latest Release"></a>
+    <a href="https://pkg.go.dev/nimbleterminal.dev/ntmaps"><img src="https://pkg.go.dev/badge/nimbleterminal.dev/ntmaps.svg" alt="GoDoc"></a>
+    <a href="https://github.com/NimbleTerminal/ntmaps/blob/main/CODE_OF_CONDUCT.md"><img src="https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg"  alt="Code Of Conduct"></a>
 </p>
 
-`ntcharts-osm` is a [Bubble Tea](https://github.com/charmbracelet/bubbletea) widget that renders OpenStreetMap tiles in the terminal. It pairs [`flopp/go-staticmaps`](https://github.com/flopp/go-staticmaps) for tile fetching with [`ntpicture`](https://nimbleterminal.dev/ntpicture) for image rendering — half-block glyphs anywhere, full-resolution Kitty graphics on terminals that support them (Kitty, Ghostty, WezTerm).
+`ntmaps` is a [Bubble Tea](https://github.com/charmbracelet/bubbletea) widget that renders OpenStreetMap tiles in the terminal. It pairs [`flopp/go-staticmaps`](https://github.com/flopp/go-staticmaps) for tile fetching with [`ntpicture`](https://nimbleterminal.dev/ntpicture) for image rendering — half-block glyphs anywhere, full-resolution Kitty graphics on terminals that support them (Kitty, Ghostty, WezTerm).
 
-[Open the map explorer](https://nimblemarkets.github.io/ntcharts-osm/?demo=explorer) ·
+[Open the map explorer](https://nimbleterminal.github.io/ntmaps/?demo=explorer) ·
 [Minimal 2D example](examples/mapview/main.go) ·
 [Explorer sample app](examples/explorer/main.go)
 
 ## Quickstart
+
+```sh
+go get nimbleterminal.dev/ntmaps@latest
+```
 
 ```go
 package main
@@ -22,7 +26,7 @@ import (
     "os"
 
     tea "charm.land/bubbletea/v2"
-    "github.com/NimbleMarkets/ntcharts-osm/mapview"
+    "nimbleterminal.dev/ntmaps/mapview"
 )
 
 type model struct{ mv mapview.Model }
@@ -60,7 +64,7 @@ The sample app lives at [`examples/explorer`](./examples/explorer/main.go), with
 
 ```sh
 task build-ex-explorer
-./bin/ntcharts-osm-explorer
+./bin/ntmaps-explorer
 ```
 
 The native explorer buffers a one-tile border around the map. Arrows move two
@@ -149,7 +153,7 @@ The small 2D example keeps application concerns out of the embedding code:
 
 ```sh
 task build-ex-mapview
-./bin/ntcharts-osm-mapview -lat 40.7415 -lon -73.989 -zoom 16
+./bin/ntmaps-mapview -lat 40.7415 -lon -73.989 -zoom 16
 ```
 
 ### Map explorer
@@ -159,7 +163,7 @@ Manhattan; the first 3D neighborhood is bundled and works without network access
 
 ```sh
 task build-ex-explorer
-./bin/ntcharts-osm-explorer
+./bin/ntmaps-explorer
 ```
 
 Press **`v` to switch 2D/3D**, `j`/`k` or Shift-Up/Down to choose a place, and `/`
@@ -184,7 +188,7 @@ buildings under a new place name. It does not stream new areas during flight.
 
 Neighborhood scenes use a bounded in-memory cache. Native runs additionally
 cache source data under the OS user-cache directory at
-`ntcharts-osm/neighborhoods-v1`: up to eight files / 32 MiB, expiring after seven
+`ntmaps/neighborhoods-v1`: up to eight files / 32 MiB, expiring after seven
 days. Use `-cache-dir PATH` to choose a directory, or `-cache-dir ''` to disable
 disk storage. The browser uses memory only. Uppercase **`R` explicitly refreshes**
 the current 3D neighborhood; `-offline` allows only cached/bundled data. The bundled
@@ -228,7 +232,7 @@ is needed. It requests GPU rendering by default, with software fallback.
 
 ```sh
 task build-ex-cityview3d
-./bin/ntcharts-osm-cityview3d
+./bin/ntmaps-cityview3d
 ```
 
 Arrows orbit/tilt the camera; WASD moves the camera target along the ground,
@@ -247,8 +251,8 @@ top-level `bounds` object uses `south`, `west`, `north`, `east`; otherwise suppl
 be complete, not clipped. A single live neighborhood fetch is explicit:
 
 ```sh
-./bin/ntcharts-osm-cityview3d -osm -lat 40.7415 -lon -73.989 -radius 200
-./bin/ntcharts-osm-cityview3d -snapshot /tmp/city.png
+./bin/ntmaps-cityview3d -osm -lat 40.7415 -lon -73.989 -radius 200
+./bin/ntmaps-cityview3d -snapshot /tmp/city.png
 ```
 
 The helpers live in [`internal/city`](internal/city/README.md), with no rendering
@@ -284,7 +288,8 @@ Made with :heart: and :fire: by the team behind [Nimble.Markets](https://nimble.
 The root module contains the map widget. `examples/go.mod` owns ntcharts3d
 v0.3.2 (with nt3d v0.3.1) and go-booba v0.10.3; library users do not inherit the demo or GPU
 dependencies. ntcharts3d uses published nt3d and ntpicture modules. The root
-module path remains `github.com/NimbleMarkets/ntcharts-osm`.
+module path is `nimbleterminal.dev/ntmaps`, hosted at
+[github.com/NimbleTerminal/ntmaps](https://github.com/NimbleTerminal/ntmaps).
 
 Run `task test` for both modules, `task build` for native binaries, and
 `task ci` for race tests, vet, dependency checks, native builds, and browser
