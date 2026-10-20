@@ -21,15 +21,14 @@ import (
 	"nimbleterminal.dev/ntmaps/examples/internal/demorun"
 	"nimbleterminal.dev/ntmaps/examples/internal/neighborhood"
 	"nimbleterminal.dev/ntmaps/internal/city"
+	"nimbleterminal.dev/ntmaps/tile"
 )
 
-func styleName(s ntmaps.Style) string {
-	switch s {
-	case ntmaps.ArcgisWorldImagery:
+func styleName(src tile.Source) string {
+	if src != nil && src.Info().Name == tile.ArcGISWorldImagery().Name {
 		return "Satellite"
-	default:
-		return "Graphics"
 	}
+	return "Graphics"
 }
 
 func fitName(f ntmaps.FitMode) string {
@@ -418,11 +417,11 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, m.mv.SetRenderMode(mode)
 		case "s":
-			next := ntmaps.OpenStreetMaps
-			if m.mv.TileStyle() != ntmaps.ArcgisWorldImagery {
-				next = ntmaps.ArcgisWorldImagery
+			next := tile.OpenStreetMap()
+			if styleName(m.mv.TileSource()) != "Satellite" {
+				next = tile.ArcGISWorldImagery()
 			}
-			return m, m.mv.SetStyle(next)
+			return m, m.mv.SetTileSource(next)
 		case "f":
 			next := ntmaps.FitContain
 			switch m.mv.Fit() {
@@ -569,7 +568,7 @@ func (m *model) View() tea.View {
 		optical = fmt.Sprintf("  ×%d", 1<<oz)
 	}
 	status := fmt.Sprintf("%.4f,%.4f z%d%s  %s  %s  %s",
-		lat, lng, m.mv.Zoom(), optical, mode, styleName(m.mv.TileStyle()), fitName(m.mv.Fit()))
+		lat, lng, m.mv.Zoom(), optical, mode, styleName(m.mv.TileSource()), fitName(m.mv.Fit()))
 
 	if m.in3D {
 		status = "3D · " + m.lastPlace.Name + " · 200 m neighborhood"

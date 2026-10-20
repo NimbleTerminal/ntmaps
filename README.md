@@ -92,9 +92,9 @@ pending shared-memory images.
 
 ## Tile styles
 
-`ntmaps.SetStyle(...)` switches between the built-in providers: `Wikimedia`, `OpenStreetMaps`, `OpenTopoMap`, `CartoLight`, `CartoDark`, `ArcgisWorldImagery`. Each comes with the upstream provider's terms-of-use and attribution requirements — read them before shipping a public app. The attribution strip drawn along the bottom of the map follows the selected provider.
+`ntmaps.SetTileSource(...)` switches the map to any `tile.Source`. The `nimbleterminal.dev/ntmaps/tile` package ships keyless built-ins: `tile.OpenStreetMap()`, `tile.Wikimedia()`, `tile.OpenTopoMap()`, `tile.CartoLight()`, `tile.CartoDark()`, and `tile.ArcGISWorldImagery()`. Each comes with the upstream provider's terms-of-use and attribution requirements — read them before shipping a public app. The attribution strip drawn along the bottom of the map and the text row under it both follow the current source.
 
-Any XYZ tile server works through `ntmaps.SetTileSource` and the `nimbleterminal.dev/ntmaps/tile` package, including keyed services:
+Any XYZ tile server is a `tile.Provider`, including keyed services:
 
 ```go
 mv.SetTileSource(tile.Provider{
@@ -106,9 +106,11 @@ mv.SetTileSource(tile.Provider{
 })
 ```
 
-`Name` keys the tile and render caches, so give distinct providers distinct names. A provider with an empty `URL` renders only its `Placeholder` color and fetches nothing, which is handy in tests.
+`Name` keys the tile and render caches, so give distinct sources distinct names. A provider with an empty `URL`, or a nil source, renders only the placeholder color and fetches nothing, which is handy in tests. Anything else that can produce a tile image, such as an MBTiles or PMTiles file or an in-memory generator, implements `tile.Source` directly; a source that can also hand over encoded bytes (`tile.DataSource`) gets the disk cache too. The arrow keys zoom between 1 and the source's `MaxZoom`.
 
-Tile requests identify the application with a `User-Agent` of `ntmaps/<version> (+https://github.com/NimbleTerminal/ntmaps)`. Tile usage policies, [OpenStreetMap's](https://operations.osmfoundation.org/policies/tiles/) included, ask that a public app name itself, so set `Config.UserAgent` before shipping one. Browsers send their own, and the header is not set under WASM.
+Tile and geocoding requests identify the application with a `User-Agent` of `ntmaps/<version> (+https://github.com/NimbleTerminal/ntmaps)`. Usage policies, [OpenStreetMap's](https://operations.osmfoundation.org/policies/tiles/) included, ask that a public app name itself, so set `Config.UserAgent` before shipping one. Browsers send their own, and the header is not set under WASM.
+
+`SetLocation` resolves a place name through `Config.Geocoder`; the default is `geocode.Nominatim` against the public OpenStreetMap instance, paced to one request per second as [its policy](https://operations.osmfoundation.org/policies/nominatim/) requires. Point it at your own Nominatim with `&geocode.Nominatim{Endpoint: ...}`, or implement `geocode.Geocoder` for another service.
 
 ## Render modes
 

@@ -824,14 +824,20 @@ func TestSetRenderModeTogglesAndReRenders(t *testing.T) {
 
 func TestUpdateZoomInRespectsUpperBound(t *testing.T) {
 	m := New(80, 24)
-	m.zoom = 16
+	m.SetTileSource(tile.Provider{Name: "shallow", URL: "x/{z}/{x}/{y}", MaxZoom: 12})
+	m.zoom = 12
 
 	updated, cmd := m.Update(tea.KeyPressMsg(tea.Key{Text: "+", Code: '+'}))
 	if cmd == nil {
 		t.Fatal("expected render command after zoom-in keypress")
 	}
-	if updated.zoom != 16 {
-		t.Fatalf("expected zoom to stay capped at 16, got %d", updated.zoom)
+	if updated.zoom != 12 {
+		t.Fatalf("expected zoom to stay capped at the source's MaxZoom 12, got %d", updated.zoom)
+	}
+	updated.zoom = minZoom
+	updated, _ = updated.Update(tea.KeyPressMsg(tea.Key{Text: "-", Code: '-'}))
+	if updated.zoom != minZoom {
+		t.Fatalf("expected zoom to stay at the floor %d, got %d", minZoom, updated.zoom)
 	}
 }
 

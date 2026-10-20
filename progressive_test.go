@@ -9,6 +9,7 @@ import (
 	"image/png"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -162,9 +163,6 @@ func TestCachedTilesRenderSynchronously(t *testing.T) {
 func TestEmptyProviderRendersPlaceholderWithoutFetching(t *testing.T) {
 	m := NewWithConfig(Config{Cols: 20, Rows: 5, RenderDebounce: -1, DisableDiskCache: true})
 	m.SetTileSource(tile.Provider{Placeholder: color.RGBA{1, 2, 3, 255}})
-	if m.TileStyle() != StyleCustom {
-		t.Fatalf("TileStyle = %v, want StyleCustom", m.TileStyle())
-	}
 	m.renderMapCmd()
 	if m.inFlight() {
 		t.Fatal("nothing to fetch should not be in flight")
@@ -227,20 +225,23 @@ func TestAllTileFetchesFailingReportsError(t *testing.T) {
 	}
 }
 
-func TestSetStyleSwitchesProvider(t *testing.T) {
-	m := New(10, 3)
-	if m.TileSource().Info().Name != tile.OpenStreetMap().Name || m.TileStyle() != OpenStreetMaps {
-		t.Fatalf("default provider = %q style %v", m.TileSource().Info().Name, m.TileStyle())
+func TestSetTileSourceSwitchesAndAttributes(t *testing.T) {
+	m := New(40, 3)
+	if m.TileSource().Info().Name != tile.OpenStreetMap().Name {
+		t.Fatalf("default source = %q", m.TileSource().Info().Name)
 	}
-	m.SetTileSource(tile.Provider{})
-	m.SetStyle(CartoDark)
-	if m.TileSource().Info().Name != tile.CartoDark().Name || m.TileStyle() != CartoDark {
-		t.Fatalf("after SetStyle: provider = %q style %v", m.TileSource().Info().Name, m.TileStyle())
+	m.SetTileSource(tile.ArcGISWorldImagery())
+	if m.TileSource().Info().Name != tile.ArcGISWorldImagery().Name {
+		t.Fatalf("after SetTileSource: source = %q", m.TileSource().Info().Name)
 	}
-	for _, st := range []Style{Wikimedia, OpenStreetMaps, OpenTopoMap, CartoLight, CartoDark, ArcgisWorldImagery} {
-		if !st.Provider().Valid() {
-			t.Fatalf("style %v has no provider", st)
-		}
+	m, _ = m.Update(mapImageMsg{gen: *m.renderGen, img: solidTile(tileGreen)})
+	if v := m.View().Content; !strings.Contains(v, "Esri") || strings.Contains(v, "openstreetmap") {
+		t.Fatalf("attribution row should follow the source, got %q", v)
+	}
+	m.SetTileSource(nil)
+	m, _ = m.Update(mapImageMsg{gen: *m.renderGen, img: solidTile(tileGreen)})
+	if rows := strings.Count(m.View().Content, "\n") + 1; rows != 3 {
+		t.Fatalf("a source without attribution should still fill %d rows, got %d", 3, rows)
 	}
 }
 

@@ -52,42 +52,6 @@ const (
 	FitCover   = picture.FitCover
 )
 
-// Style selects one of the built-in tile providers. SetTileProvider accepts
-// any tile.Provider, including ones with API keys; Style is the shorthand
-// for the keyless services in the tile package.
-type Style int8
-
-const (
-	Wikimedia Style = iota
-	OpenStreetMaps
-	OpenTopoMap
-	CartoLight
-	CartoDark
-	ArcgisWorldImagery
-
-	// StyleCustom is reported by TileStyle after SetTileProvider.
-	StyleCustom Style = -1
-)
-
-// Provider returns the tile.Provider a Style stands for. Unknown values,
-// StyleCustom included, map to OpenStreetMap.
-func (s Style) Provider() tile.Provider {
-	switch s {
-	case Wikimedia:
-		return tile.Wikimedia()
-	case OpenTopoMap:
-		return tile.OpenTopoMap()
-	case CartoLight:
-		return tile.CartoLight()
-	case CartoDark:
-		return tile.CartoDark()
-	case ArcgisWorldImagery:
-		return tile.ArcGISWorldImagery()
-	default:
-		return tile.OpenStreetMap()
-	}
-}
-
 // MapCoordinates recenters the map. SetLocation produces it from the
 // Geocoder, and a parent can send its own. Setting Err makes ntmaps show
 // it in place of the map.
@@ -215,7 +179,6 @@ type Model struct {
 	loc       string
 	zoom      int
 	markers   []Marker
-	tileStyle Style
 
 	// job is the render currently allowed to deliver partial images. A
 	// newer render cancels it so abandoned tile fetches stop. Pointer for
@@ -529,7 +492,6 @@ func log2(n int) int {
 func (m *Model) setInitialValues() {
 	m.KeyMap = DefaultKeyMap()
 	m.setSource(tile.OpenStreetMap())
-	m.tileStyle = OpenStreetMaps
 	if m.loader == nil {
 		m.loader = tile.NewLoader(tile.Options{Dir: tile.DefaultDir()})
 	}
@@ -791,9 +753,9 @@ const (
 	osmPxPerCellH = 16
 )
 
-// AttributionText is the OSM credit pinned to the bottom row of the rendered
-// map. OpenStreetMap's attribution policy requires it on every visible map.
-const AttributionText = "Maps and Data (c) openstreetmap.org and contributors"
+// minZoom is the lowest zoom the arrow keys reach. The keys cap at the
+// source's MaxZoom; SetLatLng accepts any zoom.
+const minZoom = 1
 
 // attributionMinRows is the smallest cell-rectangle height that still leaves
 // at least one row for the actual map after reserving the attribution row.
@@ -801,7 +763,7 @@ const attributionMinRows = 2
 
 // defaultRenderCacheCap is the number of composited tile-images cached
 // keyed on (lat, lng, zoom, cols, rows, style, markers). A cache hit lets
-// SetLatLng / SetStyle / etc. apply the prior image synchronously, skipping
+// SetLatLng / SetTileSource / etc. apply the prior image synchronously, skipping
 // the goroutine roundtrip and the in-flight Loading overlay. Each entry is
 // a (cols × cellPixelW) × (rows × cellPixelH) RGBA image — for an
 // 80×24 cell viewport that's ~940 KB.
@@ -913,7 +875,7 @@ func (m Model) picRows() int {
 // re-syncs legacy.Model and re-renders the map. The tile canvas is sized
 // per-render inside renderMapCmd to match the cell-rectangle aspect ratio,
 // so the rendered image flows the entire enclosure rather than letterboxing.
-// One row is reserved at the bottom for the OSM attribution strip.
+// One row is reserved at the bottom for the source's attribution.
 func (m *Model) SetSize(cols, rows int) tea.Cmd {
 	if cols == m.cols && rows == m.rows {
 		return nil
@@ -990,17 +952,6 @@ func (m Model) Fit() FitMode {
 // call picks up the new fit synchronously.
 func (m *Model) SetFit(fit FitMode) tea.Cmd { return m.pic.SetFit(fit) }
 
-// TileStyle returns the currently-selected tile style, or StyleCustom
-// after SetTileProvider.
-func (m Model) TileStyle() Style { return m.tileStyle }
-
-// SetStyle switches to a built-in tile provider and re-renders.
-func (m *Model) SetStyle(style Style) tea.Cmd {
-	m.setSource(style.Provider())
-	m.tileStyle = style
-	return m.renderMapCmd()
-}
-
 // TileSource returns the source tiles are fetched from.
 func (m Model) TileSource() tile.Source { return m.source }
 
@@ -1011,7 +962,6 @@ func (m Model) TileSource() tile.Source { return m.source }
 // names. A Provider without a UserAgent gets Config.UserAgent.
 func (m *Model) SetTileSource(src tile.Source) tea.Cmd {
 	m.setSource(src)
-	m.tileStyle = StyleCustom
 	return m.renderMapCmd()
 }
 
@@ -1186,12 +1136,12 @@ func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 		case key.Matches(msg, m.KeyMap.Left):
 			return m.arrowPan(-2*osmPxPerCellW, 0)
 		case key.Matches(msg, m.KeyMap.ZoomIn):
-			if m.zoom < 16 {
+			if m.zoom < m.info().Max() {
 				m.zoom += 1
 			}
 			hit = true
 		case key.Matches(msg, m.KeyMap.ZoomOut):
-			if m.zoom > 2 {
+			if m.zoom > minZoom {
 				m.zoom -= 1
 			}
 			hit = true
@@ -1439,17 +1389,17 @@ func (m Model) View() tea.View {
 	// back to the natural picRows count and the pad is a no-op.
 	body = padLinesBottom(body, picRows)
 
-	// When the height is too small to spare a row, drop the attribution
-	// strip rather than starving the map further.
-	if picRows == m.rows {
-		return tea.NewView(body)
+	// When the height is too small to spare a row, or the source has no
+	// credit to show, drop the attribution row rather than starving the map.
+	if picRows == m.rows || m.info().Attribution == "" {
+		return tea.NewView(padLinesBottom(body, m.rows))
 	}
 
 	attribution := lipgloss.NewStyle().
 		Width(m.cols).
 		Align(lipgloss.Center).
 		Foreground(lipgloss.Color("242")).
-		Render(truncateForWidth(AttributionText, m.cols))
+		Render(truncateForWidth(m.info().Attribution, m.cols))
 
 	return tea.NewView(lipgloss.JoinVertical(lipgloss.Left, body, attribution))
 }

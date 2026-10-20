@@ -35,6 +35,19 @@
   rasterized from a signed distance with an anti-aliased outline and the
   credit uses x/image's basicfont, so gg and freetype leave the dependency
   list.
+- Tiles come from a `tile.Source` interface (`Info` plus `Tile`), so offline
+  files and generators are drop-ins; `tile.Provider` stays the XYZ-server
+  implementation and now carries its own `Client` and `UserAgent`.
+  `SetTileSource`/`TileSource` replace `SetTileProvider`/`TileProvider`, and
+  the `Style` enum, `SetStyle`, and `TileStyle` are gone: pass
+  `tile.OpenStreetMap()` and friends directly.
+- Geocoding moves to `nimbleterminal.dev/ntmaps/geocode` behind a `Geocoder`
+  interface (`Config.Geocoder`); the default Nominatim client sends the
+  identifying User-Agent and paces requests as the usage policy requires. The
+  `NominatimResponse` type is no longer exported.
+- The attribution row under the map follows the current source instead of
+  always crediting OpenStreetMap (`AttributionText` is removed), and the arrow
+  keys zoom between 1 and the source's `MaxZoom` instead of 2 and 16.
 
 ## v0.3.0 (2026-10-19)
 
