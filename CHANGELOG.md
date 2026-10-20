@@ -52,6 +52,9 @@
   cursor, events are read in the widget's cell coordinates, and hosts get
   `OffsetMouse` and `Dragging()` for routing. The explorer forwards its map
   events instead of carrying its own drag and zoom code.
+- Paths: `SetPaths`/`ClearPaths` draw anti-aliased polylines with round caps
+  and joins, taking the short way across the antimeridian, and participate
+  in the render cache key by hash.
 
 ## v0.3.0 (2026-10-19)
 

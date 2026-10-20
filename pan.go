@@ -41,8 +41,10 @@ type panPresentedMsg struct{ owner *panState }
 
 func (m *Model) currentRenderKey() renderKey {
 	os, _ := m.effectiveOversample()
-	return makeRenderKey(m.lat, m.lng, m.zoom, m.cols, m.picRows(), m.info().Name,
+	key := makeRenderKey(m.lat, m.lng, m.zoom, m.cols, m.picRows(), m.info().Name,
 		os, m.maxAspectRatio, m.letterboxColor, m.markers)
+	key.paths = pathsKey(m.paths)
+	return key
 }
 
 // presentImage hands img to the picture model. While a Kitty frame is

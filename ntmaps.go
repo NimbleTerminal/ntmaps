@@ -179,6 +179,7 @@ type Model struct {
 	loc       string
 	zoom      int
 	markers   []Marker
+	paths     []Path
 
 	// job is the render currently allowed to deliver partial images. A
 	// newer render cancels it so abandoned tile fetches stop. Pointer for
@@ -795,6 +796,7 @@ type renderKey struct {
 	maxAspectRatio float64
 	ltrColor       rgba8
 	markers        string
+	paths          string
 }
 
 func makeRenderKey(lat, lng float64, zoom, cols, rows int, provider string, oversample int, maxAR float64, ltrColor color.Color, markers []Marker) renderKey {
@@ -1257,7 +1259,9 @@ func (m *Model) renderMapCmd() tea.Cmd {
 	effectiveOversample, zoomBoost := m.effectiveOversample()
 
 	markers := append([]Marker(nil), m.markers...)
+	paths := append([]Path(nil), m.paths...)
 	key := makeRenderKey(m.lat, m.lng, m.zoom, m.cols, picRows, m.info().Name, effectiveOversample, m.maxAspectRatio, m.letterboxColor, markers)
+	key.paths = pathsKey(paths)
 
 	// Whatever happens next supersedes a render still fetching tiles.
 	m.job.cancel()
@@ -1295,7 +1299,7 @@ func (m *Model) renderMapCmd() tea.Cmd {
 	cx, cy, _ := tile.Project(m.lat, m.lng, tileZoom, m.info().Size())
 	geom := viewGeometry{
 		source: m.source, zoom: tileZoom, w: mapW, h: mapH, cx: cx, cy: cy,
-		markers: markers, cellRectW: cellRectW, cellRectH: cellRectH, letterbox: m.letterboxColor,
+		markers: markers, paths: paths, cellRectW: cellRectW, cellRectH: cellRectH, letterbox: m.letterboxColor,
 	}
 	job := newRenderJob(gen, key, m.loader, geom)
 

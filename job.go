@@ -26,6 +26,7 @@ type viewGeometry struct {
 	w, h    int // map portion in pixels (before letterbox)
 	cx, cy  float64
 	markers []Marker
+	paths   []Path
 
 	// cellRectW/H and letterbox pad the map portion to the full cell
 	// rectangle; they equal w/h when MaxAspectRatio is off.
@@ -44,6 +45,7 @@ func (g viewGeometry) compose(placements []tile.Placement, lookup func(tile.ID) 
 	info := infoOf(g.source)
 	img := image.NewRGBA(image.Rect(0, 0, g.w, g.h))
 	missing := composeTiles(img, placements, info, lookup)
+	drawPaths(img, g.paths, g.cx, g.cy, g.zoom, info.Size())
 	drawMarkers(img, g.markers, g.cx, g.cy, g.zoom, info.Size())
 	drawMapAttribution(img, info.Attribution)
 	return composeLetterbox(img, g.cellRectW, g.cellRectH, g.letterbox), missing
