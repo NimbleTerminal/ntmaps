@@ -36,7 +36,9 @@ try {
   const initial = await expectOutput(demo === 'explorer' ? '2D' : demo === 'mapview' ? 'Loading' : 'map zoom');
   if (demo === 'explorer') {
     assert.ok(initial.includes('\x1b[?1003h'), 'explorer enables terminal mouse motion reporting');
-    bubbletea_write('\x1b[<64;90;10M'); // wheel over the wide-layout 2D map
+    // Wheel at the center of the wide-layout 2D map. The wheel zooms around
+    // the cursor, and the bundled neighborhood only covers the place itself.
+    bubbletea_write('\x1b[<64;67;20M');
     await delay(60);
   }
   bubbletea_write('\x1b]7501;?\x1b\\');
