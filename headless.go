@@ -19,9 +19,13 @@ type RenderOptions struct {
 	Loader *tile.Loader
 
 	// Lat, Lng, and Zoom place the view. Zoom must not exceed the source's
-	// MaxZoom.
+	// MaxZoom. When Bounds is set they are derived from it instead.
 	Lat, Lng float64
 	Zoom     int
+
+	// Bounds, when non-nil, frames this box at the highest zoom that fits
+	// inside the image, overriding Lat, Lng, and Zoom.
+	Bounds *Bounds
 
 	// Width and Height are the image size in pixels.
 	Width, Height int
@@ -57,6 +61,12 @@ func Render(ctx context.Context, o RenderOptions) (image.Image, error) {
 		src = p
 	}
 	info := src.Info()
+	if o.Bounds != nil {
+		if !o.Bounds.Valid() {
+			return nil, fmt.Errorf("ntmaps: invalid bounds %+v", *o.Bounds)
+		}
+		o.Lat, o.Lng, o.Zoom = fitBounds(*o.Bounds, o.Width, o.Height, info.Size(), info.Max())
+	}
 	if o.Zoom < 0 || o.Zoom > info.Max() {
 		return nil, fmt.Errorf("ntmaps: zoom %d outside 0..%d for %q", o.Zoom, info.Max(), info.Name)
 	}

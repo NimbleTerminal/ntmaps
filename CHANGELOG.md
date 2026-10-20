@@ -59,6 +59,10 @@
   or Bubble Tea involved, sharing the tile cache and drawing code.
 - Breaking: `Config.CacheCap` is now `RenderCacheCap`, and the demos' curated
   `Place` list moves out of the library into examples/internal/places.
+- `Bounds`, `SetBounds`, `ContentBounds`, and `FitContent` frame a box or
+  the current markers and paths at the highest zoom that fits, with
+  antimeridian-aware extents; `RenderOptions.Bounds` does the same for
+  static images.
 
 ## v0.3.0 (2026-10-19)
 

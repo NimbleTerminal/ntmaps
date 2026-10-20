@@ -110,6 +110,8 @@ It fetches every tile the view needs through the same cache the widget uses, kee
 
 `SetMarkers` places pins (red, 16 px by default) and `SetPaths` draws polylines (blue, 3 px by default) such as a GPX track or a route; both take geographic coordinates and are drawn into the map image at full resolution, with anti-aliased edges. A path crossing the antimeridian takes the short way around. Call `Init` or any other render trigger after changing them.
 
+`SetBounds(ntmaps.Bounds{South, West, North, East})` frames a box at the highest zoom that fits the cell rectangle with a one-cell margin, and `FitContent()` does the same for whatever markers and paths are set, so a loaded track is shown whole with no zoom guessing. `ContentBounds()` returns that box. `RenderOptions.Bounds` frames a static image the same way.
+
 ## Tile styles
 
 `ntmaps.SetTileSource(...)` switches the map to any `tile.Source`. The `nimbleterminal.dev/ntmaps/tile` package ships keyless built-ins: `tile.OpenStreetMap()`, `tile.Wikimedia()`, `tile.OpenTopoMap()`, `tile.CartoLight()`, `tile.CartoDark()`, and `tile.ArcGISWorldImagery()`. Each comes with the upstream provider's terms-of-use and attribution requirements — read them before shipping a public app. The attribution strip drawn along the bottom of the map and the text row under it both follow the current source.
