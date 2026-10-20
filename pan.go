@@ -44,6 +44,7 @@ func (m *Model) currentRenderKey() renderKey {
 	key := makeRenderKey(m.lat, m.lng, m.zoom, m.cols, m.picRows(), m.info().Name,
 		os, m.maxAspectRatio, m.letterboxColor, m.markers)
 	key.paths = pathsKey(m.paths)
+	key.overlays = overlayKey(m.overlays)
 	return key
 }
 

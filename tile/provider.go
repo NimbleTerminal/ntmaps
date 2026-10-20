@@ -301,3 +301,26 @@ func ArcGISWorldImagery() Provider {
 		Placeholder: darkPlaceholder,
 	}
 }
+
+// OpenSeaMap is the seamark overlay: buoys, lights, and harbour marks on
+// transparent tiles, meant to be drawn over a base map.
+func OpenSeaMap() Provider {
+	return Provider{
+		Name:        "openseamap",
+		URL:         "https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png",
+		Attribution: "Seamarks (c) OpenSeaMap contributors, CC BY-SA",
+		MaxZoom:     18,
+	}
+}
+
+// OpenRailwayMap is the railway infrastructure overlay on transparent
+// tiles, meant to be drawn over a base map.
+func OpenRailwayMap() Provider {
+	return Provider{
+		Name:        "openrailwaymap",
+		URL:         "https://{s}.tiles.openrailwaymap.org/standard/{z}/{x}/{y}.png",
+		Shards:      []string{"a", "b", "c"},
+		Attribution: "Railways (c) OpenRailwayMap, CC BY-SA",
+		MaxZoom:     19,
+	}
+}

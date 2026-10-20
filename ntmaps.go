@@ -171,6 +171,7 @@ type Model struct {
 	initialized bool
 
 	source    tile.Source
+	overlays  []tile.Source
 	loader    *tile.Loader
 	userAgent string
 	geocoder  geocode.Geocoder
@@ -797,6 +798,7 @@ type renderKey struct {
 	ltrColor       rgba8
 	markers        string
 	paths          string
+	overlays       string
 }
 
 func makeRenderKey(lat, lng float64, zoom, cols, rows int, provider string, oversample int, maxAR float64, ltrColor color.Color, markers []Marker) renderKey {
@@ -979,6 +981,45 @@ func (m *Model) setSource(src tile.Source) {
 // info describes the current source; a nil source has zero Info.
 func (m Model) info() tile.Info { return infoOf(m.source) }
 
+// SetOverlays replaces the transparent layers drawn over the base, such
+// as tile.OpenSeaMap() seamarks or tile.OpenRailwayMap(), in order from
+// bottom to top, and re-renders. An overlay is skipped at zooms beyond
+// its MaxZoom. Overlay credits join the attribution. Overlay tiles of a
+// different size are scaled into the base grid.
+func (m *Model) SetOverlays(overlays ...tile.Source) tea.Cmd {
+	m.overlays = nil
+	for _, o := range overlays {
+		if o != nil {
+			if p, ok := o.(tile.Provider); ok && p.UserAgent == "" && m.userAgent != "" {
+				p.UserAgent = m.userAgent
+				o = p
+			}
+			m.overlays = append(m.overlays, o)
+		}
+	}
+	return m.renderMapCmd()
+}
+
+// Overlays returns the layers drawn over the base, bottom to top.
+func (m Model) Overlays() []tile.Source { return append([]tile.Source(nil), m.overlays...) }
+
+// attribution joins the credits of the base and the overlays in use at
+// the current zoom.
+func (m Model) attribution() string {
+	g := viewGeometry{source: m.source, overlays: m.overlays, zoom: m.zoom}
+	return g.attribution()
+}
+
+// overlayKey summarizes the overlay names for the render cache key.
+func overlayKey(overlays []tile.Source) string {
+	var sb strings.Builder
+	for _, o := range overlays {
+		sb.WriteString(infoOf(o).Name)
+		sb.WriteByte(';')
+	}
+	return sb.String()
+}
+
 // prefetchRings clamps Config.Prefetch: 0 means one ring, negative none,
 // and at most four.
 func prefetchRings(n int) int {
@@ -998,26 +1039,31 @@ func (m Model) animating() bool {
 }
 
 // prefetchCmd fetches the ring of tiles beyond the edges of the view
-// described by geom in the background, so the next pan paints from
-// memory. It returns nil when there is nothing to fetch. The fetch is
-// canceled by the next render; tiles that render also needs keep
-// downloading through the loader's waiter count.
+// described by geom, for the base and every overlay, in the background
+// so the next pan paints from memory. It returns nil when there is
+// nothing to fetch. The fetch is canceled by the next render; tiles that
+// render also needs keep downloading through the loader's waiter count.
 func (m *Model) prefetchCmd(geom viewGeometry) tea.Cmd {
-	if m.prefetch <= 0 || m.loader == nil || !tile.Fetchable(geom.source) || geom.w <= 0 || geom.h <= 0 {
+	if m.prefetch <= 0 || m.loader == nil || geom.w <= 0 || geom.h <= 0 {
 		return nil
 	}
 	size := infoOf(geom.source).Size()
 	pad := 2 * m.prefetch * size
-	var ids []tile.ID
-	for _, pl := range tile.Cover(geom.cx, geom.cy, geom.w+pad, geom.h+pad, geom.zoom, size) {
-		if !pl.InWorld {
+	var requests []tileRequest
+	for _, src := range geom.layers() {
+		if !tile.Fetchable(src) {
 			continue
 		}
-		if _, ok := m.loader.Cached(geom.source, pl.ID); !ok {
-			ids = append(ids, pl.ID)
+		for _, pl := range tile.Cover(geom.cx, geom.cy, geom.w+pad, geom.h+pad, geom.zoom, size) {
+			if !pl.InWorld {
+				continue
+			}
+			if _, ok := m.loader.Cached(src, pl.ID); !ok {
+				requests = append(requests, tileRequest{src, pl.ID})
+			}
 		}
 	}
-	if len(ids) == 0 {
+	if len(requests) == 0 {
 		return nil
 	}
 	if m.job == nil {
@@ -1028,26 +1074,31 @@ func (m *Model) prefetchCmd(geom viewGeometry) tea.Cmd {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	m.job.prefetch = cancel
-	loader, source := m.loader, geom.source
+	loader := m.loader
 	return func() tea.Msg {
-		_ = loader.FetchAll(ctx, source, ids, nil)
+		_ = fetchAll(ctx, loader, requests, nil)
 		return nil
 	}
 }
 
-// tilesCached reports whether every in-world placement is already in the
-// loader's memory, or there is nothing to fetch at all, so a render can
-// complete synchronously.
-func (m Model) tilesCached(placements []tile.Placement) bool {
-	if !tile.Fetchable(m.source) || m.loader == nil {
+// tilesCached reports whether every in-world placement of every layer is
+// already in the loader's memory, or there is nothing to fetch at all, so
+// a render can complete synchronously.
+func (m Model) tilesCached(geom viewGeometry, placements []tile.Placement) bool {
+	if m.loader == nil {
 		return true
 	}
-	for _, pl := range placements {
-		if !pl.InWorld {
+	for _, src := range geom.layers() {
+		if !tile.Fetchable(src) {
 			continue
 		}
-		if _, ok := m.loader.Cached(m.source, pl.ID); !ok {
-			return false
+		for _, pl := range placements {
+			if !pl.InWorld {
+				continue
+			}
+			if _, ok := m.loader.Cached(src, pl.ID); !ok {
+				return false
+			}
 		}
 	}
 	return true
@@ -1262,6 +1313,7 @@ func (m *Model) renderMapCmd() tea.Cmd {
 	paths := append([]Path(nil), m.paths...)
 	key := makeRenderKey(m.lat, m.lng, m.zoom, m.cols, picRows, m.info().Name, effectiveOversample, m.maxAspectRatio, m.letterboxColor, markers)
 	key.paths = pathsKey(paths)
+	key.overlays = overlayKey(m.overlays)
 
 	// Whatever happens next supersedes a render still fetching tiles.
 	m.job.cancel()
@@ -1298,7 +1350,7 @@ func (m *Model) renderMapCmd() tea.Cmd {
 	mapW, mapH := targetMapDims(cellRectW, cellRectH, m.maxAspectRatio)
 	cx, cy, _ := tile.Project(m.lat, m.lng, tileZoom, m.info().Size())
 	geom := viewGeometry{
-		source: m.source, zoom: tileZoom, w: mapW, h: mapH, cx: cx, cy: cy,
+		source: m.source, overlays: append([]tile.Source(nil), m.overlays...), zoom: tileZoom, w: mapW, h: mapH, cx: cx, cy: cy,
 		markers: markers, paths: paths, cellRectW: cellRectW, cellRectH: cellRectH, letterbox: m.letterboxColor,
 	}
 	job := newRenderJob(gen, key, m.loader, geom)
@@ -1306,7 +1358,7 @@ func (m *Model) renderMapCmd() tea.Cmd {
 	// Every tile already in memory, or nothing to fetch: compose on this
 	// goroutine exactly like a cache hit, so panning across tiles seen
 	// before never waits for the debounce or shows the Loading badge.
-	if m.tilesCached(job.places) {
+	if m.tilesCached(geom, job.places) {
 		img, _ := geom.compose(job.places, job.lookup)
 		job.cancel()
 		*m.lastAccepted = gen
@@ -1395,7 +1447,7 @@ func (m Model) View() tea.View {
 
 	// When the height is too small to spare a row, or the source has no
 	// credit to show, drop the attribution row rather than starving the map.
-	if picRows == m.rows || m.info().Attribution == "" {
+	if picRows == m.rows || m.attribution() == "" {
 		return tea.NewView(padLinesBottom(body, m.rows))
 	}
 
@@ -1403,7 +1455,7 @@ func (m Model) View() tea.View {
 		Width(m.cols).
 		Align(lipgloss.Center).
 		Foreground(lipgloss.Color("242")).
-		Render(truncateForWidth(m.info().Attribution, m.cols))
+		Render(truncateForWidth(m.attribution(), m.cols))
 
 	return tea.NewView(lipgloss.JoinVertical(lipgloss.Left, body, attribution))
 }

@@ -33,6 +33,9 @@ type RenderOptions struct {
 	Markers []Marker
 	Paths   []Path
 
+	// Overlays are transparent layers drawn over the source, bottom to top.
+	Overlays []tile.Source
+
 	// NoAttribution leaves out the credit strip along the bottom edge for
 	// callers that credit the source elsewhere. The source's terms still
 	// apply.
@@ -77,19 +80,19 @@ func Render(ctx context.Context, o RenderOptions) (image.Image, error) {
 
 	cx, cy, _ := tile.Project(o.Lat, o.Lng, o.Zoom, info.Size())
 	geom := viewGeometry{
-		source: src, zoom: o.Zoom, w: o.Width, h: o.Height, cx: cx, cy: cy,
+		source: src, overlays: o.Overlays, zoom: o.Zoom, w: o.Width, h: o.Height, cx: cx, cy: cy,
 		markers: o.Markers, paths: o.Paths,
 		cellRectW: o.Width, cellRectH: o.Height, noAttribution: o.NoAttribution,
 	}
 	placements := geom.placements()
-	lookup := func(id tile.ID) (image.Image, bool) { return loader.Cached(src, id) }
+	lookup := func(s tile.Source, id tile.ID) (image.Image, bool) { return loader.Cached(s, id) }
 	img, missing := geom.compose(placements, lookup)
-	if len(missing) == 0 || !tile.Fetchable(src) {
+	if len(missing) == 0 || !fetchable(missing) {
 		return img, nil
 	}
-	err := loader.FetchAll(ctx, src, missing, nil)
+	err := fetchAll(ctx, loader, missing, nil)
 	img, missing = geom.compose(placements, lookup)
-	if err != nil && len(missing) == inWorldCount(placements) {
+	if err != nil && baseMissing(missing, src) == inWorldCount(placements) {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}

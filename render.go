@@ -7,6 +7,7 @@ import (
 	"math"
 	"strings"
 
+	xdraw "golang.org/x/image/draw"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/basicfont"
 	"golang.org/x/image/math/fixed"
@@ -191,4 +192,29 @@ func drawMapAttribution(img *image.RGBA, attribution string) {
 		d.DrawString(line)
 		y += lineHeight + 2
 	}
+}
+
+// composeOverlay draws an overlay's tiles over dst with source-over
+// blending at the base grid's placements. An overlay tile of another
+// size is scaled into the base cell. Out-of-world rows are skipped. It
+// returns the in-world tiles lookup could not supply.
+func composeOverlay(dst *image.RGBA, placements []tile.Placement, size int, lookup func(tile.ID) (image.Image, bool)) []tile.ID {
+	var missing []tile.ID
+	for _, pl := range placements {
+		if !pl.InWorld {
+			continue
+		}
+		img, ok := lookup(pl.ID)
+		if !ok || img == nil {
+			missing = append(missing, pl.ID)
+			continue
+		}
+		r := image.Rect(pl.Offset.X, pl.Offset.Y, pl.Offset.X+size, pl.Offset.Y+size)
+		if b := img.Bounds(); b.Dx() == size && b.Dy() == size {
+			draw.Draw(dst, r, img, b.Min, draw.Over)
+		} else {
+			xdraw.BiLinear.Scale(dst, r, img, img.Bounds(), xdraw.Over, nil)
+		}
+	}
+	return missing
 }

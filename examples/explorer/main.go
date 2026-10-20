@@ -100,6 +100,7 @@ type appKeys struct {
 	filter        key.Binding
 	mode          key.Binding
 	style         key.Binding
+	overlay       key.Binding
 	fit           key.Binding
 	help          key.Binding
 	quit          key.Binding
@@ -115,6 +116,7 @@ func newAppKeys() appKeys {
 		filter:  key.NewBinding(key.WithKeys("/"), key.WithHelp("/", "filter")),
 		mode:    key.NewBinding(key.WithKeys("g"), key.WithHelp("g", "mode")),
 		style:   key.NewBinding(key.WithKeys("s"), key.WithHelp("s", "style")),
+		overlay: key.NewBinding(key.WithKeys("o"), key.WithHelp("o", "seamarks")),
 		fit:     key.NewBinding(key.WithKeys("f"), key.WithHelp("f", "fit")),
 		help:    key.NewBinding(key.WithKeys("?"), key.WithHelp("?", "more")),
 		quit:    key.NewBinding(key.WithKeys("q", "ctrl+c"), key.WithHelp("q", "quit")),
@@ -131,7 +133,7 @@ func (k appKeys) FullHelp() [][]key.Binding {
 	if k.in3D {
 		return [][]key.Binding{k.ShortHelp(), {k.refresh, demorun.Binding("0", "reset"), k.mode}}
 	}
-	return [][]key.Binding{k.ShortHelp(), {k.optZoom, k.style, k.fit}}
+	return [][]key.Binding{k.ShortHelp(), {k.optZoom, k.style, k.overlay, k.fit}}
 }
 
 type model struct {
@@ -424,6 +426,11 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				next = tile.ArcGISWorldImagery()
 			}
 			return m, m.mv.SetTileSource(next)
+		case "o":
+			if len(m.mv.Overlays()) > 0 {
+				return m, m.mv.SetOverlays()
+			}
+			return m, m.mv.SetOverlays(tile.OpenSeaMap())
 		case "f":
 			next := ntmaps.FitContain
 			switch m.mv.Fit() {

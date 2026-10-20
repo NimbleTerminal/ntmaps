@@ -63,6 +63,11 @@
   the current markers and paths at the highest zoom that fits, with
   antimeridian-aware extents; `RenderOptions.Bounds` does the same for
   static images.
+- Overlays: `SetOverlays`/`Overlays` compose transparent layers over the base
+  with the credits joined, skipped beyond their `MaxZoom`, scaled when their
+  tile size differs, fetched and prefetched alongside base tiles;
+  `tile.OpenSeaMap()` and `tile.OpenRailwayMap()` are built in, and the
+  explorer toggles seamarks with `o`.
 
 ## v0.3.0 (2026-10-19)
 
