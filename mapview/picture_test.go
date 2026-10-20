@@ -8,7 +8,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 )
 
-func TestCachedPictureRefreshAfterReplaceResizeAndClear(t *testing.T) {
+func TestPictureRefreshAfterReplaceResizeAndClear(t *testing.T) {
 	m := New(20, 11)
 	m.pic.SetImage(newSolidImage(color.RGBA{R: 255, A: 255}))
 	red := m.pic.View().Content

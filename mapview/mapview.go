@@ -256,7 +256,7 @@ type Model struct {
 	sourceImage image.Image
 
 	// Use a pointer to preserve the glyph cache across View calls.
-	pic    *cachedPicture
+	pic    *legacy.Model
 	errMsg string
 
 	smoothPan      bool
@@ -463,7 +463,7 @@ func (m *Model) setInitialValues() {
 	m.lat = 25.0782266
 	m.lng = -77.3383438
 	m.loc = ""
-	pic := cachedPicture{Model: legacy.NewModel()}
+	pic := legacy.NewModel()
 	m.pic = &pic
 	if m.panState == nil {
 		m.panState = &panState{}

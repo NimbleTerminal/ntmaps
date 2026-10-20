@@ -20,24 +20,18 @@ migration, not conversion to the root `Picture` asynchronous presentation API.
 Existing public mapview aliases remain available. Hosts must execute commands
 returned by Update, including terminal capability notifications.
 
-## Confirmed upstream bug: legacy View loses its glyph cache
+## Resolved upstream bug: legacy View lost its glyph cache
 
-In ntpicture v0.1.0, `legacybridge.ModelView` type-asserts the stored value to
-`legacyModel`, calls View on that copy, and returns only tea.View. View fills
-`glyphKey` and `glyphCache`, but the bridge discards the changed model.
-`ModelString` has the same copy behavior.
+In ntpicture v0.1.0, `legacybridge.ModelView` called View on a copy of the
+stored model and discarded its populated glyph cache, so every unchanged View
+re-read source pixels. mapview carried a `cachedPicture` adapter that cached the
+presentation and invalidated it on image, size, fit, mode, and picture message
+changes.
 
-The existing `TestGlyphCacheSurvivesValueReceiverView` failed after migration:
-a second unchanged View read source pixels again. `mapview/picture.go` caches
-the presentation and invalidates it on image, size, fit, mode, and picture
-message changes. This narrow adapter preserves mapview performance until an
-upstream release fixes the bridge. Remove it only when that regression test
-passes without the adapter.
-
-Suggested upstream fix: retain updated state across ModelView/ModelString
-(either return and store it, or consistently use pointer-backed bridge state).
-Add a source-pixel-read regression test against the public legacy API; testing
-only the internal model misses the bridge bug.
+ntpicture v0.1.1 retains the cache across `legacy.Model.View` and `String`.
+The adapter is removed and mapview holds `*legacy.Model` directly;
+`TestGlyphCacheSurvivesValueReceiverView` guards the behavior against the
+public legacy API.
 
 ## ntcharts3d v0.3.0
 

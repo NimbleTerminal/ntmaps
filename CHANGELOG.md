@@ -23,7 +23,6 @@
 - Opt into graceful action-metadata fallback so oversized descriptions cannot
   prevent demo startup; keyboard controls remain available.
 - Use released texture fast paths to eliminate per-pixel texture allocations.
-- Preserve glyph caching around the ntpicture v0.1.0 legacy bridge regression.
 - deps: update ntcharts3d to v0.3.2, nt3d to v0.3.1, ntpicture to v0.1.1,
   go-booba to v0.10.3, the Bubble Tea WASM fork to `aa0ac3f1b5fe`,
   `actions/setup-node` to v7, and the remaining transitive dependencies to their
