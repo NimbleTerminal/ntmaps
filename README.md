@@ -6,7 +6,7 @@
     <a href="https://github.com/NimbleTerminal/ntmaps/blob/main/CODE_OF_CONDUCT.md"><img src="https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg"  alt="Code Of Conduct"></a>
 </p>
 
-`ntmaps` is a [Bubble Tea](https://github.com/charmbracelet/bubbletea) widget that renders OpenStreetMap tiles in the terminal. It pairs [`flopp/go-staticmaps`](https://github.com/flopp/go-staticmaps) for tile fetching with [`ntpicture`](https://nimbleterminal.dev/ntpicture) for image rendering — half-block glyphs anywhere, full-resolution Kitty graphics on terminals that support them (Kitty, Ghostty, WezTerm).
+`ntmaps` is a [Bubble Tea](https://github.com/charmbracelet/bubbletea) widget that renders OpenStreetMap tiles in the terminal. It fetches and composes XYZ tiles itself and renders them with [`ntpicture`](https://nimbleterminal.dev/ntpicture) — half-block glyphs anywhere, full-resolution Kitty graphics on terminals that support them (Kitty, Ghostty, WezTerm).
 
 [Open the map explorer](https://nimbleterminal.github.io/ntmaps/?demo=explorer) ·
 [Minimal 2D example](examples/mapview/main.go) ·
@@ -93,7 +93,23 @@ pending shared-memory images.
 
 ## Tile styles
 
-`ntmaps.SetStyle(...)` switches between nine tile providers from [`flopp/go-staticmaps`](https://github.com/flopp/go-staticmaps): `Wikimedia`, `OpenStreetMaps`, `OpenTopoMap`, `OpenCycleMap`, `CartoLight`, `CartoDark`, `StamenToner`, `StamenTerrain`, `ArcgisWorldImagery`. Each comes with the upstream provider's terms-of-use and attribution requirements — read them before shipping a public app.
+`ntmaps.SetStyle(...)` switches between the built-in providers: `Wikimedia`, `OpenStreetMaps`, `OpenTopoMap`, `CartoLight`, `CartoDark`, `ArcgisWorldImagery`. Each comes with the upstream provider's terms-of-use and attribution requirements — read them before shipping a public app. The attribution strip drawn along the bottom of the map follows the selected provider.
+
+Any XYZ tile server works through `ntmaps.SetTileProvider` and the `nimbleterminal.dev/ntmaps/tile` package, including keyed services:
+
+```go
+mv.SetTileProvider(tile.Provider{
+    Name:        "thunderforest-outdoors",
+    URL:         "https://{s}.tile.thunderforest.com/outdoors/{z}/{x}/{y}.png?apikey=" + key,
+    Shards:      []string{"a", "b", "c"},
+    Attribution: "Maps (c) Thunderforest; Data (c) OSM and contributors, ODbL",
+    MaxZoom:     22,
+})
+```
+
+`Name` keys the tile and render caches, so give distinct providers distinct names. A provider with an empty `URL` renders only its `Placeholder` color and fetches nothing, which is handy in tests.
+
+Tile requests identify the application with a `User-Agent` of `ntmaps/<version> (+https://github.com/NimbleTerminal/ntmaps)`. Tile usage policies, [OpenStreetMap's](https://operations.osmfoundation.org/policies/tiles/) included, ask that a public app name itself, so set `Config.UserAgent` before shipping one. Browsers send their own, and the header is not set under WASM.
 
 ## Render modes
 
@@ -266,12 +282,10 @@ attribution are recorded in [examples/cityview3d/DATA.md](examples/cityview3d/DA
 ## Known caveats
 
 - **WASM dependencies.** `wasm.work` selects Bubble Tea and clipboard forks with browser support. Native builds use upstream versions. The WASM task and CI select this workspace automatically; manual builds need `task build-wasm` (or select that workspace with `go -C examples build`).
-- **go-staticmaps fork for marker performance.** `go.mod` replaces `flopp/go-staticmaps` with [`neomantra/go-staticmaps`](https://github.com/neomantra/go-staticmaps) to fix offscreen marker wrapping and skip drawing invisible pins. These fixes reduce rendering delays when panning. We'll switch back when upstream includes them.
-- **Tile fetching is synchronous per render.** Each render builds its own `*sm.Context` inside a dispatched goroutine. With buffering off, generation counters discard stale results. With `PanBuffer` enabled, tile renders are serialized and completed buffers are cropped for the latest compatible camera position. Composited viewports are kept in a small per-Model LRU keyed on `(lat, lng, zoom, cols, rows, style, oversample, markers)` — revisiting a state hits the cache synchronously (no Loading overlay). Default cap is 16 entries; tune via `ntmaps.NewWithConfig(Config{CacheCap: N})` (`-1` disables this LRU; an explicitly enabled pan buffer remains active).
-- **Server-side supersample (`Config.Oversample`).** Raises the source-image pixel density without changing visible geographic coverage — `Oversample: N` (powers of 2) renders the same area at `N×` per-cell resolution and `+log2(N)` OSM tile zoom, so Kitty terminals can downscale a sharper source. `1` (default) keeps current behavior; `2` is a noticeable boost; `4` is hi-DPI quality at ~16× the tile fetches. Capped so the effective tile zoom never exceeds 19. Glyph mode pays the cost without visible benefit.
+- **Progressive tile rendering.** A render paints the tiles already in memory, fetches the rest, and repaints as they land (batched to about ten repaints per second), keeping the Loading badge up until the last tile arrives. Panning across tiles seen before composes synchronously with no fetch and no badge. Tiles live in a per-Loader memory LRU (`Config.TileCacheCap`, default 256 tiles) and, natively, a raw-bytes disk cache under the user cache directory (`Config.TileCacheDir`, `Config.DisableDiskCache`); pass one `Config.Loader` to several models to share both. A newer render cancels the fetches of the one it supersedes, except for tiles both need. With `PanBuffer` enabled, buffer renders wait for all their tiles while the previous buffer stays visible. Composited viewports are kept in a small per-Model LRU keyed on `(lat, lng, zoom, cols, rows, provider, oversample, markers)` — revisiting a state hits the cache synchronously. Default cap is 16 entries; tune via `ntmaps.NewWithConfig(Config{CacheCap: N})` (`-1` disables this LRU; an explicitly enabled pan buffer remains active). Hosts that snapshot the first frame should wait until no render is in flight, since it may show placeholder tiles.
+- **Server-side supersample (`Config.Oversample`).** Raises the source-image pixel density without changing visible geographic coverage — `Oversample: N` (powers of 2) renders the same area at `N×` per-cell resolution and `+log2(N)` OSM tile zoom, so Kitty terminals can downscale a sharper source. `1` (default) keeps current behavior; `2` is a noticeable boost; `4` is hi-DPI quality at ~16× the tile fetches. Capped so the effective tile zoom never exceeds the provider's `MaxZoom`. Glyph mode pays the cost without visible benefit.
 - **Client-side optical zoom (`Config.OpticalZoom` / `mv.SetOpticalZoom(n)`).** Magnifies the *cached* source image by cropping the center `1/2^n` of each axis and letting the renderer scale it back up to the cell rectangle. No network, no tile-render goroutine — switching is instant. Pixelated at high N (it's digital zoom in spirit even though we call it optical), but useful for going past the OSM tile-zoom ceiling or just inspecting fine detail without re-fetching. Composes with `Oversample`: e.g. `Oversample: 2` + `OpticalZoom: 1` is a 2× zoomed view rendered from a 2× supersampled source.
 - **Aspect-ratio guardrail (`Config.MaxAspectRatio` / `Config.LetterboxColor`).** Maps display correctly at any cell-rect AR — every pixel sits at its true geographic location — but at extreme ARs (a 100×5 status bar, say) viewers find the result disorienting because their mental model of "a map" is roughly square. `MaxAspectRatio: 3.0` lets the cell rect's AR range up to 3:1 in either direction; beyond that, the map portion is rendered at the boundary AR centered in the cell rect, with the rest filled by `LetterboxColor` (default opaque black; `color.Transparent` shows the terminal background through the bars). The letterbox is composed into the source image *before* picture renders, so Glyph and Kitty show identical letterbox geometry — toggling render modes doesn't change layout. Default `0` keeps the current "fill the cell rect at any AR" behavior; opt in when your layout might land in extreme territory.
-- **No built-in API key handling.** Tile providers that require a key (e.g. Thunderforest) are not bundled — add a custom `tileProvider` if you need one.
 - **Geocoding uses Nominatim** with no caching. Respect their [usage policy](https://operations.osmfoundation.org/policies/nominatim/) for production traffic.
 
 ## License
@@ -299,9 +313,7 @@ buttons, renderer selection, and restart. Generated assets are ignored.
 GitHub Pages deploys only after the same CI checks pass.
 
 After changing dependencies, run `task go-tidy` and `task notices`. Browser
-builds use `wasm.work`; native tasks explicitly disable workspaces. The
-staticmaps fork replacement is repeated in the examples module because Go
-ignores dependency modules' replace directives.
+builds use `wasm.work`; native tasks explicitly disable workspaces.
 
 See [migration notes](MIGRATION.md) for the compatibility adapter, the upstream
 glyph-cache regression, and suggested platform guide corrections.

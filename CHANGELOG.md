@@ -11,6 +11,21 @@
   under the user cache directory, and the browser demo lives at
   https://nimbleterminal.github.io/ntmaps/.
 
+- Replace go-staticmaps with an in-house tile layer, `nimbleterminal.dev/ntmaps/tile`,
+  and render progressively: a render paints the tiles it already has, fetches
+  the rest, and repaints as they land; panning across cached tiles composes
+  synchronously with no fetch and no Loading badge. Tiles are cached in memory
+  and, natively, on disk under the user cache directory, and requests carry an
+  identifying User-Agent. New `Config` fields `Loader`, `TileCacheCap`,
+  `TileCacheDir`, `DisableDiskCache`, and `UserAgent`; new `SetTileProvider`
+  and `TileProvider` for any XYZ server, with `TileStyle` reporting
+  `StyleCustom`. The `go-staticmaps` replace directive is gone from both modules.
+- Breaking: `StamenToner` and `StamenTerrain` (service shut down) and
+  `OpenCycleMap` (http only, key-gated upstream) are removed from `Style`, so
+  the remaining constants have new values; the oversample zoom cap follows the
+  provider's `MaxZoom`; the attribution strip follows the selected provider;
+  and the first frame of a render may show placeholder tiles while fetching.
+
 ## v0.3.0 (2026-10-19)
 
 - Fix explorer mouse reporting and pane-relative 3D coordinates; add 2D

@@ -18,10 +18,10 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
-	sm "github.com/flopp/go-staticmaps"
-	"github.com/golang/geo/s2"
 	picture "nimbleterminal.dev/ntpicture"
 	"nimbleterminal.dev/ntpicture/legacy"
+
+	"nimbleterminal.dev/ntmaps/tile"
 )
 
 // RenderMode is an alias for picture.PictureMode so callers can keep using
@@ -56,19 +56,41 @@ const (
 	FitCover   = picture.FitCover
 )
 
+// Style selects one of the built-in tile providers. SetTileProvider accepts
+// any tile.Provider, including ones with API keys; Style is the shorthand
+// for the keyless services in the tile package.
 type Style int8
 
 const (
 	Wikimedia Style = iota
 	OpenStreetMaps
 	OpenTopoMap
-	OpenCycleMap
 	CartoLight
 	CartoDark
-	StamenToner
-	StamenTerrain
 	ArcgisWorldImagery
+
+	// StyleCustom is reported by TileStyle after SetTileProvider.
+	StyleCustom Style = -1
 )
+
+// Provider returns the tile.Provider a Style stands for. Unknown values,
+// StyleCustom included, map to OpenStreetMap.
+func (s Style) Provider() tile.Provider {
+	switch s {
+	case Wikimedia:
+		return tile.Wikimedia()
+	case OpenTopoMap:
+		return tile.OpenTopoMap()
+	case CartoLight:
+		return tile.CartoLight()
+	case CartoDark:
+		return tile.CartoDark()
+	case ArcgisWorldImagery:
+		return tile.ArcGISWorldImagery()
+	default:
+		return tile.OpenStreetMap()
+	}
+}
 
 // MapCoordinates is the geocoder-result message a parent forwards into Update
 // to recenter the map. Setting Err makes ntmaps surface it via errMsg / View.
@@ -79,17 +101,23 @@ type MapCoordinates struct {
 }
 
 // mapImageMsg carries the image.Image produced by an async tile render.
-// Update hands the image to the embedded legacy.Model and, on success,
-// stores the image in the render cache keyed by the state that produced it.
-// The gen field is a monotonic counter set when the render Cmd is
-// dispatched; messages whose gen no longer matches the Model's renderGen
-// are stale and dropped, so an older render finishing late can't overwrite
-// a newer one.
+// Update hands the image to the embedded legacy.Model and, once the render
+// is complete, stores the image in the render cache keyed by the state
+// that produced it. The gen field is a monotonic counter set when the
+// render Cmd is dispatched; messages whose gen no longer matches the
+// Model's renderGen are stale and dropped, so an older render finishing
+// late can't overwrite a newer one.
+//
+// A render whose tiles are still arriving delivers a series of these:
+// partial is true and next is the Cmd that waits for the following
+// repaint. The final message has partial false and no next.
 type mapImageMsg struct {
-	gen uint64
-	key renderKey
-	img image.Image
-	err error
+	gen     uint64
+	key     renderKey
+	img     image.Image
+	err     error
+	partial bool
+	next    tea.Cmd
 }
 
 // debouncedFetchMsg is delivered by a tea.Tick after Config.RenderDebounce
@@ -179,8 +207,10 @@ type Marker struct {
 }
 
 // Model renders a tile map using legacy.Model and handles navigation,
-// tile fetching, and geocoding. Each tile render uses a separate sm.Context.
-// Buffered rendering runs one fetch at a time and reuses nearby pixels.
+// tile fetching, and geocoding. Tiles come from a tile.Loader shared by
+// every render; a render paints the tiles it has, fetches the rest, and
+// repaints as they land. Buffered rendering runs one fetch at a time and
+// reuses nearby pixels.
 type Model struct {
 	KeyMap KeyMap
 	Style  lipgloss.Style
@@ -189,13 +219,19 @@ type Model struct {
 
 	initialized bool
 
-	tileProvider *sm.TileProvider
-	lat          float64
-	lng          float64
-	loc          string
-	zoom         int
-	markers      []Marker
-	tileStyle    Style
+	provider  tile.Provider
+	loader    *tile.Loader
+	lat       float64
+	lng       float64
+	loc       string
+	zoom      int
+	markers   []Marker
+	tileStyle Style
+
+	// job is the render currently allowed to deliver partial images. A
+	// newer render cancels it so abandoned tile fetches stop. Pointer for
+	// the value-receiver reason described under renderGen.
+	job *jobSlot
 
 	// renderGen is bumped every time renderMapCmd dispatches a goroutine.
 	// Each in-flight goroutine carries a copy in its mapImageMsg; Update
@@ -384,6 +420,28 @@ type Config struct {
 	//	N > 0       → wait N before dispatching the fetch
 	//	N < 0       → disable debouncing (prior behavior)
 	RenderDebounce time.Duration
+
+	// Loader supplies tiles. nil builds one from the fields below. Pass
+	// the same Loader to several models to share their tile caches.
+	Loader *tile.Loader
+
+	// TileCacheCap is the number of decoded tiles kept in memory by the
+	// built Loader. Zero means 256; negative disables the memory cache,
+	// which also disables synchronous repaints from cached tiles.
+	TileCacheCap int
+
+	// TileCacheDir is where the built Loader stores raw tiles on disk.
+	// Empty means the per-user cache directory (tile.DefaultDir), which
+	// is none in the browser.
+	TileCacheDir string
+
+	// DisableDiskCache keeps the built Loader from touching the disk.
+	DisableDiskCache bool
+
+	// UserAgent identifies the application to tile servers; their usage
+	// policies require one. Empty means tile.DefaultUserAgent, which names
+	// ntmaps and its version. Ignored when Loader is set.
+	UserAgent string
 }
 
 // New returns a Model sized to cols × rows terminal cells with default
@@ -422,6 +480,21 @@ func NewWithConfig(cfg Config) Model {
 		panBufferTiles: max(0, min(4, cfg.PanBuffer)),
 		smoothPan:      cfg.SmoothPan,
 		preferKitty:    cfg.PreferKitty,
+		loader:         cfg.Loader,
+	}
+	if m.loader == nil {
+		dir := cfg.TileCacheDir
+		if dir == "" && !cfg.DisableDiskCache {
+			dir = tile.DefaultDir()
+		}
+		if cfg.DisableDiskCache {
+			dir = ""
+		}
+		m.loader = tile.NewLoader(tile.Options{
+			UserAgent: cfg.UserAgent,
+			MemoryCap: cfg.TileCacheCap,
+			Dir:       dir,
+		})
 	}
 	m.setInitialValues()
 	m.pic.SetKittyMedium(cfg.KittyMedium)
@@ -457,8 +530,14 @@ func log2(n int) int {
 
 func (m *Model) setInitialValues() {
 	m.KeyMap = DefaultKeyMap()
-	m.tileProvider = sm.NewTileProviderOpenStreetMaps()
+	m.provider = tile.OpenStreetMap()
 	m.tileStyle = OpenStreetMaps
+	if m.loader == nil {
+		m.loader = tile.NewLoader(tile.Options{Dir: tile.DefaultDir()})
+	}
+	if m.job == nil {
+		m.job = &jobSlot{}
+	}
 	m.zoom = 15
 	m.lat = 25.0782266
 	m.lng = -77.3383438
@@ -652,19 +731,19 @@ func toRGBA8(c color.Color) rgba8 {
 	}
 }
 
-// effectiveOversample returns the (oversample factor, OSM zoom boost)
+// effectiveOversample returns the (oversample factor, tile zoom boost)
 // actually used for the next render. Both are derived from m.oversample,
 // then capped so the resulting tile zoom (m.zoom + boost) doesn't exceed
-// maxOSMZoom. At the cap a request like "zoom 18, oversample 4" silently
-// degrades to "tile zoom 19, oversample 2" — same area, less sharp than
-// requested but never an invalid OSM request.
+// the provider's maximum. At the cap a request like "zoom 18, oversample
+// 4" silently degrades to "tile zoom 19, oversample 2" — same area, less
+// sharp than requested but never a request the server cannot answer.
 func (m Model) effectiveOversample() (factor, boost int) {
 	factor = m.oversample
 	if factor < 1 {
 		factor = 1
 	}
 	boost = log2(factor)
-	for m.zoom+boost > maxOSMZoom && factor > 1 {
+	for m.zoom+boost > m.provider.Max() && factor > 1 {
 		factor >>= 1
 		boost--
 	}
@@ -697,10 +776,6 @@ func (m Model) Image() image.Image {
 	}
 	return m.sourceImage
 }
-
-// maxOSMZoom caps the OSM tile zoom we'll request, including any oversample
-// boost. Most providers serve up to z=19; going higher returns 404s.
-const maxOSMZoom = 19
 
 // Source-image pixel size per terminal cell. The 1:2 ratio matches ansimage's
 // half-block convention: each cell renders as one half-block character that
@@ -754,14 +829,14 @@ type renderKey struct {
 	lat, lng       float64
 	zoom           int
 	cols, rows     int
-	style          Style
+	provider       string
 	oversample     int
 	maxAspectRatio float64
 	ltrColor       rgba8
 	markers        string
 }
 
-func makeRenderKey(lat, lng float64, zoom, cols, rows int, style Style, oversample int, maxAR float64, ltrColor color.Color, markers []Marker) renderKey {
+func makeRenderKey(lat, lng float64, zoom, cols, rows int, provider string, oversample int, maxAR float64, ltrColor color.Color, markers []Marker) renderKey {
 	var sb strings.Builder
 	for _, mk := range markers {
 		fmt.Fprintf(&sb, "%g,%g,%g,%v;", mk.Lat, mk.Lng, mk.Size, mk.Color)
@@ -772,7 +847,7 @@ func makeRenderKey(lat, lng float64, zoom, cols, rows int, style Style, oversamp
 		zoom:           zoom,
 		cols:           cols,
 		rows:           rows,
-		style:          style,
+		provider:       provider,
 		oversample:     oversample,
 		maxAspectRatio: maxAR,
 		ltrColor:       toRGBA8(ltrColor),
@@ -880,8 +955,10 @@ func (m Model) RenderMode() RenderMode {
 	return m.pic.Mode()
 }
 
-// Close releases pending shared-memory images after the Bubble Tea program exits.
+// Close stops any tile fetches still in flight and releases pending
+// shared-memory images after the Bubble Tea program exits.
 func (m *Model) Close() {
+	m.job.cancel()
 	if m.pic != nil {
 		m.pic.SetImage(nil)
 	}
@@ -915,33 +992,46 @@ func (m Model) Fit() FitMode {
 // call picks up the new fit synchronously.
 func (m *Model) SetFit(fit FitMode) tea.Cmd { return m.pic.SetFit(fit) }
 
-// TileStyle returns the currently-selected tile style.
+// TileStyle returns the currently-selected tile style, or StyleCustom
+// after SetTileProvider.
 func (m Model) TileStyle() Style { return m.tileStyle }
 
-// SetStyle switches the tile provider and re-renders.
+// SetStyle switches to a built-in tile provider and re-renders.
 func (m *Model) SetStyle(style Style) tea.Cmd {
-	switch style {
-	case Wikimedia:
-		m.tileProvider = sm.NewTileProviderWikimedia()
-	case OpenStreetMaps:
-		m.tileProvider = sm.NewTileProviderOpenStreetMaps()
-	case OpenTopoMap:
-		m.tileProvider = sm.NewTileProviderOpenTopoMap()
-	case OpenCycleMap:
-		m.tileProvider = sm.NewTileProviderOpenCycleMap()
-	case CartoLight:
-		m.tileProvider = sm.NewTileProviderCartoLight()
-	case CartoDark:
-		m.tileProvider = sm.NewTileProviderCartoDark()
-	case StamenToner:
-		m.tileProvider = sm.NewTileProviderStamenToner()
-	case StamenTerrain:
-		m.tileProvider = sm.NewTileProviderStamenTerrain()
-	case ArcgisWorldImagery:
-		m.tileProvider = sm.NewTileProviderArcgisWorldImagery()
-	}
+	m.provider = style.Provider()
 	m.tileStyle = style
 	return m.renderMapCmd()
+}
+
+// TileProvider returns the provider tiles are fetched from.
+func (m Model) TileProvider() tile.Provider { return m.provider }
+
+// SetTileProvider switches to any tile provider, such as a keyed service
+// or a local tile server, and re-renders. A provider with an empty URL
+// renders its placeholder color and fetches nothing. The provider's Name
+// keys both caches, so give distinct providers distinct names.
+func (m *Model) SetTileProvider(p tile.Provider) tea.Cmd {
+	m.provider = p
+	m.tileStyle = StyleCustom
+	return m.renderMapCmd()
+}
+
+// tilesCached reports whether every in-world placement is already in the
+// loader's memory, or there is nothing to fetch at all, so a render can
+// complete synchronously.
+func (m Model) tilesCached(placements []tile.Placement) bool {
+	if !m.provider.Valid() || m.loader == nil {
+		return true
+	}
+	for _, pl := range placements {
+		if !pl.InWorld {
+			continue
+		}
+		if _, ok := m.loader.Cached(m.provider, pl.ID); !ok {
+			return false
+		}
+	}
+	return true
 }
 
 // Init dispatches the first tile render plus, on the first invocation only,
@@ -1090,20 +1180,29 @@ func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 		if m.renderGen == nil || msg.gen != *m.renderGen {
 			return m, nil
 		}
-		*m.lastAccepted = msg.gen
 		if msg.err != nil {
+			*m.lastAccepted = msg.gen
+			m.job.cancel()
 			m.errMsg = msg.err.Error()
 			m.sourceImage = nil
 			return m, m.pic.SetImage(nil)
 		}
 		m.errMsg = ""
-		// Cache and remember the un-cropped source so a later
-		// SetOpticalZoom can re-crop without going back to the network.
+		// Remember the un-cropped source so a later SetOpticalZoom can
+		// re-crop without going back to the network.
+		m.sourceImage = msg.img
+		cmd := m.pic.SetImage(opticalCrop(msg.img, opticalCropFactor(m.opticalZoom)))
+		if msg.partial {
+			// More tiles are coming: show what we have, keep the
+			// Loading badge up, and wait for the next repaint.
+			return m, tea.Batch(cmd, msg.next)
+		}
+		*m.lastAccepted = msg.gen
+		m.job.cancel()
 		if m.cache != nil && msg.img != nil {
 			m.cache.put(msg.key, msg.img)
 		}
-		m.sourceImage = msg.img
-		return m, m.pic.SetImage(opticalCrop(msg.img, opticalCropFactor(m.opticalZoom)))
+		return m, cmd
 
 	case MapCoordinates:
 		m.loc = ""
@@ -1129,18 +1228,21 @@ func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 }
 
 // renderMapCmd produces a Cmd that delivers the composited tile image for
-// the Model's current geo state. On a cache hit the image is applied
-// synchronously via picture.SetImage, so no gen bump and no in-flight
-// state — the View won't show a Loading overlay and the map updates in
-// the same Bubble Tea iteration. On a cache miss it snapshots the state
-// into a closure and dispatches a goroutine that builds its own fresh
-// *sm.Context (sm.Context is not goroutine-safe) to do the tile fetch
-// and composite. The returned mapImageMsg carries the generation counter
-// used by Update to drop stale results, and the renderKey used to populate
-// the cache once the result is accepted.
+// the Model's current geo state. On a render-cache hit, or when every tile
+// is already in the loader's memory, the image is applied synchronously
+// via picture.SetImage with no in-flight state — the View won't show a
+// Loading overlay and the map updates in the same Bubble Tea iteration.
+// Otherwise it snapshots the state into a renderJob whose Cmd paints the
+// tiles on hand, fetches the rest, and repaints as they land. Each
+// mapImageMsg carries the generation counter used by Update to drop
+// stale results, and the renderKey used to populate the cache once the
+// final image is accepted.
 func (m *Model) renderMapCmd() tea.Cmd {
-	if m.cols <= 0 || m.tileProvider == nil {
+	if m.cols <= 0 {
 		return nil
+	}
+	if m.job == nil {
+		m.job = &jobSlot{}
 	}
 	picRows := m.picRows()
 	if picRows <= 0 {
@@ -1161,11 +1263,14 @@ func (m *Model) renderMapCmd() tea.Cmd {
 
 	// Optical-zoom math: oversample N (a power of 2) means N× per-cell
 	// pixel density at zoom + log2(N), preserving geographic coverage.
-	// effectiveOversample handles the maxOSMZoom cap.
+	// effectiveOversample handles the provider's zoom cap.
 	effectiveOversample, zoomBoost := m.effectiveOversample()
 
 	markers := append([]Marker(nil), m.markers...)
-	key := makeRenderKey(m.lat, m.lng, m.zoom, m.cols, picRows, m.tileStyle, effectiveOversample, m.maxAspectRatio, m.letterboxColor, markers)
+	key := makeRenderKey(m.lat, m.lng, m.zoom, m.cols, picRows, m.provider.Name, effectiveOversample, m.maxAspectRatio, m.letterboxColor, markers)
+
+	// Whatever happens next supersedes a render still fetching tiles.
+	m.job.cancel()
 
 	if m.cache != nil {
 		if cached, ok := m.cache.get(key); ok {
@@ -1186,44 +1291,40 @@ func (m *Model) renderMapCmd() tea.Cmd {
 	*m.renderGen++
 	gen := *m.renderGen
 
-	provider := m.tileProvider
-	lat, lng := m.lat, m.lng
 	tileZoom := m.zoom + zoomBoost
 	cellRectW := m.cols * osmPxPerCellW * effectiveOversample
 	cellRectH := picRows * osmPxPerCellH * effectiveOversample
 
 	// Compute the actual map portion's pixel dims under MaxAspectRatio
 	// clamping. When unconstrained, mapW/mapH equal the cell rect and
-	// composeLetterbox is a no-op below.
+	// the letterbox step inside compose is a no-op. The composed image
+	// has the cell rect's pixel AR by construction, so picture's
+	// pre-scale (Kitty) and ansimage's fit (Glyph) are both no-ops and
+	// the two render modes show identical layout.
 	mapW, mapH := targetMapDims(cellRectW, cellRectH, m.maxAspectRatio)
-	letterboxColor := m.letterboxColor
+	cx, cy, _ := tile.Project(m.lat, m.lng, tileZoom, m.provider.Size())
+	geom := viewGeometry{
+		provider: m.provider, zoom: tileZoom, w: mapW, h: mapH, cx: cx, cy: cy,
+		markers: markers, cellRectW: cellRectW, cellRectH: cellRectH, letterbox: m.letterboxColor,
+	}
+	job := newRenderJob(gen, key, m.loader, geom)
 
-	fetch := tea.Cmd(func() tea.Msg {
-		ctx := sm.NewContext()
-		configureTileCache(ctx)
-		ctx.SetTileProvider(provider)
-		ctx.SetCenter(s2.LatLngFromDegrees(lat, lng))
-		ctx.SetZoom(tileZoom)
-		ctx.SetSize(mapW, mapH)
-		addMapMarkers(ctx, markers, lat, lng, tileZoom, provider.TileSize)
-		mapImg, err := ctx.Render()
-		if err != nil {
-			return mapImageMsg{gen: gen, key: key, img: nil, err: err}
+	// Every tile already in memory, or nothing to fetch: compose on this
+	// goroutine exactly like a cache hit, so panning across tiles seen
+	// before never waits for the debounce or shows the Loading badge.
+	if m.tilesCached(job.places) {
+		img, _ := geom.compose(job.places, job.lookup)
+		job.cancel()
+		*m.lastAccepted = gen
+		if m.cache != nil {
+			m.cache.put(key, img)
 		}
-		// go-staticmaps' final tile-composite loop just ran on this
-		// goroutine — give JS a slice before the next CPU-heavy step so
-		// pending fetch resolves / key events can drain (no-op on native).
-		yieldToJS()
-		// Compose into a cell-rect-sized canvas with letterbox bands when
-		// MaxAspectRatio shrunk the map portion. The composed image has
-		// the cell rect's pixel AR by construction, so picture's
-		// pre-scale (Kitty) and ansimage's fit (Glyph) are both no-ops —
-		// the two render modes show identical layout, including the
-		// letterbox bands baked into the source.
-		composed := composeLetterbox(mapImg, cellRectW, cellRectH, letterboxColor)
-		yieldToJS()
-		return mapImageMsg{gen: gen, key: key, img: composed, err: nil}
-	})
+		m.sourceImage = img
+		return m.pic.SetImage(opticalCrop(img, opticalCropFactor(m.opticalZoom)))
+	}
+
+	m.job.current = job
+	fetch := tea.Cmd(job.start)
 
 	// Debounce: wait renderDebounce before delivering the captured fetch
 	// to Update. Each call returns its own tick — Update checks msg.gen

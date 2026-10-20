@@ -10,15 +10,15 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
-	sm "github.com/flopp/go-staticmaps"
-	"github.com/golang/geo/s2"
 	"nimbleterminal.dev/ntpicture/legacy"
+
+	"nimbleterminal.dev/ntmaps/tile"
 )
 
 func bufferedTestModel() Model {
 	m := NewWithConfig(Config{Cols: 20, Rows: 11, PanBuffer: 1})
 	m.SetLatLng(0, 0, 15)
-	m.tileProvider = sm.NewTileProviderNone()
+	m.provider = tile.Provider{}
 	return m
 }
 
@@ -143,7 +143,7 @@ func TestBufferRejectsChangedStyleAndOtherOwners(t *testing.T) {
 	if cmd != nil || other.panState.buffer != nil {
 		t.Fatal("another model accepted this buffer")
 	}
-	m.tileStyle = CartoDark
+	m.provider = tile.CartoDark()
 	m.panState.lastStart = time.Now().Add(-panRenderInterval)
 	m, cmd = m.Update(msg)
 	if m.sourceImage != nil || cmd == nil || !m.panState.busy {
@@ -190,9 +190,9 @@ func TestPanUsesScreenPixelsAtDifferentLatitudes(t *testing.T) {
 		}
 	}
 	m := bufferedTestModel()
-	m.SetLatLng(maxMercatorLatitude, 0, 15)
+	m.SetLatLng(tile.MaxLatitude, 0, 15)
 	m.panPixels(0, -16)
-	if math.Abs(m.lat-maxMercatorLatitude) > 1e-9 {
+	if math.Abs(m.lat-tile.MaxLatitude) > 1e-9 {
 		t.Fatal("northward pan should clamp at the Mercator boundary")
 	}
 }
@@ -246,36 +246,6 @@ func TestGlyphCacheSurvivesValueReceiverView(t *testing.T) {
 	if m.View().Content != first || src.reads.Load() != reads {
 		t.Fatal("unchanged View re-rendered the source instead of using the glyph cache")
 	}
-}
-
-func TestSafeMarkerPreservesPinOverlappingViewport(t *testing.T) {
-	ctx := sm.NewContext()
-	ctx.SetTileProvider(sm.NewTileProviderNone())
-	ctx.SetCenter(s2.LatLngFromDegrees(0, 0))
-	ctx.SetZoom(16)
-	ctx.SetSize(128, 128)
-	trans, err := ctx.Transformer()
-	if err != nil {
-		t.Fatal(err)
-	}
-	cx, cy := trans.LatLngToXY(s2.LatLngFromDegrees(0, 0))
-	// The pin sits just outside the image with its right edge still visible.
-	// Older go-staticmaps versions wrap it out of view.
-	ll := trans.XYToLatLng(cx-64-4, cy)
-	addMapMarkers(ctx, []Marker{{Lat: ll.Lat.Degrees(), Lng: ll.Lng.Degrees()}}, 0, 0, 16, 256)
-	img, err := ctx.Render()
-	if err != nil {
-		t.Fatal(err)
-	}
-	for y := 32; y < 64; y++ {
-		for x := 0; x < 8; x++ {
-			r, g, b, _ := img.At(x, y).RGBA()
-			if r > g && r > b {
-				return
-			}
-		}
-	}
-	t.Fatal("partially visible pin was lost at the left edge")
 }
 
 func BenchmarkBufferedPan(b *testing.B) {

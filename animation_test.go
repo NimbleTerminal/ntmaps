@@ -6,6 +6,8 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
+
+	"nimbleterminal.dev/ntmaps/tile"
 )
 
 func TestSpringPanSettlesWithoutOvershoot(t *testing.T) {
@@ -54,12 +56,12 @@ func TestSpringRetargetKeepsVelocityAndOneTimer(t *testing.T) {
 func TestSpringDatelineAndLatitudeClamp(t *testing.T) {
 	m := bufferedTestModel()
 	m.smoothPan = true
-	m.SetLatLng(maxMercatorLatitude, 179.9999, 15)
+	m.SetLatLng(tile.MaxLatitude, 179.9999, 15)
 	m, _ = m.arrowPan(16, -16)
 	for i := 0; i < 120 && m.panState.motion.active; i++ {
 		m.advancePanAnimation(1.0 / 60)
 	}
-	if m.lng > -179.99 || math.Abs(m.lat-maxMercatorLatitude) > 1e-8 {
+	if m.lng > -179.99 || math.Abs(m.lat-tile.MaxLatitude) > 1e-8 {
 		t.Fatalf("dateline or pole handling failed: %f, %f", m.lat, m.lng)
 	}
 }

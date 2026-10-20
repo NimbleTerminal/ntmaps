@@ -36,7 +36,7 @@ func TestNewInitializesDefaultState(t *testing.T) {
 	if m.loc != "" {
 		t.Fatalf("expected empty location, got %q", m.loc)
 	}
-	if m.tileProvider == nil {
+	if !m.provider.Valid() {
 		t.Fatal("expected tile provider to be initialized")
 	}
 	// Until the first render completes, View shows a centered "Loading…"
@@ -161,7 +161,7 @@ func TestCacheHitDuringStaleInFlight(t *testing.T) {
 
 	// Pre-populate the cache so the next renderMapCmd takes the synchronous hit.
 	cachedImg := newSolidImage(color.RGBA{R: 1, G: 2, B: 3, A: 255})
-	key := makeRenderKey(m.lat, m.lng, m.zoom, m.cols, m.picRows(), m.tileStyle, m.oversample, m.maxAspectRatio, m.letterboxColor, m.markers)
+	key := makeRenderKey(m.lat, m.lng, m.zoom, m.cols, m.picRows(), m.provider.Name, m.oversample, m.maxAspectRatio, m.letterboxColor, m.markers)
 	m.cache.put(key, cachedImg)
 
 	// Cache-hit transition.
@@ -193,7 +193,7 @@ func TestRenderMapCmdHitsCacheSynchronously(t *testing.T) {
 	// Pre-populate the cache with the entry that the current state would
 	// look up.
 	cachedImg := newSolidImage(color.RGBA{R: 1, G: 2, B: 3, A: 255})
-	key := makeRenderKey(m.lat, m.lng, m.zoom, m.cols, m.picRows(), m.tileStyle, m.oversample, m.maxAspectRatio, m.letterboxColor, m.markers)
+	key := makeRenderKey(m.lat, m.lng, m.zoom, m.cols, m.picRows(), m.provider.Name, m.oversample, m.maxAspectRatio, m.letterboxColor, m.markers)
 	m.cache.put(key, cachedImg)
 
 	startGen := *m.renderGen
@@ -227,8 +227,8 @@ func TestFloorPow2(t *testing.T) {
 // TestOversample_CacheKeyDistinguishes verifies that two requests with
 // different effective oversamples don't collide in the cache.
 func TestOversample_CacheKeyDistinguishes(t *testing.T) {
-	k1 := makeRenderKey(0, 0, 10, 80, 23, OpenStreetMaps, 1, 0, nil, nil)
-	k2 := makeRenderKey(0, 0, 10, 80, 23, OpenStreetMaps, 2, 0, nil, nil)
+	k1 := makeRenderKey(0, 0, 10, 80, 23, "osm", 1, 0, nil, nil)
+	k2 := makeRenderKey(0, 0, 10, 80, 23, "osm", 2, 0, nil, nil)
 	if k1 == k2 {
 		t.Fatal("oversample 1 and 2 must produce different cache keys")
 	}
@@ -412,8 +412,8 @@ func TestComposeLetterbox_NoOpWhenSizesMatch(t *testing.T) {
 // bands are baked in).
 func TestRenderKey_DistinguishesMaxAspectRatio(t *testing.T) {
 	bg := color.RGBA{A: 255}
-	k1 := makeRenderKey(0, 0, 10, 80, 23, OpenStreetMaps, 1, 0, bg, nil)
-	k2 := makeRenderKey(0, 0, 10, 80, 23, OpenStreetMaps, 1, 2.0, bg, nil)
+	k1 := makeRenderKey(0, 0, 10, 80, 23, "osm", 1, 0, bg, nil)
+	k2 := makeRenderKey(0, 0, 10, 80, 23, "osm", 1, 2.0, bg, nil)
 	if k1 == k2 {
 		t.Fatal("MaxAspectRatio 0 and 2.0 must produce different cache keys")
 	}
@@ -425,8 +425,8 @@ func TestRenderKey_DistinguishesMaxAspectRatio(t *testing.T) {
 func TestRenderKey_DistinguishesLetterboxColor(t *testing.T) {
 	black := color.RGBA{A: 255}
 	white := color.RGBA{R: 255, G: 255, B: 255, A: 255}
-	k1 := makeRenderKey(0, 0, 10, 80, 23, OpenStreetMaps, 1, 2.0, black, nil)
-	k2 := makeRenderKey(0, 0, 10, 80, 23, OpenStreetMaps, 1, 2.0, white, nil)
+	k1 := makeRenderKey(0, 0, 10, 80, 23, "osm", 1, 2.0, black, nil)
+	k2 := makeRenderKey(0, 0, 10, 80, 23, "osm", 1, 2.0, white, nil)
 	if k1 == k2 {
 		t.Fatal("different LetterboxColor must produce different cache keys")
 	}
@@ -982,7 +982,7 @@ func TestDebouncedFetchLatestGenDispatchesFetch(t *testing.T) {
 	if cmd == nil {
 		t.Fatal("expected current-gen debounce msg to dispatch the captured fetch")
 	}
-	if got := cmd(); got != sentinel {
+	if got, ok := cmd().(mapImageMsg); !ok || got.gen != sentinel.gen || got.err != sentinel.err {
 		t.Fatalf("expected dispatched Cmd to be the captured fetch, got %#v", got)
 	}
 }

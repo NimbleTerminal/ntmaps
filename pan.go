@@ -1,40 +1,31 @@
 package ntmaps
 
 import (
+	"context"
 	"image"
 	"image/color"
 	"image/draw"
 	"math"
-	"strings"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
-	sm "github.com/flopp/go-staticmaps"
-	"github.com/fogleman/gg"
-	"github.com/golang/geo/s2"
+
+	"nimbleterminal.dev/ntmaps/tile"
 )
 
-const maxMercatorLatitude = 85.0511287798066
 const panRenderInterval = time.Second / 30
 
 // worldPixels converts latitude and longitude to Web Mercator pixels.
 func worldPixels(lat, lng float64, zoom, tileSize int) (x, y, world float64) {
-	world = math.Exp2(float64(zoom)) * float64(tileSize)
-	lat = max(-maxMercatorLatitude, min(maxMercatorLatitude, lat))
-	x = (lng + 180) / 360 * world
-	y = (1 - math.Asinh(math.Tan(lat*math.Pi/180))/math.Pi) / 2 * world
-	return
+	return tile.Project(lat, lng, zoom, tileSize)
 }
 
 func (m *Model) panPixels(dx, dy float64) {
-	tileSize := m.tileProvider.TileSize
-	x, y, world := worldPixels(m.lat, m.lng, m.zoom, tileSize)
+	tileSize := m.provider.Size()
+	x, y, _ := worldPixels(m.lat, m.lng, m.zoom, tileSize)
 	// Compensate for optical zoom to keep the on-screen pan distance constant.
 	factor := float64(opticalCropFactor(m.opticalZoom))
-	x = math.Mod(math.Mod(x+dx/factor, world)+world, world)
-	y = max(0, min(world, y+dy/factor))
-	m.lng = x/world*360 - 180
-	m.lat = math.Atan(math.Sinh(math.Pi*(1-2*y/world))) * 180 / math.Pi
+	m.lat, m.lng = tile.Unproject(x+dx/factor, y+dy/factor, m.zoom, tileSize)
 }
 
 // Only the Bubble Tea event loop changes panState. Commands use its pointer
@@ -114,7 +105,7 @@ func (b *panBuffer) crop(r image.Rectangle, key renderKey, bg color.Color) image
 
 func (m *Model) currentRenderKey() renderKey {
 	os, _ := m.effectiveOversample()
-	return makeRenderKey(m.lat, m.lng, m.zoom, m.cols, m.picRows(), m.tileStyle,
+	return makeRenderKey(m.lat, m.lng, m.zoom, m.cols, m.picRows(), m.provider.Name,
 		os, m.maxAspectRatio, m.letterboxColor, m.markers)
 }
 
@@ -165,26 +156,21 @@ func (m *Model) renderBufferedMapCmd() tea.Cmd {
 	}
 	state.busy = true
 	state.lastStart = time.Now()
-	provider := *m.tileProvider
+	provider := m.provider
+	loader := m.loader
 	markers := append([]Marker(nil), m.markers...)
 	w, h := targetMapDims(key.cols*osmPxPerCellW*key.oversample,
 		key.rows*osmPxPerCellH*key.oversample, key.maxAspectRatio)
-	padding := m.panBufferTiles * provider.TileSize
-	x, y, world := worldPixels(key.lat, key.lng, key.zoom+log2(key.oversample), provider.TileSize)
+	tileSize := provider.Size()
+	tileZoom := key.zoom + log2(key.oversample)
+	padding := m.panBufferTiles * tileSize
+	x, y, world := worldPixels(key.lat, key.lng, tileZoom, tileSize)
 	return tea.Batch(present, func() tea.Msg {
-		ctx := sm.NewContext()
-		configureTileCache(ctx)
-		ctx.SetTileProvider(&provider)
-		ctx.SetCenter(s2.LatLngFromDegrees(key.lat, key.lng))
-		ctx.SetZoom(key.zoom + log2(key.oversample))
-		ctx.SetSize(w+2*padding, h+2*padding)
-		// Draw attribution after cropping to the visible viewport.
-		ctx.OverrideAttribution("")
-		addMapMarkers(ctx, markers, key.lat, key.lng, key.zoom+log2(key.oversample), provider.TileSize)
-		img, err := ctx.Render()
+		// Attribution is drawn after cropping to the visible viewport.
+		img, err := renderBuffer(context.Background(), loader, provider, markers, x, y, tileZoom, w+2*padding, h+2*padding)
 		return bufferImageMsg{owner: state, err: err, buffer: &panBuffer{
 			key: key, img: img, centerX: x, centerY: y, world: world,
-			mapW: w, mapH: h, padding: padding, tileSize: provider.TileSize,
+			mapW: w, mapH: h, padding: padding, tileSize: tileSize,
 			attribution: provider.Attribution,
 		}}
 	})
@@ -204,71 +190,4 @@ func (m *Model) presentPanImage(img image.Image) tea.Cmd {
 	}
 	state.encoding = true
 	return func() tea.Msg { return panPictureMsg{owner: state, msg: cmd()} }
-}
-
-// safeMarker corrects offscreen marker wrapping in older go-staticmaps versions.
-type safeMarker struct {
-	*sm.Marker
-	center s2.LatLng
-	world  float64
-}
-
-func (m *safeMarker) Draw(gc *gg.Context, trans *sm.Transformer) {
-	if !sm.CanDisplay(m.Position) {
-		return
-	}
-	x, y := trans.LatLngToXY(m.Position)
-	cx, _ := trans.LatLngToXY(m.center)
-	shift := -math.Floor((x-cx)/m.world+0.5) * m.world
-	left, top, right, bottom := m.ExtraMarginPixels()
-	if x+shift+right < 0 || x+shift-left > float64(gc.Width()) ||
-		y+bottom < 0 || y-top > float64(gc.Height()) {
-		return
-	}
-	gc.Push()
-	gc.Translate(shift, 0)
-	m.Marker.Draw(gc, trans)
-	gc.Pop()
-}
-
-func addMapMarkers(ctx *sm.Context, markers []Marker, lat, lng float64, zoom, tileSize int) {
-	for _, mk := range markers {
-		col := mk.Color
-		if col == nil {
-			col = color.RGBA{255, 0, 0, 255}
-		}
-		size := mk.Size
-		if size == 0 {
-			size = 16
-		}
-		ctx.AddObject(&safeMarker{
-			Marker: sm.NewMarker(s2.LatLngFromDegrees(mk.Lat, mk.Lng), col, size),
-			center: s2.LatLngFromDegrees(lat, lng),
-			world:  math.Exp2(float64(zoom)) * float64(tileSize),
-		})
-	}
-}
-
-// Draw attribution at the bottom of the cropped map using go-staticmaps styling.
-func drawMapAttribution(img *image.RGBA, attribution string) {
-	if attribution == "" {
-		return
-	}
-	gc := gg.NewContextForRGBA(img)
-	lines := strings.Split(attribution, "\n")
-	var lineHeight float64
-	for _, line := range lines {
-		_, h := gc.MeasureString(line)
-		lineHeight = max(lineHeight, h)
-	}
-	height := (lineHeight+2)*float64(len(lines)) + 2
-	y := float64(img.Bounds().Dy()) - height
-	gc.SetRGBA(0, 0, 0, .5)
-	gc.DrawRectangle(0, y, float64(img.Bounds().Dx()), height)
-	gc.Fill()
-	gc.SetRGBA(1, 1, 1, .75)
-	for _, line := range lines {
-		gc.DrawStringAnchored(line, 2, y, 0, 1)
-		y += lineHeight + 2
-	}
 }
