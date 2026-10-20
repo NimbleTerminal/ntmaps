@@ -269,9 +269,7 @@ func TestSetLocationUsesConfiguredGeocoder(t *testing.T) {
 	})
 	m := NewWithConfig(Config{Cols: 20, Rows: 5, Geocoder: g, DisableDiskCache: true})
 	m.SetTileSource(tile.Provider{})
-	m.SetLocation("london", 10)
-	// Any message triggers the one-shot lookup once SetLocation was called.
-	m, cmd := m.Update(struct{}{})
+	cmd := m.SetLocation("london", 10)
 	if cmd == nil {
 		t.Fatal("expected the lookup Cmd")
 	}
@@ -283,12 +281,14 @@ func TestSetLocationUsesConfiguredGeocoder(t *testing.T) {
 	if lat, lng := m.Center(); lat != 51.5 || lng != -0.12 || m.Zoom() != 10 {
 		t.Fatalf("center = %v,%v z%d", lat, lng, m.Zoom())
 	}
-	m.SetLocation("nowhere", 10)
-	_, cmd = m.Update(struct{}{})
+	cmd = m.SetLocation("nowhere", 10)
 	if msg := cmd().(MapCoordinates); !errors.Is(msg.Err, geocode.ErrNotFound) {
 		t.Fatalf("lookup error = %v, want ErrNotFound", msg.Err)
 	}
 	if New(1, 1).geocoder == nil {
 		t.Fatal("default geocoder should be set")
+	}
+	if m.SetLocation("", 5) != nil || m.Zoom() != 5 {
+		t.Fatal("an empty query only sets the zoom")
 	}
 }

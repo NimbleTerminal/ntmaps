@@ -137,13 +137,13 @@ src, err := pmtiles.Open("city.pmtiles", pmtiles.Options{})   // nimbleterminal.
 mv.SetTileSource(src)
 ```
 
-Raster archives with uncompressed or gzip directories and PNG or JPEG tiles are supported; the attribution comes from the archive metadata. Try it with `./bin/ntmaps-mapview -pmtiles city.pmtiles`.
+Raster archives with uncompressed or gzip directories and PNG or JPEG tiles are supported; the attribution comes from the archive metadata. Try it with `./bin/ntmaps-mapview -pmtiles city.pmtiles`. `tile.FirstOf(archive, tile.OpenStreetMap())` puts an archive in front of an online provider, which is how the explorer serves its bundled Flatiron tiles offline. `pmtiles.Write` and the `internal/tools/pmtiles-fetch` tool build an archive for a small area from any XYZ provider; mind the provider's usage policy.
 
 `SetOverlays(...)` draws transparent layers over the base, bottom to top: `tile.OpenSeaMap()` for seamarks, `tile.OpenRailwayMap()` for railways, or any source serving transparent tiles. An overlay is skipped beyond its `MaxZoom`, its credit joins the attribution, and tiles of another size are scaled into the base grid. Base and overlay tiles are fetched together, so progressive painting and the prefetch ring cover both. `RenderOptions.Overlays` does the same for static images. Press `o` in the explorer to toggle seamarks.
 
 Tile and geocoding requests identify the application with a `User-Agent` of `ntmaps/<version> (+https://github.com/NimbleTerminal/ntmaps)`. Usage policies, [OpenStreetMap's](https://operations.osmfoundation.org/policies/tiles/) included, ask that a public app name itself, so set `Config.UserAgent` before shipping one. Browsers send their own, and the header is not set under WASM.
 
-`SetLocation` resolves a place name through `Config.Geocoder`; the default is `geocode.Nominatim` against the public OpenStreetMap instance, paced to one request per second as [its policy](https://operations.osmfoundation.org/policies/nominatim/) requires. Point it at your own Nominatim with `&geocode.Nominatim{Endpoint: ...}`, or implement `geocode.Geocoder` for another service.
+`SetLocation` resolves a place name through `Config.Geocoder` and returns the Cmd that delivers the `MapCoordinates`; the default is `geocode.Nominatim` against the public OpenStreetMap instance, paced to one request per second as [its policy](https://operations.osmfoundation.org/policies/nominatim/) requires. Point it at your own Nominatim with `&geocode.Nominatim{Endpoint: ...}`, or implement `geocode.Geocoder` for another service.
 
 ## Render modes
 
@@ -194,8 +194,8 @@ For the narrower "is this message owned by ntmaps alone" predicate (the `MapCoor
 
 | Program | Purpose |
 | --- | --- |
-| `mapview` | Minimal 2D map widget host: pan, zoom, marker, glyph/Kitty toggle |
-| `explorer` | Places browser with a details pane and switchable 2D / 3D buildings |
+| `mapview` | Minimal 2D map widget host: pan, zoom, marker, glyph/Kitty toggle; `-pmtiles` serves a local archive and `-snapshot out.png` renders headlessly |
+| `explorer` | Places browser: five base styles (`s`), seamarks overlay (`o`), routes with `F` to frame them, `G` to geocode a name, mouse drag and wheel, bundled offline Flatiron tiles, and switchable 2D / 3D buildings |
 | `cityview3d` | Standalone development viewer for the internal city helpers |
 | `mapview3d` | Flat textured-map rendering and performance fixture |
 

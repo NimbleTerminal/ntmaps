@@ -35,9 +35,6 @@ func TestNewInitializesDefaultState(t *testing.T) {
 	if m.lng != -77.3383438 {
 		t.Fatalf("expected default lng -77.3383438, got %f", m.lng)
 	}
-	if m.loc != "" {
-		t.Fatalf("expected empty location, got %q", m.loc)
-	}
 	if !tile.Fetchable(m.source) {
 		t.Fatal("expected tile provider to be initialized")
 	}
@@ -767,9 +764,6 @@ func TestUpdateHandlesCoordinates(t *testing.T) {
 	}
 	if updated.lng != -72.7 {
 		t.Fatalf("expected lng -72.7, got %f", updated.lng)
-	}
-	if updated.loc != "" {
-		t.Fatalf("expected location to remain empty, got %q", updated.loc)
 	}
 }
 

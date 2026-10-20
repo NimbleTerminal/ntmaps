@@ -1,9 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	_ "embed"
 	"flag"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -11,6 +14,7 @@ import (
 	"charm.land/bubbles/v2/help"
 	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/list"
+	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	chart "github.com/NimbleMarkets/ntcharts3d"
@@ -23,13 +27,41 @@ import (
 	curated "nimbleterminal.dev/ntmaps/examples/internal/places"
 	"nimbleterminal.dev/ntmaps/internal/city"
 	"nimbleterminal.dev/ntmaps/tile"
+	"nimbleterminal.dev/ntmaps/tile/pmtiles"
 )
 
-func styleName(src tile.Source) string {
-	if src != nil && src.Info().Name == tile.ArcGISWorldImagery().Name {
-		return "Satellite"
+//go:embed flatiron.pmtiles
+var flatironArchive []byte
+
+// styles are the base maps the s key cycles through.
+var styles = []struct {
+	name string
+	src  func() tile.Provider
+}{
+	{"OSM", tile.OpenStreetMap},
+	{"Light", tile.CartoLight},
+	{"Dark", tile.CartoDark},
+	{"Topo", tile.OpenTopoMap},
+	{"Satellite", tile.ArcGISWorldImagery},
+}
+
+// routes are paths drawn for some places: a walk around Flatiron, the
+// LHC ring at CERN, and the prime meridian at Greenwich.
+func routes() map[string][]ntmaps.Point {
+	var ring []ntmaps.Point
+	const lat, lng, radius = 46.2350, 6.0530, 4300.0
+	for i := 0; i <= 64; i++ {
+		a := 2 * math.Pi * float64(i) / 64
+		ring = append(ring, ntmaps.Point{
+			Lat: lat + radius*math.Cos(a)/111320,
+			Lng: lng + radius*math.Sin(a)/(111320*math.Cos(lat*math.Pi/180)),
+		})
 	}
-	return "Graphics"
+	return map[string][]ntmaps.Point{
+		"Flatiron district":           {{Lat: 40.7420, Lng: -73.9897}, {Lat: 40.7411, Lng: -73.9897}, {Lat: 40.7404, Lng: -73.9881}, {Lat: 40.7415, Lng: -73.9872}, {Lat: 40.7425, Lng: -73.9885}, {Lat: 40.7420, Lng: -73.9897}},
+		"CERN":                        ring,
+		"Royal Observatory Greenwich": {{Lat: 51.4700, Lng: 0}, {Lat: 51.4850, Lng: 0}},
+	}
 }
 
 func fitName(f ntmaps.FitMode) string {
@@ -102,6 +134,8 @@ type appKeys struct {
 	style         key.Binding
 	overlay       key.Binding
 	fit           key.Binding
+	frame         key.Binding
+	search        key.Binding
 	help          key.Binding
 	quit          key.Binding
 }
@@ -118,6 +152,8 @@ func newAppKeys() appKeys {
 		style:   key.NewBinding(key.WithKeys("s"), key.WithHelp("s", "style")),
 		overlay: key.NewBinding(key.WithKeys("o"), key.WithHelp("o", "seamarks")),
 		fit:     key.NewBinding(key.WithKeys("f"), key.WithHelp("f", "fit")),
+		frame:   key.NewBinding(key.WithKeys("F"), key.WithHelp("F", "frame route")),
+		search:  key.NewBinding(key.WithKeys("G"), key.WithHelp("G", "go to")),
 		help:    key.NewBinding(key.WithKeys("?"), key.WithHelp("?", "more")),
 		quit:    key.NewBinding(key.WithKeys("q", "ctrl+c"), key.WithHelp("q", "quit")),
 	}
@@ -127,13 +163,13 @@ func (k appKeys) ShortHelp() []key.Binding {
 	if k.in3D {
 		return []key.Binding{k.view, demorun.Binding("arrows", "look"), demorun.Binding("WASD", "move"), demorun.Binding("e/f", "rise/lower"), demorun.Binding("t", "GPU/CPU"), k.listNav, k.help, k.quit}
 	}
-	return []key.Binding{k.view, k.pan, k.zoom, k.listNav, k.filter, k.mode, k.help, k.quit}
+	return []key.Binding{k.view, k.pan, k.zoom, k.search, k.listNav, k.filter, k.mode, k.help, k.quit}
 }
 func (k appKeys) FullHelp() [][]key.Binding {
 	if k.in3D {
 		return [][]key.Binding{k.ShortHelp(), {k.refresh, demorun.Binding("0", "reset"), k.mode}}
 	}
-	return [][]key.Binding{k.ShortHelp(), {k.optZoom, k.style, k.overlay, k.fit}}
+	return [][]key.Binding{k.ShortHelp(), {k.optZoom, k.style, k.overlay, k.fit, k.frame}}
 }
 
 type model struct {
@@ -152,6 +188,11 @@ type model struct {
 	cityKey               string
 	cached                bool
 	mv                    ntmaps.Model
+	style                 int
+	archive               *pmtiles.Archive
+	routes                map[string][]ntmaps.Point
+	search                textinput.Model
+	searching             bool
 	places                []curated.Place
 	list                  list.Model
 	help                  help.Model
@@ -198,16 +239,55 @@ func initialModel(medium ntmaps.KittyMedium, loader *neighborhood.Loader, render
 	mv.SetLatLng(first.Lat, first.Lon, first.Zoom)
 	mv.SetMarkers([]ntmaps.Marker{{Lat: first.Lat, Lng: first.Lon}})
 
-	return &model{
+	// The bundled Flatiron archive serves its tiles offline, in front of
+	// OpenStreetMap for everywhere else.
+	archive, err := pmtiles.New(bytes.NewReader(flatironArchive), pmtiles.Options{Name: "flatiron"})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "bundled tiles: %v\n", err)
+		os.Exit(1)
+	}
+	m := &model{
 		zones: zones, itemPrefix: prefix,
 		loader: loader, medium: medium, renderer: renderer, mapMode: ntmaps.RenderGlyph,
 		mv:        mv,
+		archive:   archive,
+		routes:    routes(),
+		search:    newSearchInput(),
 		places:    places,
 		list:      l,
 		help:      help.New(),
 		keys:      newAppKeys(),
 		lastPlace: first,
 	}
+	m.mv.SetTileSource(m.baseSource())
+	m.mv.SetPaths(m.pathsFor(first))
+	return m
+}
+
+func newSearchInput() textinput.Model {
+	ti := textinput.New()
+	ti.Prompt = "Go to: "
+	ti.Placeholder = "place name or address"
+	ti.CharLimit = 80
+	return ti
+}
+
+// baseSource is the current style, with the bundled Flatiron tiles in
+// front of OpenStreetMap when that style is selected.
+func (m *model) baseSource() tile.Source {
+	src := styles[m.style].src()
+	if m.style == 0 && m.archive != nil {
+		return tile.FirstOf(m.archive, src)
+	}
+	return src
+}
+
+func (m *model) pathsFor(p curated.Place) []ntmaps.Path {
+	pts, ok := m.routes[p.Name]
+	if !ok {
+		return nil
+	}
+	return []ntmaps.Path{{Points: pts, Width: 3}}
 }
 
 // syncMapToSelection re-centers the map on the currently-highlighted place,
@@ -221,6 +301,7 @@ func (m *model) syncMapToSelection() tea.Cmd {
 	m.lastPlace = it.p
 	m.mv.SetLatLng(it.p.Lat, it.p.Lon, it.p.Zoom)
 	m.mv.SetMarkers([]ntmaps.Marker{{Lat: it.p.Lat, Lng: it.p.Lon}})
+	m.mv.SetPaths(m.pathsFor(it.p))
 	if m.in3D {
 		return m.requestCity(false)
 	}
@@ -379,6 +460,9 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if v.String() == "ctrl+c" {
 			return m, m.quit()
 		}
+		if m.searching {
+			return m, m.updateSearch(v)
+		}
 		if m.list.FilterState() == list.Filtering {
 			var cmd tea.Cmd
 			m.list, cmd = m.list.Update(v)
@@ -421,11 +505,17 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, m.mv.SetRenderMode(mode)
 		case "s":
-			next := tile.OpenStreetMap()
-			if styleName(m.mv.TileSource()) != "Satellite" {
-				next = tile.ArcGISWorldImagery()
+			m.style = (m.style + 1) % len(styles)
+			return m, m.mv.SetTileSource(m.baseSource())
+		case "F":
+			if m.mv.FitContent() {
+				return m, m.mv.Init()
 			}
-			return m, m.mv.SetTileSource(next)
+			return m, nil
+		case "G":
+			m.searching = true
+			m.search.SetValue("")
+			return m, m.search.Focus()
 		case "o":
 			if len(m.mv.Overlays()) > 0 {
 				return m, m.mv.SetOverlays()
@@ -448,6 +538,13 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		var cmd tea.Cmd
 		m.mv, cmd = m.mv.Update(v)
 		return m, cmd
+	}
+	if coords, ok := msg.(ntmaps.MapCoordinates); ok && coords.Err == nil {
+		// A geocoder hit: mark it, drop the place route, and stop the list
+		// from re-centering on its selection.
+		m.lastPlace = curated.Place{}
+		m.mv.SetMarkers([]ntmaps.Marker{{Lat: coords.Lat, Lng: coords.Lng}})
+		m.mv.SetPaths(nil)
 	}
 	// Ownership checks in both components reject unrelated frames. Runtime and
 	// late cleanup messages reach both even while one pane is hidden.
@@ -533,6 +630,28 @@ func (m *model) detailView(innerW, innerH int) string {
 	return lipgloss.NewStyle().Width(innerW).Height(innerH).MaxHeight(innerH).Render(content)
 }
 
+// updateSearch drives the go-to prompt: Enter geocodes, Esc cancels.
+func (m *model) updateSearch(v tea.KeyPressMsg) tea.Cmd {
+	switch v.String() {
+	case "esc", "ctrl+c":
+		m.searching = false
+		m.search.Blur()
+		return nil
+	case "enter":
+		m.searching = false
+		m.search.Blur()
+		query := m.search.Value()
+		if query == "" {
+			return nil
+		}
+		m.cancelDrag()
+		return m.mv.SetLocation(query, 14)
+	}
+	var cmd tea.Cmd
+	m.search, cmd = m.search.Update(v)
+	return cmd
+}
+
 func (m *model) View() tea.View {
 	if m.width == 0 || m.height == 0 {
 		v := tea.NewView("loading…")
@@ -577,7 +696,10 @@ func (m *model) View() tea.View {
 		optical = fmt.Sprintf("  ×%d", 1<<oz)
 	}
 	status := fmt.Sprintf("%.4f,%.4f z%d%s  %s  %s  %s",
-		lat, lng, m.mv.Zoom(), optical, mode, styleName(m.mv.TileSource()), fitName(m.mv.Fit()))
+		lat, lng, m.mv.Zoom(), optical, mode, styles[m.style].name, fitName(m.mv.Fit()))
+	if len(m.mv.Overlays()) > 0 {
+		status += "  +seamarks"
+	}
 
 	if m.in3D {
 		status = "3D · " + m.lastPlace.Name + " · 200 m neighborhood"
@@ -586,6 +708,9 @@ func (m *model) View() tea.View {
 		}
 	} else {
 		status = "2D · " + status
+	}
+	if m.searching {
+		status = m.search.View() + "   enter: go · esc: cancel"
 	}
 	footer := footerStyle.Width(m.width).Render(ansi.Truncate(status, m.width, ""))
 	helpView := m.help.View(m.keys)

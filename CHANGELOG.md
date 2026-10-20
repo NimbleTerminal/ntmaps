@@ -72,6 +72,13 @@
   from a local file or over HTTP range requests as a `tile.Source`, with
   gzip or uncompressed directories, leaf directories, and metadata
   attribution. The mapview example takes `-pmtiles`.
+- `tile.FirstOf` layers sources offline-first; `pmtiles.Write` and the
+  `pmtiles-fetch` tool build archives. `SetLocation` now returns the lookup
+  Cmd instead of waiting for the next message.
+- Demos: the explorer cycles five base styles, draws routes for Flatiron,
+  CERN's LHC ring, and the Greenwich meridian with `F` to frame them,
+  geocodes a typed place with `G`, and serves Flatiron from a bundled
+  PMTiles archive in front of OpenStreetMap; mapview gains `-snapshot`.
 
 ## v0.3.0 (2026-10-19)
 

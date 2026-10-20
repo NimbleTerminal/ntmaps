@@ -177,7 +177,6 @@ type Model struct {
 	geocoder  geocode.Geocoder
 	lat       float64
 	lng       float64
-	loc       string
 	zoom      int
 	markers   []Marker
 	paths     []Path
@@ -507,7 +506,6 @@ func (m *Model) setInitialValues() {
 	m.zoom = 15
 	m.lat = 25.0782266
 	m.lng = -77.3383438
-	m.loc = ""
 	pic := legacy.NewModel()
 	m.pic = &pic
 	if m.panState == nil {
@@ -907,9 +905,14 @@ func (m *Model) SetLatLng(lat, lng float64, zoom int) {
 	m.zoom = zoom
 }
 
-func (m *Model) SetLocation(loc string, zoom int) {
-	m.loc = loc
+// SetLocation resolves a place name through the Geocoder and returns the
+// Cmd that delivers the MapCoordinates recentering the map at zoom.
+func (m *Model) SetLocation(loc string, zoom int) tea.Cmd {
 	m.zoom = zoom
+	if loc == "" {
+		return nil
+	}
+	return m.lookup(loc)
 }
 
 // RenderMode returns the embedded legacy.Model's mode.
@@ -1251,7 +1254,6 @@ func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 		return m, tea.Batch(cmd, m.prefetchCmd(geom))
 
 	case MapCoordinates:
-		m.loc = ""
 		if msg.Err != nil {
 			m.errMsg = msg.Err.Error()
 			return m, m.pic.SetImage(nil)
@@ -1264,13 +1266,7 @@ func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 	}
 
 	// Unknown messages: forward to legacy.Model so KittyFrameMsg gets handled.
-	cmd := m.pic.Update(msg)
-
-	// One-shot lookup if SetLocation was called and we haven't dispatched it.
-	if m.initialized && m.loc != "" {
-		return m, tea.Batch(cmd, m.lookup(m.loc))
-	}
-	return m, cmd
+	return m, m.pic.Update(msg)
 }
 
 // renderMapCmd produces a Cmd that delivers the composited tile image for
