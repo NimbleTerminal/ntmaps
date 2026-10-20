@@ -3,6 +3,7 @@ package ntmaps
 import (
 	"image"
 	"image/color"
+	"strings"
 	"testing"
 
 	"nimbleterminal.dev/ntmaps/tile"
@@ -104,4 +105,62 @@ func TestDrawMarkersSkipsPolarAndOffscreen(t *testing.T) {
 			t.Fatal("expected no pixels for polar or offscreen markers")
 		}
 	}
+}
+
+func TestDrawPinOutlineAndFill(t *testing.T) {
+	img := image.NewRGBA(image.Rect(0, 0, 64, 64))
+	for i := range img.Pix {
+		img.Pix[i] = 0xff
+	}
+	drawPin(img, 32, 48, 16, color.RGBA{R: 255, A: 255})
+	// Head center is 16 above the tip; its edge sits 8 further out.
+	if got := img.RGBAAt(32, 32); got != (color.RGBA{255, 0, 0, 255}) {
+		t.Fatalf("head center = %v, want fill", got)
+	}
+	edge := img.RGBAAt(32, 24)
+	if edge.R > 90 || edge.G > 90 || edge.B > 90 {
+		t.Fatalf("head edge = %v, want dark outline", edge)
+	}
+	if got := img.RGBAAt(32, 20); got != (color.RGBA{255, 255, 255, 255}) {
+		t.Fatalf("above the pin = %v, want untouched white", got)
+	}
+	tail := img.RGBAAt(32, 44)
+	if tail.R < 200 || tail.G > 90 {
+		t.Fatalf("tail interior = %v, want fill", tail)
+	}
+	if got := img.RGBAAt(20, 46); got != (color.RGBA{255, 255, 255, 255}) {
+		t.Fatalf("beside the tail = %v, want untouched white", got)
+	}
+}
+
+func TestDrawPinClipsAtCorners(t *testing.T) {
+	img := image.NewRGBA(image.Rect(0, 0, 16, 16))
+	drawPin(img, 0, 0, 16, nil)
+	drawPin(img, 16, 16, 16, color.RGBA{A: 255})
+	drawPin(img, -40, -40, 16, color.RGBA{A: 255})
+	var painted int
+	for i := 3; i < len(img.Pix); i += 4 {
+		if img.Pix[i] != 0 {
+			painted++
+		}
+	}
+	if painted == 0 {
+		t.Fatal("a pin overlapping the corner should paint something")
+	}
+}
+
+func TestDrawMapAttributionStripAndClipping(t *testing.T) {
+	img := image.NewRGBA(image.Rect(0, 0, 40, 40))
+	for i := range img.Pix {
+		img.Pix[i] = 0xff
+	}
+	drawMapAttribution(img, strings.Repeat("Maps and Data (c) openstreetmap.org ", 4))
+	if got := img.RGBAAt(5, 5); got != (color.RGBA{255, 255, 255, 255}) {
+		t.Fatalf("top of image = %v, want untouched", got)
+	}
+	bottom := img.RGBAAt(39, 38)
+	if bottom.R > 200 {
+		t.Fatalf("bottom strip = %v, want darkened", bottom)
+	}
+	drawMapAttribution(img, "")
 }

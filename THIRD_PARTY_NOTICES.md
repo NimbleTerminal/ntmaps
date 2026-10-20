@@ -441,30 +441,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## github.com/fogleman/gg v1.3.0
-
-```
-Copyright (C) 2016 Michael Fogleman
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
-
 ## github.com/go-webgpu/goffi v0.6.7
 
 ```
@@ -607,23 +583,6 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-```
-
-## github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0
-
-```
-Use of the Freetype-Go software is subject to your choice of exactly one of
-the following two licenses:
-  * The FreeType License, which is similar to the original BSD license with
-    an advertising clause, or
-  * The GNU General Public License (GPL), version 2 or later.
-
-The text of these licenses are available in the licenses/ftl.txt and the
-licenses/gpl.txt files respectively. They are also available at
-http://freetype.sourceforge.net/license.html
-
-The Luxi fonts in the testdata directory are licensed separately. See the
-testdata/COPYING file for details.
 ```
 
 ## github.com/lrstanley/bubblezone/v2 v2.0.0

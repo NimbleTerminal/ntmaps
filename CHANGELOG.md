@@ -31,6 +31,10 @@
   from the tile cache. `Config.PanBuffer` is removed and `SmoothPan` no longer
   depends on it. Kitty back-pressure now applies to every presentation, and
   tile downloads share one concurrency limit per loader.
+- Draw marker pins and the attribution strip without fogleman/gg: pins are
+  rasterized from a signed distance with an anti-aliased outline and the
+  credit uses x/image's basicfont, so gg and freetype leave the dependency
+  list.
 
 ## v0.3.0 (2026-10-19)
 

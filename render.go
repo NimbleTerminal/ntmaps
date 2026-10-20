@@ -7,7 +7,9 @@ import (
 	"math"
 	"strings"
 
-	"github.com/fogleman/gg"
+	"golang.org/x/image/font"
+	"golang.org/x/image/font/basicfont"
+	"golang.org/x/image/math/fixed"
 
 	"nimbleterminal.dev/ntmaps/tile"
 )
@@ -35,6 +37,17 @@ func composeTiles(dst *image.RGBA, placements []tile.Placement, p tile.Provider,
 	return missing
 }
 
+// inWorldCount is the number of placements that name real tiles.
+func inWorldCount(placements []tile.Placement) int {
+	n := 0
+	for _, p := range placements {
+		if p.InWorld {
+			n++
+		}
+	}
+	return n
+}
+
 // drawMarkers draws each marker as a pin whose tip is at the marker's
 // position. cx, cy are the world pixels of the view center at zoom and
 // tileSize, matching the Cover call that produced img. Markers beyond the
@@ -48,7 +61,6 @@ func drawMarkers(img *image.RGBA, markers []Marker, cx, cy float64, zoom, tileSi
 	originX := math.Floor(cx) - float64(w/2)
 	originY := math.Floor(cy) - float64(h/2)
 	_, _, world := tile.Project(0, 0, zoom, tileSize)
-	gc := gg.NewContextForRGBA(img)
 	for _, mk := range markers {
 		if mk.Lat < -85 || mk.Lat > 85 {
 			continue
@@ -64,59 +76,111 @@ func drawMarkers(img *image.RGBA, markers []Marker, cx, cy float64, zoom, tileSi
 		mx, my, _ := tile.Project(mk.Lat, mk.Lng, zoom, tileSize)
 		dx := mx - cx
 		dx -= math.Floor(dx/world+0.5) * world
-		x := cx + dx - originX
-		y := my - originY
-
-		left, top, right, bottom := 0.5*size+1, 1.5*size+1, 0.5*size+1, 1.0
-		if x+right < 0 || x-left > float64(w) || y+bottom < 0 || y-top > float64(h) {
-			continue
-		}
-		radius := 0.5 * size
-		gc.ClearPath()
-		gc.SetLineJoin(gg.LineJoinRound)
-		gc.SetLineWidth(1)
-		gc.DrawArc(x, y-size, radius, (90+60)*math.Pi/180, (360+90-60)*math.Pi/180)
-		gc.LineTo(x, y)
-		gc.ClosePath()
-		gc.SetColor(col)
-		gc.FillPreserve()
-		gc.SetRGB(0, 0, 0)
-		gc.Stroke()
+		drawPin(img, cx+dx-originX, my-originY, size, col)
 	}
 }
 
-// inWorldCount is the number of placements that name real tiles.
-func inWorldCount(placements []tile.Placement) int {
-	n := 0
-	for _, p := range placements {
-		if p.InWorld {
-			n++
+// drawPin rasterizes a map pin with its tip at (x, y): a round head of
+// radius size/2 centered size above the tip, joined to the tip by a
+// tail, filled with col and outlined in black one pixel wide. Coverage
+// comes from the signed distance to the head-or-tail shape, which gives
+// anti-aliased edges without a vector library.
+func drawPin(img *image.RGBA, x, y, size float64, col color.Color) {
+	r := size / 2
+	center := point{x, y - size}
+	a := point{x - r*math.Sqrt(3)/2, y - size + r/2}
+	b := point{x + r*math.Sqrt(3)/2, y - size + r/2}
+	tip := point{x, y}
+
+	bounds := img.Bounds()
+	x0 := max(bounds.Min.X, int(math.Floor(x-r-2)))
+	x1 := min(bounds.Max.X, int(math.Ceil(x+r+2)))
+	y0 := max(bounds.Min.Y, int(math.Floor(y-size-r-2)))
+	y1 := min(bounds.Max.Y, int(math.Ceil(y+2)))
+	if x0 >= x1 || y0 >= y1 {
+		return
+	}
+	if col == nil {
+		col = color.RGBA{R: 255, A: 255}
+	}
+	fill := color.RGBAModel.Convert(col).(color.RGBA)
+	black := color.RGBA{A: 255}
+	for py := y0; py < y1; py++ {
+		for px := x0; px < x1; px++ {
+			p := point{float64(px) + 0.5, float64(py) + 0.5}
+			d := min(sdCircle(p, center, r), sdTriangle(p, a, b, tip))
+			outline := clamp01(0.5 - d)
+			if outline <= 0 {
+				continue
+			}
+			c := img.RGBAAt(px, py)
+			c = blend(c, black, outline)
+			c = blend(c, fill, clamp01(-0.5-d))
+			img.SetRGBA(px, py, c)
 		}
 	}
-	return n
+}
+
+type point struct{ x, y float64 }
+
+func (p point) sub(q point) point            { return point{p.x - q.x, p.y - q.y} }
+func (p point) scale(s float64) point        { return point{p.x * s, p.y * s} }
+func (p point) dot(q point) float64          { return p.x*q.x + p.y*q.y }
+func (p point) cross(q point) float64        { return p.x*q.y - p.y*q.x }
+func (p point) length() float64              { return math.Hypot(p.x, p.y) }
+func clamp01(v float64) float64              { return max(0, min(1, v)) }
+func sdCircle(p, c point, r float64) float64 { return p.sub(c).length() - r }
+
+// sdTriangle is the signed distance from p to the triangle abc, negative
+// inside (Inigo Quilez's formulation).
+func sdTriangle(p, a, b, c point) float64 {
+	e0, e1, e2 := b.sub(a), c.sub(b), a.sub(c)
+	v0, v1, v2 := p.sub(a), p.sub(b), p.sub(c)
+	pq0 := v0.sub(e0.scale(clamp01(v0.dot(e0) / e0.dot(e0))))
+	pq1 := v1.sub(e1.scale(clamp01(v1.dot(e1) / e1.dot(e1))))
+	pq2 := v2.sub(e2.scale(clamp01(v2.dot(e2) / e2.dot(e2))))
+	s := 1.0
+	if e0.cross(e2) < 0 {
+		s = -1
+	}
+	dx := min(pq0.dot(pq0), pq1.dot(pq1), pq2.dot(pq2))
+	dy := min(s*v0.cross(e0), s*v1.cross(e1), s*v2.cross(e2))
+	if dy < 0 {
+		return math.Sqrt(dx)
+	}
+	return -math.Sqrt(dx)
+}
+
+// blend returns src over dst with the given coverage, assuming both are
+// opaque enough that premultiplication does not matter for the map.
+func blend(dst, src color.RGBA, alpha float64) color.RGBA {
+	if alpha <= 0 {
+		return dst
+	}
+	if alpha >= 1 {
+		return src
+	}
+	mix := func(d, s uint8) uint8 { return uint8(float64(d)*(1-alpha) + float64(s)*alpha + 0.5) }
+	return color.RGBA{R: mix(dst.R, src.R), G: mix(dst.G, src.G), B: mix(dst.B, src.B), A: mix(dst.A, src.A)}
 }
 
 // drawMapAttribution draws the provider credit in a translucent strip
-// along the bottom edge of img.
+// along the bottom edge of img, clipping text that does not fit.
 func drawMapAttribution(img *image.RGBA, attribution string) {
 	if attribution == "" {
 		return
 	}
-	gc := gg.NewContextForRGBA(img)
+	face := basicfont.Face7x13
 	lines := strings.Split(attribution, "\n")
-	var lineHeight float64
+	lineHeight := face.Height
+	height := (lineHeight+2)*len(lines) + 2
+	b := img.Bounds()
+	y := b.Max.Y - height
+	draw.Draw(img, image.Rect(b.Min.X, y, b.Max.X, b.Max.Y), &image.Uniform{C: color.NRGBA{A: 128}}, image.Point{}, draw.Over)
+	d := &font.Drawer{Dst: img, Src: image.NewUniform(color.NRGBA{R: 255, G: 255, B: 255, A: 191}), Face: face}
 	for _, line := range lines {
-		_, h := gc.MeasureString(line)
-		lineHeight = max(lineHeight, h)
-	}
-	height := (lineHeight+2)*float64(len(lines)) + 2
-	y := float64(img.Bounds().Dy()) - height
-	gc.SetRGBA(0, 0, 0, .5)
-	gc.DrawRectangle(0, y, float64(img.Bounds().Dx()), height)
-	gc.Fill()
-	gc.SetRGBA(1, 1, 1, .75)
-	for _, line := range lines {
-		gc.DrawStringAnchored(line, 2, y, 0, 1)
+		d.Dot = fixed.P(b.Min.X+2, y+face.Ascent)
+		d.DrawString(line)
 		y += lineHeight + 2
 	}
 }
