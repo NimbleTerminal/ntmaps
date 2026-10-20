@@ -85,3 +85,24 @@ func TestSeedExpiryBoundsAndCanceledWork(t *testing.T) {
 		t.Fatal("expired memory entry used")
 	}
 }
+
+func TestLoadReusesSeededNeighborhoodCoveringTheCenter(t *testing.T) {
+	d, err := cityview.Bundled()
+	if err != nil {
+		t.Fatal(err)
+	}
+	l := &Loader{}
+	center := d.Bounds.Center()
+	if err := l.Seed(center, 200, d); err != nil {
+		t.Fatal(err)
+	}
+	nearby := city.Coordinate{Lat: center.Lat + 0.0002, Lon: center.Lon - 0.0003}
+	r, err := l.Load(context.Background(), nearby, 200, false)
+	if err != nil || !r.Cached || len(r.Scene.Buildings) == 0 {
+		t.Fatalf("nearby center should reuse the seeded neighborhood: err=%v cached=%v", err, r.Cached)
+	}
+	outside := city.Coordinate{Lat: d.Bounds.North + 0.01, Lon: center.Lon}
+	if _, err := l.Load(context.Background(), outside, 200, false); err == nil {
+		t.Fatal("a center outside every cached neighborhood must not be served offline")
+	}
+}

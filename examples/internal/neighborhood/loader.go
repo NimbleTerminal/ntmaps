@@ -93,6 +93,27 @@ func (l *Loader) Seed(center city.Coordinate, radius float64, d city.Dataset) er
 	l.put(Key(center, radius), Result{Data: d, Scene: s}, 0, time.Time{})
 	return nil
 }
+
+// covering returns a live entry whose data covers center, so a view that
+// moved a little, after a wheel zoom around the cursor say, keeps using
+// the neighborhood already on hand. The caller holds l.mu.
+func (l *Loader) covering(center city.Coordinate) (entry, bool) {
+	now := time.Now()
+	for key, e := range l.entries {
+		if !e.expires.IsZero() && now.After(e.expires) {
+			continue
+		}
+		b := e.result.Data.Bounds
+		if center.Lat >= b.South && center.Lat <= b.North && center.Lon >= b.West && center.Lon <= b.East {
+			l.tick++
+			e.used = l.tick
+			l.entries[key] = e
+			return e, true
+		}
+	}
+	return entry{}, false
+}
+
 func (l *Loader) Load(ctx context.Context, center city.Coordinate, radius float64, refresh bool) (Result, error) {
 	bounds, err := city.Around(center, radius)
 	if err != nil {
@@ -113,6 +134,9 @@ func (l *Loader) Load(ctx context.Context, center city.Coordinate, radius float6
 			l.tick++
 			e.used = l.tick
 			l.entries[key] = e
+		}
+		if !ok {
+			e, ok = l.covering(center)
 		}
 		l.mu.Unlock()
 		if ok {
