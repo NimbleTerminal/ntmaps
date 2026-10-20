@@ -68,6 +68,10 @@
   tile size differs, fetched and prefetched alongside base tiles;
   `tile.OpenSeaMap()` and `tile.OpenRailwayMap()` are built in, and the
   explorer toggles seamarks with `o`.
+- `nimbleterminal.dev/ntmaps/tile/pmtiles` reads raster PMTiles v3 archives
+  from a local file or over HTTP range requests as a `tile.Source`, with
+  gzip or uncompressed directories, leaf directories, and metadata
+  attribution. The mapview example takes `-pmtiles`.
 
 ## v0.3.0 (2026-10-19)
 

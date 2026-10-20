@@ -13,6 +13,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 	"nimbleterminal.dev/ntmaps"
 	"nimbleterminal.dev/ntmaps/examples/internal/demorun"
+	"nimbleterminal.dev/ntmaps/tile/pmtiles"
 )
 
 type model struct {
@@ -69,6 +70,7 @@ func main() {
 	lat := flag.Float64("lat", 40.7415, "map center latitude")
 	lon := flag.Float64("lon", -73.989, "map center longitude")
 	zoom := flag.Int("zoom", 16, "map zoom")
+	archive := flag.String("pmtiles", "", "serve tiles from a local PMTiles archive instead of OpenStreetMap")
 	flag.Parse()
 	medium := ntmaps.KittyMediumDirect
 	if *mediumFlag == "shm" {
@@ -78,6 +80,15 @@ func main() {
 		os.Exit(2)
 	}
 	m := newModel(medium, *lat, *lon, *zoom)
+	if *archive != "" {
+		src, err := pmtiles.Open(*archive, pmtiles.Options{})
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(2)
+		}
+		defer src.Close()
+		m.mapView.SetTileSource(src)
+	}
 	err := demorun.Run(m, "mapview", "Simple 2D map widget", demorun.Keys{Primary: []key.Binding{demorun.Binding("up", "North"), demorun.Binding("down", "South"), demorun.Binding("left", "West"), demorun.Binding("right", "East"), demorun.Binding("+", "Zoom in"), demorun.Binding("-", "Zoom out")}, More: []key.Binding{demorun.Binding("g", "Graphics")}})
 	m.mapView.Close()
 	if err != nil {

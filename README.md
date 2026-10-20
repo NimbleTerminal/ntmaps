@@ -130,6 +130,15 @@ mv.SetTileSource(tile.Provider{
 
 `Name` keys the tile and render caches, so give distinct sources distinct names. A provider with an empty `URL`, or a nil source, renders only the placeholder color and fetches nothing, which is handy in tests. Anything else that can produce a tile image, such as an MBTiles or PMTiles file or an in-memory generator, implements `tile.Source` directly; a source that can also hand over encoded bytes (`tile.DataSource`) gets the disk cache too. The arrow keys zoom between 1 and the source's `MaxZoom`.
 
+Offline, a [PMTiles](https://github.com/protomaps/PMTiles) archive is a source too, from a local file or a server that honors range requests:
+
+```go
+src, err := pmtiles.Open("city.pmtiles", pmtiles.Options{})   // nimbleterminal.dev/ntmaps/tile/pmtiles
+mv.SetTileSource(src)
+```
+
+Raster archives with uncompressed or gzip directories and PNG or JPEG tiles are supported; the attribution comes from the archive metadata. Try it with `./bin/ntmaps-mapview -pmtiles city.pmtiles`.
+
 `SetOverlays(...)` draws transparent layers over the base, bottom to top: `tile.OpenSeaMap()` for seamarks, `tile.OpenRailwayMap()` for railways, or any source serving transparent tiles. An overlay is skipped beyond its `MaxZoom`, its credit joins the attribution, and tiles of another size are scaled into the base grid. Base and overlay tiles are fetched together, so progressive painting and the prefetch ring cover both. `RenderOptions.Overlays` does the same for static images. Press `o` in the explorer to toggle seamarks.
 
 Tile and geocoding requests identify the application with a `User-Agent` of `ntmaps/<version> (+https://github.com/NimbleTerminal/ntmaps)`. Usage policies, [OpenStreetMap's](https://operations.osmfoundation.org/policies/tiles/) included, ask that a public app name itself, so set `Config.UserAgent` before shipping one. Browsers send their own, and the header is not set under WASM.
