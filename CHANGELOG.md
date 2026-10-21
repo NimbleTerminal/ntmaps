@@ -1,95 +1,49 @@
 # `ntmaps` CHANGELOG
 
-## Unreleased
+## v0.4.0 (2026-10-21)
 
-- Rename the project from `ntcharts-osm` to `ntmaps` and move it to the
-  NimbleTerminal organization. The Go module path is now
-  `nimbleterminal.dev/ntmaps` (previously `github.com/NimbleMarkets/ntcharts-osm`);
-  the `mapview` package moves to the module root as package `ntmaps`, so
-  `mapview.New` becomes `ntmaps.New` and so on; the API is otherwise
-  unchanged. Example binaries are now named `ntmaps-*`, the explorer neighborhood cache moved to `ntmaps/neighborhoods-v1`
-  under the user cache directory, and the browser demo lives at
+The project is now `ntmaps` under NimbleTerminal, and the map is composed
+from tiles in-house instead of through go-staticmaps.
+
+- Breaking: the module is `nimbleterminal.dev/ntmaps` and the root package
+  is `ntmaps`, so `mapview.New` becomes `ntmaps.New`; the API is otherwise
+  the same. Example binaries are `ntmaps-*`, the explorer cache moves to
+  `ntmaps/neighborhoods-v1`, and the browser demo lives at
   https://nimbleterminal.github.io/ntmaps/.
-
-- Replace go-staticmaps with an in-house tile layer, `nimbleterminal.dev/ntmaps/tile`,
-  and render progressively: a render paints the tiles it already has, fetches
-  the rest, and repaints as they land; panning across cached tiles composes
-  synchronously with no fetch and no Loading badge. Tiles are cached in memory
-  and, natively, on disk under the user cache directory, and requests carry an
-  identifying User-Agent. New `Config` fields `Loader`, `TileCacheCap`,
-  `TileCacheDir`, `DisableDiskCache`, and `UserAgent`; new `SetTileSource`
-  and `TileSource` for any tile source, with `TileStyle` reporting
-  `StyleCustom`. The `go-staticmaps` replace directive is gone from both modules.
-- Breaking: `StamenToner` and `StamenTerrain` (service shut down) and
-  `OpenCycleMap` (http only, key-gated upstream) are removed from `Style`, so
-  the remaining constants have new values; the oversample zoom cap follows the
-  provider's `MaxZoom`; the attribution strip follows the selected provider;
-  and the first frame of a render may show placeholder tiles while fetching.
-- Replace the oversized pan buffer with a prefetch ring: after a render
-  completes, the tiles one ring beyond the view (`Config.Prefetch`, default 1)
-  are fetched in the background, and every pan, animated or not, composes
-  from the tile cache. `Config.PanBuffer` is removed and `SmoothPan` no longer
-  depends on it. Kitty back-pressure now applies to every presentation, and
-  tile downloads share one concurrency limit per loader.
-- Draw marker pins and the attribution strip without fogleman/gg: pins are
-  rasterized from a signed distance with an anti-aliased outline and the
-  credit uses x/image's basicfont, so gg and freetype leave the dependency
-  list.
-- Tiles come from a `tile.Source` interface (`Info` plus `Tile`), so offline
-  files and generators are drop-ins; `tile.Provider` stays the XYZ-server
-  implementation and now carries its own `Client` and `UserAgent`.
-  `SetTileSource`/`TileSource` replace `SetTileProvider`/`TileProvider`, and
-  the `Style` enum, `SetStyle`, and `TileStyle` are gone: pass
-  `tile.OpenStreetMap()` and friends directly.
+- Breaking: tiles come from a `tile.Source` (`Info` plus `Tile`), and
+  `SetTileSource`/`TileSource` replace `SetTileProvider`/`TileProvider`.
+  Pass `tile.OpenStreetMap()` and friends directly: the `Style` enum,
+  `SetStyle`, `TileStyle`, `AttributionText`, `Config.PanBuffer`, and
+  `NominatimResponse` are gone, `Config.CacheCap` is `RenderCacheCap`, and
+  the Stamen and OpenCycleMap providers are removed.
+- Breaking: the curated `Place` list moves to examples/internal/places, and
+  `SetLocation` returns the lookup Cmd instead of waiting for the next message.
+- Progressive rendering: a render paints the tiles it has, fetches the rest,
+  and repaints as they land. Tiles are cached in memory and, natively, on
+  disk, and a prefetch ring keeps pans composing from cache. New `Config`
+  fields: `Loader`, `TileCacheCap`, `TileCacheDir`, `DisableDiskCache`,
+  `UserAgent`, and `Prefetch`. go-staticmaps, gg, and freetype leave the
+  dependency list.
+- Mouse: left drag pans and the wheel zooms around the cursor, with
+  `OffsetMouse` and `Dragging()` for hosts.
+- Paths (`SetPaths`, `ClearPaths`), transparent overlays (`SetOverlays`,
+  `Overlays`, with `tile.OpenSeaMap()` and `tile.OpenRailwayMap()` built in),
+  and framing (`Bounds`, `SetBounds`, `ContentBounds`, `FitContent`).
+- `Render` composes a static map image from `RenderOptions` with no terminal.
 - Geocoding moves to `nimbleterminal.dev/ntmaps/geocode` behind a `Geocoder`
-  interface (`Config.Geocoder`); the default Nominatim client sends the
-  identifying User-Agent and paces requests as the usage policy requires. The
-  `NominatimResponse` type is no longer exported.
-- The attribution row under the map follows the current source instead of
-  always crediting OpenStreetMap (`AttributionText` is removed), and the arrow
-  keys zoom between 1 and the source's `MaxZoom` instead of 2 and 16.
-- Mouse support in the widget: left drag pans, the wheel zooms around the
-  cursor, events are read in the widget's cell coordinates, and hosts get
-  `OffsetMouse` and `Dragging()` for routing. The explorer forwards its map
-  events instead of carrying its own drag and zoom code.
-- Paths: `SetPaths`/`ClearPaths` draw anti-aliased polylines with round caps
-  and joins, taking the short way across the antimeridian, and participate
-  in the render cache key by hash.
-- `Render` composes a static map image from `RenderOptions` with no terminal
-  or Bubble Tea involved, sharing the tile cache and drawing code.
-- Breaking: `Config.CacheCap` is now `RenderCacheCap`, and the demos' curated
-  `Place` list moves out of the library into examples/internal/places.
-- `Bounds`, `SetBounds`, `ContentBounds`, and `FitContent` frame a box or
-  the current markers and paths at the highest zoom that fits, with
-  antimeridian-aware extents; `RenderOptions.Bounds` does the same for
-  static images.
-- Overlays: `SetOverlays`/`Overlays` compose transparent layers over the base
-  with the credits joined, skipped beyond their `MaxZoom`, scaled when their
-  tile size differs, fetched and prefetched alongside base tiles;
-  `tile.OpenSeaMap()` and `tile.OpenRailwayMap()` are built in, and the
-  explorer toggles seamarks with `o`.
-- `nimbleterminal.dev/ntmaps/tile/pmtiles` reads raster PMTiles v3 archives
-  from a local file or over HTTP range requests as a `tile.Source`, with
-  gzip or uncompressed directories, leaf directories, and metadata
-  attribution. The mapview example takes `-pmtiles`.
-- `tile.FirstOf` layers sources offline-first; `pmtiles.Write` and the
-  `pmtiles-fetch` tool build archives. `SetLocation` now returns the lookup
-  Cmd instead of waiting for the next message.
-- Demos: the explorer cycles five base styles, draws routes for Flatiron,
-  CERN's LHC ring, and the Greenwich meridian with `F` to frame them,
-  geocodes a typed place with `G`, and serves Flatiron from a bundled
-  PMTiles archive in front of OpenStreetMap; mapview gains `-snapshot`.
-
-- deps: upgrade go-booba to v0.10.4, which turns browser touch gestures into
-  mouse input when the application enables mouse tracking (tap to click, drag
-  to pan, pinch to zoom, two fingers to scroll) and stops WebGL and WebGPU
-  from clipping emoji. The explorer's drag, wheel, and click handling now works
-  on an iPad.
-
-- The browser demo page shows a notice when it is served from an insecure
-  origin other than localhost: Safari then runs it without a JIT and without
-  WebGPU, which makes the WebAssembly about twenty times slower. Serve the
-  demos over https; the README explains why.
+  interface (`Config.Geocoder`); the Nominatim client identifies itself and
+  paces requests as the usage policy requires.
+- Attribution follows the source, zoom is clamped to the source's `MaxZoom`,
+  and requests carry a `User-Agent`; set `Config.UserAgent` before shipping.
+- Offline: `tile/pmtiles` reads raster PMTiles v3 archives from a file or
+  over HTTP range requests, `tile.FirstOf` layers sources offline-first, and
+  `pmtiles.Write` with the `pmtiles-fetch` tool builds archives.
+- Demos: the explorer cycles five styles (`s`), toggles seamarks (`o`), draws
+  routes and frames them with `F`, geocodes with `G`, and serves Flatiron
+  from a bundled archive; mapview takes `-pmtiles` and `-snapshot`. The demo
+  page warns on an insecure origin, where Safari runs without a JIT or WebGPU.
+- deps: go-booba v0.10.4 turns touch gestures into mouse input, so the
+  explorer works on an iPad.
 
 ## v0.3.0 (2026-10-19)
 
