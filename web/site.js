@@ -18,6 +18,16 @@ for (const link of document.querySelectorAll('[data-demo]')) {
   if (link.dataset.demo === demo) link.setAttribute('aria-current', 'page');
 }
 document.querySelector('#help').textContent = help[demo];
+if (!window.isSecureContext) {
+  // Safari 26+ runs a non-localhost http page in its Enhanced Security process
+  // with the JIT disabled, which makes the WebAssembly about twenty times
+  // slower, and WebGPU exists only in secure contexts. Say so instead of
+  // leaving the visitor guessing why the demo crawls.
+  const notice = document.createElement('p');
+  notice.id = 'notice';
+  notice.textContent = `This page is on an insecure origin (${location.origin}). Safari runs it without a JIT and without WebGPU, so it is far slower than it should be. Open it over https or from localhost.`;
+  status.insertAdjacentElement('afterend', notice);
+}
 function failed(error) {
   status.dataset.error = '';
   status.textContent = `Could not run the demo: ${error.message}. Try Restart.`;

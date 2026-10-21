@@ -18,6 +18,7 @@ h1 { font-size: 17px; margin: 0; }
 #terminal { height: 100%; width: 100%; }
 #status, #help, footer { color: #a9b5c5; font-size: 13px; line-height: 1.8; }
 #status[data-error] { color: #ffaaa1; }
+#notice { color: #f3c969; font-size: 13px; line-height: 1.8; }
 footer { border-top: 1px solid #303642; margin-top: 24px; }
 a:focus-visible { outline: 2px solid #8de3b6; outline-offset: 4px; }
 @media (max-width: 650px) { header, main, footer { padding: 10px 14px; } .brand span { display: none; } }

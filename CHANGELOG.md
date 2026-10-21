@@ -80,6 +80,11 @@
   geocodes a typed place with `G`, and serves Flatiron from a bundled
   PMTiles archive in front of OpenStreetMap; mapview gains `-snapshot`.
 
+- The browser demo page shows a notice when it is served from an insecure
+  origin other than localhost: Safari then runs it without a JIT and without
+  WebGPU, which makes the WebAssembly about twenty times slower. Serve the
+  demos over https; the README explains why.
+
 ## v0.3.0 (2026-10-19)
 
 - Fix explorer mouse reporting and pane-relative 3D coordinates; add 2D
