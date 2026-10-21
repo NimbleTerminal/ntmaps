@@ -149,7 +149,7 @@ tasks:
         cmd: node scripts/smoke-demo.mjs {{.ITEM}}
 
   serve-wasm-site:
-    desc: 'Serve at http://localhost:8000/ntmaps/'
+    desc: 'Serve at http://localhost:8000/ntmaps/ (use https or localhost: Safari disables the JIT on other http origins, see README)'
     deps: [build-wasm-site]
     vars:
       SERVE_DIR: /tmp/ntmaps-site

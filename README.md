@@ -158,6 +158,8 @@ To start in Kitty whenever it is available, set `ntmaps.Config{PreferKitty: true
 
 The WASM browser demo requests Kitty shared-memory transport through booba v0.10.3 and starts in Kitty rendering; press `g` to switch to glyphs. Native demos default to direct transmission, including over SSH. Other consumers can opt in with `ntmaps.Config{KittyMedium: ntmaps.KittyMediumSharedMemory}` when their terminal or browser bridge supports it. Shared-memory allocation or bridge failures fall back to direct transmission.
 
+Serve the browser demos over `https` or from `localhost`. On a plain `http` origin that is not localhost, Safari 26 and later runs the page in its Enhanced Security content process with the JIT disabled, so the WebAssembly runs interpreted, roughly twenty times slower: every tile arrival blocks the page for most of a second and resizing crawls. The same insecure origin also hides WebGPU, since `navigator.gpu` exists only in secure contexts. `task serve-wasm-site` serves `http://localhost:8000/ntmaps/`, which is fine on the same machine; to test from a tablet or another computer put the site behind TLS (for example `tailscale serve`, `cloudflared`, or a certificate the device trusts) rather than opening the LAN address directly.
+
 ## Bubble Tea version
 
 Targets Bubble Tea **v2** (`charm.land/bubbletea/v2`). No v1 backport.
