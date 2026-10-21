@@ -80,6 +80,12 @@
   geocodes a typed place with `G`, and serves Flatiron from a bundled
   PMTiles archive in front of OpenStreetMap; mapview gains `-snapshot`.
 
+- deps: upgrade go-booba to v0.10.4, which turns browser touch gestures into
+  mouse input when the application enables mouse tracking (tap to click, drag
+  to pan, pinch to zoom, two fingers to scroll) and stops WebGL and WebGPU
+  from clipping emoji. The explorer's drag, wheel, and click handling now works
+  on an iPad.
+
 - The browser demo page shows a notice when it is served from an insecure
   origin other than localhost: Safari then runs it without a JIT and without
   WebGPU, which makes the WebAssembly about twenty times slower. Serve the
