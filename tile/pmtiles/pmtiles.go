@@ -171,9 +171,13 @@ const (
 	DefaultMaxTileBytes      = 8 << 20
 )
 
-// maxLeaves is how many decoded leaf directories an Archive keeps; past it
-// the cache starts over.
-const maxLeaves = 64
+// Bound retained decoded entries as well as directory count. One entry has
+// two uint64 and two uint32 fields (24 bytes), substantially more than its
+// minimum four-byte wire representation.
+const (
+	maxLeaves            = 64
+	maxCachedLeafEntries = (32 << 20) / 24
+)
 
 // ErrTooLarge is a directory, the metadata or a tile larger than its bound
 // in Options.
@@ -189,8 +193,9 @@ type Archive struct {
 
 	maxDirectory, maxTile int
 
-	mu     sync.Mutex
-	leaves map[uint64][]Entry // decoded leaf directories by offset
+	mu                sync.Mutex
+	leaves            map[uint64][]Entry // decoded leaf directories by offset
+	cachedLeafEntries int
 }
 
 // New reads the header, root directory, and metadata from r. Pass the
@@ -353,7 +358,7 @@ func find(entries []Entry, id uint64) (Entry, bool) {
 		return Entry{}, false
 	}
 	e := entries[i]
-	if e.RunLength == 0 || id < e.TileID+uint64(e.RunLength) {
+	if e.RunLength == 0 || id-e.TileID < uint64(e.RunLength) {
 		return e, true
 	}
 	return Entry{}, false
@@ -375,10 +380,19 @@ func (a *Archive) leaf(e Entry) ([]Entry, error) {
 		return nil, fmt.Errorf("pmtiles: leaf directory: %w", err)
 	}
 	a.mu.Lock()
-	if len(a.leaves) >= maxLeaves {
-		clear(a.leaves)
+	// Another concurrent reader may have cached this directory already.
+	if cached, ok := a.leaves[off]; ok {
+		a.mu.Unlock()
+		return cached, nil
 	}
-	a.leaves[off] = entries
+	if len(entries) <= maxCachedLeafEntries {
+		if len(a.leaves) >= maxLeaves || a.cachedLeafEntries > maxCachedLeafEntries-len(entries) {
+			clear(a.leaves)
+			a.cachedLeafEntries = 0
+		}
+		a.leaves[off] = entries
+		a.cachedLeafEntries += len(entries)
+	}
 	a.mu.Unlock()
 	return entries, nil
 }
@@ -419,7 +433,7 @@ func DecodeDirectory(data []byte) ([]Entry, error) {
 	if err != nil {
 		return nil, fmt.Errorf("pmtiles: directory count: %w", err)
 	}
-	if n > uint64(len(data))/4 { // Each entry takes at least four bytes.
+	if n > uint64(rd.Len())/4 { // Each entry takes at least four bytes.
 		return nil, fmt.Errorf("pmtiles: directory claims %d entries in %d bytes", n, len(data))
 	}
 	entries := make([]Entry, n)
@@ -429,6 +443,9 @@ func DecodeDirectory(data []byte) ([]Entry, error) {
 		if err != nil {
 			return nil, fmt.Errorf("pmtiles: tile id %d: %w", i, err)
 		}
+		if d > math.MaxUint64-last {
+			return nil, fmt.Errorf("pmtiles: tile id %d overflows", i)
+		}
 		last += d
 		entries[i].TileID = last
 	}
@@ -437,12 +454,18 @@ func DecodeDirectory(data []byte) ([]Entry, error) {
 		if err != nil {
 			return nil, fmt.Errorf("pmtiles: run length %d: %w", i, err)
 		}
+		if v > math.MaxUint32 {
+			return nil, fmt.Errorf("pmtiles: run length %d overflows", i)
+		}
 		entries[i].RunLength = uint32(v)
 	}
 	for i := range entries {
 		v, err := binary.ReadUvarint(rd)
 		if err != nil {
 			return nil, fmt.Errorf("pmtiles: length %d: %w", i, err)
+		}
+		if v > math.MaxUint32 {
+			return nil, fmt.Errorf("pmtiles: length %d overflows", i)
 		}
 		entries[i].Length = uint32(v)
 	}
@@ -452,8 +475,15 @@ func DecodeDirectory(data []byte) ([]Entry, error) {
 			return nil, fmt.Errorf("pmtiles: offset %d: %w", i, err)
 		}
 		if v == 0 && i > 0 {
-			entries[i].Offset = entries[i-1].Offset + uint64(entries[i-1].Length)
+			prev := entries[i-1]
+			if prev.Offset > math.MaxUint64-uint64(prev.Length) {
+				return nil, fmt.Errorf("pmtiles: offset %d overflows", i)
+			}
+			entries[i].Offset = prev.Offset + uint64(prev.Length)
 		} else {
+			if v == 0 {
+				return nil, fmt.Errorf("pmtiles: first offset must be positive")
+			}
 			entries[i].Offset = v - 1
 		}
 	}

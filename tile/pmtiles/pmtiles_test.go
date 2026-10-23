@@ -500,3 +500,55 @@ func TestArchiveAttributionIsPlainText(t *testing.T) {
 		t.Fatalf("attribution %q", got)
 	}
 }
+
+func TestDecodeDirectoryRejectsIntegerOverflow(t *testing.T) {
+	for name, values := range map[string][]uint64{
+		"tile id":         {2, math.MaxUint64, 1, 1, 1, 1, 1, 1, 1},
+		"run length":      {1, 0, 1 << 32, 1, 1},
+		"tile length":     {1, 0, 1, 1 << 32, 1},
+		"first offset":    {1, 0, 1, 1, 0},
+		"implicit offset": {2, 0, 1, 1, 1, 2, 1, math.MaxUint64, 0},
+	} {
+		t.Run(name, func(t *testing.T) {
+			var data []byte
+			for _, v := range values {
+				data = binary.AppendUvarint(data, v)
+			}
+			if _, err := DecodeDirectory(data); err == nil {
+				t.Fatal("invalid directory accepted")
+			}
+		})
+	}
+}
+
+func TestFindRunNearMaximumTileID(t *testing.T) {
+	entries := []Entry{{TileID: math.MaxUint64 - 1, RunLength: 2}}
+	if _, ok := find(entries, math.MaxUint64); !ok {
+		t.Fatal("run end overflow hid matching entry")
+	}
+}
+
+func TestLeafCacheBoundsDecodedEntries(t *testing.T) {
+	// Seed a full cache, then load one more directory. Its byte footprint,
+	// rather than the count of cached directories, must trigger eviction.
+	raw := EncodeDirectory([]Entry{{TileID: 1, RunLength: 1, Length: 1}})
+	a := &Archive{
+		r: bytes.NewReader(raw), header: Header{InternalCompression: CompressionNone},
+		maxDirectory:      DefaultMaxDirectoryBytes,
+		leaves:            map[uint64][]Entry{100: make([]Entry, maxCachedLeafEntries)},
+		cachedLeafEntries: maxCachedLeafEntries,
+	}
+	entries, err := a.leaf(Entry{Offset: 0, Length: uint32(len(raw))})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 1 || len(a.leaves) != 1 || a.cachedLeafEntries != 1 {
+		t.Fatal("decoded leaf cache exceeded its entry budget")
+	}
+	if _, ok := a.leaves[100]; ok {
+		t.Fatal("old large leaf was retained")
+	}
+	if _, err := a.leaf(Entry{Offset: 0, Length: uint32(len(raw))}); err != nil || a.cachedLeafEntries != 1 {
+		t.Fatal("cache hit changed accounting")
+	}
+}

@@ -6,7 +6,9 @@
   metadata at most `Options.MaxDirectoryBytes` (16 MiB), a tile at most
   `Options.MaxTileBytes` (8 MiB), stored or decompressed (`ErrTooLarge`);
   offsets past the addressable range are refused, a directory's entry count
-  must fit its bytes, and at most 64 leaf directories stay cached.
+  must fit its bytes. Cached leaf directories are limited to 64 directories
+  and 32 MiB of decoded entries; oversized leaves are read without caching.
+  Directory integers that would overflow or truncate are rejected.
 - `tile.Decode` refuses a tile over `tile.MaxTileEdge` (4096) pixels a side
   before decoding it.
 - `pmtiles.Write` derives an east bound of 180° for tiles on the world's

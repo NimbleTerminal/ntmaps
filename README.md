@@ -150,6 +150,14 @@ mv.SetTileSource(src)
 
 Raster archives with uncompressed or gzip directories and PNG or JPEG tiles are supported; the attribution comes from the archive metadata. Try it with `./bin/ntmaps-mapview -pmtiles city.pmtiles`. `tile.FirstOf(archive, tile.OpenStreetMap())` puts an archive in front of an online provider, which is how the explorer serves its bundled Flatiron tiles offline. `pmtiles.Write` and the `internal/tools/pmtiles-fetch` tool build an archive for a small area from any XYZ provider; the download tool requires `-url` for a provider that permits offline downloads. OSMF tile servers prohibit archive building and prefetching.
 
+Archive reads default to 16 MiB for each directory/metadata document and 8 MiB
+for each tile, both stored and decompressed. `pmtiles.Options.MaxDirectoryBytes`
+and `MaxTileBytes` can raise these limits for trusted archives; exceeding them
+returns `pmtiles.ErrTooLarge`. Decoded leaf caching is capped at 32 MiB of entries
+and 64 directories. Tile images over 4096 pixels on either side are rejected
+before pixel decoding. Archive attribution is displayed as bounded printable text.
+
+
 `SetOverlays(...)` draws transparent layers over the base, bottom to top: `tile.OpenSeaMap()` for seamarks, `tile.OpenRailwayMap()` for railways, or any source serving transparent tiles. An overlay is skipped beyond its `MaxZoom`, its credit joins the attribution, and tiles of another size are scaled into the base grid. Base and overlay tiles are fetched together, so progressive painting and the prefetch ring cover both. `RenderOptions.Overlays` does the same for static images. Press `o` in the explorer to toggle seamarks.
 
 The library retains `ntmaps/<version> (+https://github.com/NimbleTerminal/ntmaps)`
