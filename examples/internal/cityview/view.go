@@ -10,7 +10,6 @@ import (
 	"math"
 	"nimbleterminal.dev/ntmaps/internal/city"
 	picture "nimbleterminal.dev/ntpicture"
-	"nimbleterminal.dev/ntpicture/legacy"
 )
 
 type Model struct {
@@ -21,8 +20,12 @@ type Model struct {
 	Skipped int
 }
 
-func New(d city.Dataset, scene city.Scene, mode chart.RenderMode, medium picture.KittyMedium) (*Model, error) {
-	c := chart.New(90, 28, chart.WithRenderMode(mode), chart.WithTerminalSession(legacy.DefaultTerminalSession()), chart.WithKittyMedium(medium), chart.WithAutoRotate(false), chart.WithBackground(cityBackground()), chart.WithAxes(chart.Axes{X: chart.Axis{Hidden: true}, Y: chart.Axis{Hidden: true}, Z: chart.Axis{Hidden: true}}))
+func New(d city.Dataset, scene city.Scene, mode chart.RenderMode, medium picture.KittyMedium, sessions ...*picture.TerminalSession) (*Model, error) {
+	var session *picture.TerminalSession
+	if len(sessions) > 0 {
+		session = sessions[0]
+	}
+	c := chart.New(90, 28, chart.WithRenderMode(mode), chart.WithTerminalSession(session), chart.WithKittyMedium(medium), chart.WithAutoRotate(false), chart.WithBackground(cityBackground()), chart.WithAxes(chart.Axes{X: chart.Axis{Hidden: true}, Y: chart.Axis{Hidden: true}, Z: chart.Axis{Hidden: true}}))
 	c.SetColorLegendVisible(false)
 	c.SetSeries(citySeries{geometry(scene)})
 	c.SetCamera(initialCamera(scene))

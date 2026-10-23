@@ -177,31 +177,58 @@ Targets Bubble Tea **v2** (`charm.land/bubbletea/v2`). No v1 backport.
 
 ## Routing messages across multiple picture owners
 
-`ntmaps.IsMapUpdate(msg)` is a **"may need this"** predicate, not an ownership predicate. It returns `true` for both the widget's own messages *and* for every `legacy.IsPictureMsg` (Kitty frames, cell-size events, capability probes). Picture messages are program-wide — they belong to the runtime, not to any one model.
-
-If your program embeds `picture.Model` in more than one place (say, a `ntmaps.Model` *and* a `pictureurl.Model` rendering a product image), do NOT route picture messages with `else if` — broadcast them to every picture owner, otherwise one of them will starve:
+`ntmaps.IsMapUpdate(msg)` recognizes map results, Picture's asynchronous preparation,
+presentation and retirement messages, and terminal discovery/geometry events.
+Forward these even when the map is unfocused, and execute every returned command.
+Picture messages are filtered internally by picture/session identity; broadcast them
+to every picture owner on that terminal. `IsMapOwnMsg` covers only map inputs and
+render/animation results; route those to the map that produced or expects them.
 
 ```go
-mapMsg := ntmaps.IsMapUpdate(msg)
-prodMsg := pictureurl.IsPictureMsg(msg)
-
-if mapMsg || prodMsg {
-    var cmds []tea.Cmd
-    if mapMsg {
-        var cmd tea.Cmd
-        m.mv, cmd = m.mv.Update(msg)
-        cmds = append(cmds, cmd)
-    }
-    if prodMsg {
-        var cmd tea.Cmd
-        m.prod, cmd = m.prod.Update(msg)
-        cmds = append(cmds, cmd)
-    }
-    return m, tea.Batch(cmds...)
+if ntmaps.IsMapUpdate(msg) {
+    var cmd tea.Cmd
+    m.mv, cmd = m.mv.Update(msg)
+    return m, tea.Batch(cmd, m.otherPicture.Update(msg))
 }
 ```
 
-For the narrower "is this message owned by ntmaps alone" predicate (the `MapCoordinates` input, async tile-render results, debounce ticks), use `ntmaps.IsMapOwnMsg(msg)`. Each model's own `Update` already filters by instance ID where applicable, so broadcasting picture messages is safe.
+A host may instead forward all messages to each Picture and route navigation keys
+only to the focused component. ntpicture v0.1.1 has private completion message
+types; `IsMapUpdate` includes its message namespace so filtering cannot drop them.
+
+## Sharing a terminal and cleaning up
+
+```go
+session := ntpicture.NewTerminalSession(ntpicture.TerminalOptions{})
+mv := ntmaps.NewWithConfig(ntmaps.Config{
+    Session: session,
+    NextImageID: ntpicture.NextImageID,
+    PreferKitty: true,
+    KittyMedium: ntmaps.KittyMediumSharedMemory,
+})
+```
+
+Pass the same `Session` and image ID allocator to every picture owner in the host.
+`Config.Session` defaults to a map-owned session; `Config.NextImageID` defaults to
+`ntpicture.NextImageID`. A supplied session remains owned by the host. Repeated
+initialization shares discovery without issuing duplicate probes. Glyph mode is
+the default; `PreferKitty` switches once the shared session reports support, unless
+the application explicitly selected a mode.
+
+On removal or quit, run `mv.Dispose()` while the terminal event loop is alive,
+then call `mv.Close()` to release remaining resources. For example, return
+`tea.Sequence(mv.Dispose(), tea.Quit)` and defer `mv.Close()` in the application.
+For a main-screen exit retaining the last frame, include `mv.View().Content` in
+the host's final view with `AltScreen = false`, and run
+`tea.Sequence(mv.Keep(), tea.Quit)` instead. `Close()` after `Keep()` preserves the
+frame. All three lifecycle methods tolerate repeat calls; the host closes its
+shared session after closing its picture owners.
+
+Both glyph and Kitty presentations are asynchronous. Execute returned commands
+and keep forwarding messages until completion; reading `View` immediately after
+a setter may still show the previous frame. Map composition/cache hits remain
+synchronous when tiles are cached. Presentation coalesces to the newest pending
+image while allowing the current frame to finish.
 
 ## Examples and sample application
 

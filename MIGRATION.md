@@ -3,44 +3,39 @@
 This repository uses published ntpicture v0.1.1, ntcharts3d v0.3.2, nt3d v0.3.1,
 and booba v0.10.3. No sibling checkout replacements are required.
 
-## ntpicture compatibility is a two-import migration
+## ntpicture Picture migration (ntmaps v0.5.0)
 
-The old NTCharts picture package does not map to a single replacement import:
+ntmaps now holds `*ntpicture.Picture`. No library package imports the legacy API.
+The existing `RenderMode`, `FitMode`, and `KittyMedium` aliases remain compatible.
+`Config.Session` accepts the host's terminal session; nil creates a map-owned
+session. `Config.NextImageID` accepts the host's allocator and defaults to
+`ntpicture.NextImageID`. PreferKitty follows that session's capability.
 
-| Old symbol | Replacement |
-| --- | --- |
-| `picture.New()` | `legacy.NewModel()` |
-| `picture.Model`, `KittyFrameMsg`, `IsPictureMsg` | `nimbleterminal.dev/ntpicture/legacy` |
-| Process-global capability helpers | `nimbleterminal.dev/ntpicture/legacy` |
-| `PictureMode`, `FitMode`, `KittyMedium`, capability enums | `nimbleterminal.dev/ntpicture` |
+Picture prepares glyph and Kitty frames asynchronously. ntmaps waits for the
+current presentation to settle before submitting its newest pending immutable
+image. Tile render generations still reject stale results, independently of
+Picture's presentation generations. Cache hits and optical zoom use the same
+queue. Hosts must execute returned commands and forward `IsMapUpdate` messages
+even when the map is unfocused. This includes private Picture completion and
+session messages, not just exported PresentedMsg/ErrorMsg notifications.
 
-ntmaps retains the legacy frame API because its buffered-pan generation and
-presentation coordination already depend on it. This is a compatibility
-migration, not conversion to the root `Picture` asynchronous presentation API.
-Existing public ntmaps aliases remain available. Hosts must execute commands
-returned by Update, including terminal capability notifications.
+Run `Dispose()` before removing the map or quitting, then `Close()`. For a
+main-screen exit retaining the frame, include the map in the final main-screen
+view and run `Keep()` before quitting, then `Close()`. A supplied terminal session
+is never closed by the map. Close is idempotent; terminal cleanup requires running
+the Dispose/Keep command while the event loop is alive.
 
-## Resolved upstream bug: legacy View lost its glyph cache
+The glyph cache regression remains covered by
+`TestGlyphCacheSurvivesValueReceiverView`, now against Picture's committed view.
 
-In ntpicture v0.1.0, `legacybridge.ModelView` called View on a copy of the
-stored model and discarded its populated glyph cache, so every unchanged View
-re-read source pixels. ntmaps carried a `cachedPicture` adapter that cached the
-presentation and invalidated it on image, size, fit, mode, and picture message
-changes.
+## ntcharts3d
 
-ntpicture v0.1.1 retains the cache across `legacy.Model.View` and `String`.
-The adapter is removed and ntmaps holds `*legacy.Model` directly;
-`TestGlyphCacheSurvivesValueReceiverView` guards the behavior against the
-public legacy API.
-
-## ntcharts3d v0.3.0
-
-The textured Surface/Material/Texture APIs continue to work. The example now
-imports ntpicture types directly and shares `legacy.DefaultTerminalSession()`
-with its map source through `WithTerminalSession`, avoiding separate discovery
-state. Quit executes `Dispose()` before leaving the event loop; `Close()` still
-runs afterward. Native GPU support requires the `webgpu` build tag. Software
-rendering remains the default and the browser demo uses it.
+The textured Surface/Material/Texture APIs continue to work. The mapview3d and
+explorer examples create explicit terminal sessions and share them with map
+sources through `Config.Session` and charts through `WithTerminalSession`.
+Quit executes `Dispose()` before leaving the event loop; `Close()` runs afterward.
+Native GPU support requires the `webgpu` build tag. Software rendering remains
+the default and the browser demo uses it.
 
 ## Demo deployment
 
@@ -70,9 +65,9 @@ and quit. These are lifecycle checks, not visual or live tile-fetch checks.
 The sibling ntpicture MIGRATION.md inspected during this migration still says
 no siblings have migrated/released and describes ntcharts3d migration as future
 work. Update that status for ntcharts3d v0.3.0 and ntqrcode's existing migration.
-Add the two-import mapping above, the legacy cache regression and its fixed
-release when available, and a multi-module consumer example covering workspace
-selection, replace inheritance, action controls, and --no-index asset export.
+Add the Picture migration and host session/lifecycle pattern, plus a multi-module
+consumer example covering workspace selection, replace inheritance, action
+controls, and --no-index asset export.
 
 Native Kitty, browser pixel rendering, live tile requests/CORS, and hardware GPU
 behavior still need visual/manual acceptance; automated checks do not establish

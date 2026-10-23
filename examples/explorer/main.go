@@ -28,6 +28,7 @@ import (
 	"nimbleterminal.dev/ntmaps/internal/city"
 	"nimbleterminal.dev/ntmaps/tile"
 	"nimbleterminal.dev/ntmaps/tile/pmtiles"
+	picture "nimbleterminal.dev/ntpicture"
 )
 
 //go:embed flatiron.pmtiles
@@ -173,6 +174,7 @@ func (k appKeys) FullHelp() [][]key.Binding {
 }
 
 type model struct {
+	terminal              *picture.TerminalSession
 	pointer               pointerState
 	zones                 *zone.Manager
 	itemPrefix            string
@@ -229,7 +231,8 @@ func initialModel(medium ntmaps.KittyMedium, loader *neighborhood.Loader, render
 	// Oversample: 2 gives a 2× pixel-density tile-canvas at +1 OSM zoom,
 	// which Kitty terminals downscale to a noticeably sharper image at no
 	// extra geographic coverage. Glyph mode is unaffected visually.
-	cfg := ntmaps.Config{Oversample: 2, KittyMedium: medium, PreferKitty: true}
+	terminal := picture.NewTerminalSession(picture.TerminalOptions{})
+	cfg := ntmaps.Config{Session: terminal, Oversample: 2, KittyMedium: medium, PreferKitty: true}
 	if runtime.GOOS != "js" {
 		// Animate arrow pans; the prefetch ring keeps the next tiles in memory.
 		cfg.SmoothPan = true
@@ -246,7 +249,7 @@ func initialModel(medium ntmaps.KittyMedium, loader *neighborhood.Loader, render
 		fmt.Fprintf(os.Stderr, "bundled tiles: %v\n", err)
 		os.Exit(1)
 	}
-	m := &model{
+	m := &model{terminal: terminal,
 		zones: zones, itemPrefix: prefix,
 		loader: loader, medium: medium, renderer: renderer, mapMode: ntmaps.RenderGlyph,
 		mv:        mv,
@@ -393,10 +396,7 @@ func (m *model) quit() tea.Cmd {
 	m.cancelDrag()
 	m.closed = true
 	m.stopLoad()
-	var cleanup []tea.Cmd
-	if m.mv.RenderMode() == ntmaps.RenderKitty {
-		cleanup = append(cleanup, m.mv.SetRenderMode(ntmaps.RenderGlyph))
-	}
+	cleanup := []tea.Cmd{m.mv.Dispose()}
 	if m.cityPane != nil {
 		cleanup = append(cleanup, m.cityPane.Dispose())
 	}
@@ -410,6 +410,7 @@ func (m *model) Close() {
 	}
 	m.stopLoad()
 	m.mv.Close()
+	m.terminal.Close()
 	if m.cityPane != nil {
 		m.cityPane.Close()
 	}
@@ -444,7 +445,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		var cmd tea.Cmd
 		if m.cityPane == nil {
-			m.cityPane, m.loadErr = cityview.New(v.result.Data, v.result.Scene, m.renderer, m.medium)
+			m.cityPane, m.loadErr = cityview.New(v.result.Data, v.result.Scene, m.renderer, m.medium, m.terminal)
 			if m.loadErr != nil {
 				return m, nil
 			}

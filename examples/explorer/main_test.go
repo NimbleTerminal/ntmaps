@@ -14,7 +14,6 @@ import (
 	"charm.land/lipgloss/v2"
 	chart "github.com/NimbleMarkets/ntcharts3d"
 	"nimbleterminal.dev/ntmaps/internal/city"
-	"nimbleterminal.dev/ntpicture/legacy"
 )
 
 func fixture(t *testing.T) *model {
@@ -173,10 +172,10 @@ func TestReplacementCancelsAndShutdownRejectsLateLoad(t *testing.T) {
 }
 func TestSharedTerminalSessionNotClosedByCity(t *testing.T) {
 	m := fixture(t)
-	before := legacy.DefaultTerminalSession().Snapshot()
+	before := m.terminal.Snapshot()
 	enterCity(t, m)
 	m.cityPane.Close()
-	after := legacy.DefaultTerminalSession().Snapshot()
+	after := m.terminal.Snapshot()
 	if before.Kitty != after.Kitty {
 		t.Fatal("closing city altered shared terminal capability")
 	}

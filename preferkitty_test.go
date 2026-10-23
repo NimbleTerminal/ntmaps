@@ -4,20 +4,11 @@ import (
 	"testing"
 
 	picture "nimbleterminal.dev/ntpicture"
-	"nimbleterminal.dev/ntpicture/legacy"
 )
-
-func forceKittyCapability(t *testing.T, c picture.KittyCapability) {
-	t.Helper()
-	prev := legacy.KittySupported()
-	legacy.ForceKittyCapability(c)
-	t.Cleanup(func() { legacy.ForceKittyCapability(prev) })
-}
 
 type unrelatedMsg struct{}
 
 func TestPreferKittySwitchesOnceSupported(t *testing.T) {
-	forceKittyCapability(t, picture.KittyCapabilityUnknown)
 	m := NewWithConfig(Config{Cols: 80, Rows: 24, PreferKitty: true})
 	if m.RenderMode() != RenderGlyph {
 		t.Fatalf("expected Glyph before the probe resolves, got %v", m.RenderMode())
@@ -30,13 +21,13 @@ func TestPreferKittySwitchesOnceSupported(t *testing.T) {
 
 	// A probe timeout can land before a late terminal reply flips the
 	// capability to Supported, so Unsupported must not end the wait.
-	legacy.ForceKittyCapability(picture.KittyCapabilityUnsupported)
+	m.pic.SetKittyCapability(picture.KittyCapabilityUnsupported)
 	m, _ = m.Update(unrelatedMsg{})
 	if m.RenderMode() != RenderGlyph {
 		t.Fatalf("expected Glyph while unsupported, got %v", m.RenderMode())
 	}
 
-	legacy.ForceKittyCapability(picture.KittyCapabilitySupported)
+	m.pic.SetKittyCapability(picture.KittyCapabilitySupported)
 	m, _ = m.Update(unrelatedMsg{})
 	if m.RenderMode() != RenderKitty {
 		t.Fatalf("expected Kitty once supported, got %v", m.RenderMode())
@@ -44,9 +35,9 @@ func TestPreferKittySwitchesOnceSupported(t *testing.T) {
 }
 
 func TestPreferKittyDoesNotOverrideExplicitMode(t *testing.T) {
-	forceKittyCapability(t, picture.KittyCapabilitySupported)
 
 	m := NewWithConfig(Config{Cols: 80, Rows: 24, PreferKitty: true})
+	m.pic.SetKittyCapability(picture.KittyCapabilitySupported)
 	m.SetRenderMode(RenderGlyph)
 	m, _ = m.Update(unrelatedMsg{})
 	if m.RenderMode() != RenderGlyph {
@@ -54,6 +45,7 @@ func TestPreferKittyDoesNotOverrideExplicitMode(t *testing.T) {
 	}
 
 	m = NewWithConfig(Config{Cols: 80, Rows: 24, PreferKitty: true})
+	m.pic.SetKittyCapability(picture.KittyCapabilitySupported)
 	m, _ = m.Update(unrelatedMsg{})
 	if m.RenderMode() != RenderKitty {
 		t.Fatalf("expected Kitty after auto-switch, got %v", m.RenderMode())
@@ -66,8 +58,8 @@ func TestPreferKittyDoesNotOverrideExplicitMode(t *testing.T) {
 }
 
 func TestDefaultConfigStaysGlyph(t *testing.T) {
-	forceKittyCapability(t, picture.KittyCapabilitySupported)
 	m := New(80, 24)
+	m.pic.SetKittyCapability(picture.KittyCapabilitySupported)
 	m, _ = m.Update(unrelatedMsg{})
 	if m.RenderMode() != RenderGlyph {
 		t.Fatalf("expected Glyph without PreferKitty, got %v", m.RenderMode())

@@ -21,23 +21,16 @@ func (m *Model) panPixels(dx, dy float64) {
 	m.lat, m.lng = tile.Unproject(x+dx/factor, y+dy/factor, m.zoom, tileSize)
 }
 
-// panState holds the spring motion and the Kitty presentation
+// panState holds the spring motion and presentation
 // back-pressure. Only the Bubble Tea event loop changes it; commands use
 // its pointer to identify the model their messages belong to.
 type panState struct {
 	motion panMotion
 
-	// encoding is set while a Kitty frame is being encoded and sent.
-	// Images presented meanwhile wait in pending; the latest wins.
-	encoding bool
-	pending  image.Image
+	// pending retains only the newest immutable render while Picture is busy.
+	pending image.Image
+	closed  bool
 }
-
-type panPictureMsg struct {
-	owner *panState
-	msg   tea.Msg
-}
-type panPresentedMsg struct{ owner *panState }
 
 func (m *Model) currentRenderKey() renderKey {
 	os, _ := m.effectiveOversample()
@@ -48,21 +41,23 @@ func (m *Model) currentRenderKey() renderKey {
 	return key
 }
 
-// presentImage hands img to the picture model. While a Kitty frame is
-// still being encoded the image is queued instead, so rapid input cannot
-// invalidate every frame before one is sent; the queued image is
-// presented when panPresentedMsg arrives.
+// presentImage lets an asynchronous presentation finish before submitting the
+// newest pending image. This prevents rapid input from starving either renderer.
 func (m *Model) presentImage(img image.Image) tea.Cmd {
-	state := m.panState
-	if state.encoding {
-		state.pending = img
+	if m.panState.closed {
 		return nil
 	}
-	cmd := m.pic.SetImage(img)
-	if cmd == nil {
+	if img != nil && m.pic.Status().Busy {
+		m.panState.pending = img
 		return nil
 	}
-	state.encoding = true
-	state.pending = nil
-	return func() tea.Msg { return panPictureMsg{owner: state, msg: cmd()} }
+	m.panState.pending = nil
+	return m.pic.SetImageImmutable(img)
+}
+
+func (m *Model) presentPending() tea.Cmd {
+	if m.panState.pending == nil || m.pic.Status().Busy {
+		return nil
+	}
+	return m.presentImage(m.panState.pending)
 }

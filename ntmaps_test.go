@@ -9,7 +9,6 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	picture "nimbleterminal.dev/ntpicture"
-	"nimbleterminal.dev/ntpicture/legacy"
 
 	"nimbleterminal.dev/ntmaps/tile"
 )
@@ -472,8 +471,8 @@ func TestPadLinesBottom(t *testing.T) {
 // grid+APC. A buggy crop (e.g. one that shifted bounds or emitted
 // wrong-size output) would break this end-to-end.
 func TestSetOpticalZoom_KittyEndToEnd(t *testing.T) {
-	forceKittySupported(t)
 	m := New(80, 24)
+	m.pic.SetKittyCapability(picture.KittyCapabilitySupported)
 
 	// Toggle into Kitty mode. SetRenderMode bumps renderGen via its
 	// renderMapCmd call, so subsequent mapImageMsgs need to use the
@@ -488,7 +487,8 @@ func TestSetOpticalZoom_KittyEndToEnd(t *testing.T) {
 	// Seed a source image. Use the *current* renderGen so Update accepts
 	// the message instead of dropping it as stale.
 	src := newSolidImage(color.RGBA{R: 100, G: 200, B: 50, A: 255})
-	updated, _ := m.Update(mapImageMsg{gen: *m.renderGen, img: src})
+	updated, present := m.Update(mapImageMsg{gen: *m.renderGen, img: src})
+	drainMap(t, &updated, present)
 	if updated.sourceImage == nil {
 		t.Fatal("expected sourceImage to be cached after a successful Update")
 	}
@@ -504,26 +504,14 @@ func TestSetOpticalZoom_KittyEndToEnd(t *testing.T) {
 		t.Fatal("SetOpticalZoom should return a Cmd in Kitty mode (picture.SetImage emits a renderCmd)")
 	}
 
-	// Drain the Cmd to a KittyFrameMsg and verify it carries a populated
-	// grid + APC at the expected cell-rectangle dimensions.
-	msg := cmd()
-	frame, ok := msg.(legacy.KittyFrameMsg)
-	if !ok {
-		t.Fatalf("expected legacy.KittyFrameMsg, got %T", msg)
+	drainMap(t, &updated, cmd)
+	if updated.pic.Status().Busy || updated.pic.View() == "" {
+		t.Fatal("optical zoom did not finish presenting")
 	}
-	if frame.Grid == "" {
-		t.Error("expected non-empty kitty grid after optical-zoom Cmd")
-	}
-	if frame.APC == "" {
-		t.Error("expected non-empty kitty APC after optical-zoom Cmd")
+	if got := strings.Count(updated.pic.View(), "\n") + 1; got != updated.picRows() {
+		t.Errorf("expected %d grid rows, got %d", updated.picRows(), got)
 	}
 
-	// The grid should be sized for the cell rectangle picture knows about
-	// (cols × picRows). Counting newlines is a cheap height check.
-	picRows := updated.picRows()
-	if got := strings.Count(frame.Grid, "\n") + 1; got != picRows {
-		t.Errorf("expected kitty grid to be %d rows tall, got %d", picRows, got)
-	}
 }
 
 // TestOpticalCrop verifies that opticalCrop preserves source dimensions —
@@ -792,8 +780,8 @@ func TestSetMarkersStoresAndClears(t *testing.T) {
 }
 
 func TestSetRenderModeTogglesAndReRenders(t *testing.T) {
-	forceKittySupported(t)
 	m := New(80, 24)
+	m.pic.SetKittyCapability(picture.KittyCapabilitySupported)
 
 	if m.RenderMode() != RenderGlyph {
 		t.Fatalf("expected default render mode RenderGlyph, got %v", m.RenderMode())
@@ -842,8 +830,8 @@ func TestIsMapUpdateRecognizesPictureMessages(t *testing.T) {
 	if !IsMapUpdate(MapCoordinates{}) {
 		t.Error("expected MapCoordinates to be a map update")
 	}
-	if !IsMapUpdate(legacy.KittyFrameMsg{}) {
-		t.Error("expected legacy.KittyFrameMsg to be a map update (forwarded to embedded pic.Model)")
+	if !IsMapUpdate(picture.PresentedMsg{}) {
+		t.Error("expected picture.PresentedMsg to be a map update (forwarded to embedded pic.Model)")
 	}
 	if IsMapUpdate("random string") {
 		t.Error("expected unrelated messages to not be a map update")
@@ -864,7 +852,7 @@ func TestIsMapOwnMsgExcludesPictureMessages(t *testing.T) {
 	if !IsMapOwnMsg(debouncedFetchMsg{}) {
 		t.Error("expected debouncedFetchMsg to be a map-own msg")
 	}
-	if IsMapOwnMsg(legacy.KittyFrameMsg{}) {
+	if IsMapOwnMsg(picture.PresentedMsg{}) {
 		t.Error("KittyFrameMsg is a shared picture runtime msg, not map-owned")
 	}
 	if IsMapOwnMsg("random string") {
@@ -875,18 +863,6 @@ func TestIsMapOwnMsgExcludesPictureMessages(t *testing.T) {
 type errExample struct{}
 
 func (errExample) Error() string { return "render boom" }
-
-// forceKittySupported flips the package-global Kitty capability to
-// Supported for the duration of t. picture.Toggle() silently no-ops
-// unless the capability is affirmatively Supported, which never happens
-// in a test process — without this helper, SetRenderMode(RenderKitty)
-// is a no-op and the model stays in Glyph mode.
-func forceKittySupported(t *testing.T) {
-	t.Helper()
-	prev := legacy.KittySupported()
-	legacy.ForceKittyCapability(picture.KittyCapabilitySupported)
-	t.Cleanup(func() { legacy.ForceKittyCapability(prev) })
-}
 
 func newSolidImage(c color.RGBA) image.Image {
 	img := image.NewRGBA(image.Rect(0, 0, 4, 4))

@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"image"
 	"nimbleterminal.dev/ntmaps/examples/internal/demorun"
-	"nimbleterminal.dev/ntpicture/legacy"
 	"os"
 	"runtime"
 	"strings"
@@ -22,6 +21,7 @@ import (
 )
 
 type model struct {
+	session       *picture.TerminalSession
 	source        ntmaps.Model
 	chart         *chart.Model
 	places        []places.Place
@@ -33,12 +33,13 @@ type model struct {
 
 func newModel(places []places.Place, medium picture.KittyMedium, renderer chart.RenderMode) *model {
 	// Keep a square map texture across terminal resizes. Camera changes only redraw 3D.
-	source := ntmaps.NewWithConfig(ntmaps.Config{Cols: 64, Rows: 33})
-	view := chart.New(80, 21, chart.WithRenderMode(renderer), chart.WithTerminalSession(legacy.DefaultTerminalSession()), chart.WithKittyMedium(medium),
+	session := picture.NewTerminalSession(picture.TerminalOptions{})
+	source := ntmaps.NewWithConfig(ntmaps.Config{Cols: 64, Rows: 33, Session: session})
+	view := chart.New(80, 21, chart.WithRenderMode(renderer), chart.WithTerminalSession(session), chart.WithKittyMedium(medium),
 		chart.WithAxes(chart.Axes{X: chart.Axis{Hidden: true}, Y: chart.Axis{Hidden: true}, Z: chart.Axis{Hidden: true}}))
 	view.SetColorLegendVisible(false)
 	view.SetCamera(initialCamera())
-	m := &model{source: source, chart: view, places: places, width: 80}
+	m := &model{session: session, source: source, chart: view, places: places, width: 80}
 	m.selectPlace(0)
 	return m
 }
@@ -97,7 +98,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyPressMsg:
 		switch v.String() {
 		case "q", "ctrl+c":
-			return m, tea.Sequence(m.chart.Dispose(), tea.Quit)
+			return m, tea.Sequence(tea.Batch(m.source.Dispose(), m.chart.Dispose()), tea.Quit)
 		case "n", "p":
 			delta := 1
 			if v.String() == "p" {
@@ -197,6 +198,7 @@ func main() {
 		More:    []key.Binding{demorun.Binding("w", "Map north"), demorun.Binding("s", "Map south"), demorun.Binding("a", "Map west"), demorun.Binding("d", "Map east"), demorun.Binding("+", "Camera closer"), demorun.Binding("-", "Camera farther"), demorun.Binding("t", "Renderer")},
 	})
 	m.source.Close()
+	m.session.Close()
 	closeErr := m.chart.Close()
 	if err == nil {
 		err = closeErr

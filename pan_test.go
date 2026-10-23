@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"nimbleterminal.dev/ntmaps/tile"
-	"nimbleterminal.dev/ntpicture/legacy"
+	picture "nimbleterminal.dev/ntpicture"
 )
 
 // animatedTestModel pans with the spring over a provider that has no
@@ -125,9 +125,9 @@ func TestPanUsesScreenPixelsAtDifferentLatitudes(t *testing.T) {
 }
 
 func TestKittyPresentsFramesDuringRapidInput(t *testing.T) {
-	forceKittySupported(t)
 	m := animatedTestModel()
-	m.pic.Toggle()
+	m.pic.SetKittyCapability(picture.KittyCapabilitySupported)
+	m.pic.SetMode(RenderKitty)
 	// A marker moves across the placeholder, so each pan is a new image.
 	m.SetMarkers([]Marker{{Lat: 0, Lng: 0}})
 	first := m.renderMapCmd()
@@ -143,22 +143,17 @@ func TestKittyPresentsFramesDuringRapidInput(t *testing.T) {
 	if m.panState.pending == nil {
 		t.Fatal("latest image should be queued behind the frame in flight")
 	}
-	frame := first().(panPictureMsg).msg.(legacy.KittyFrameMsg)
-	if cmd := m.pic.Update(frame); cmd == nil {
-		t.Fatal("first frame became stale during input")
+	firstGeneration := m.pic.Status().Generation
+	latestImage := m.panState.pending
+	drainMap(t, &m, first)
+	status := m.pic.Status()
+	if status.Busy || status.Presented != firstGeneration+1 || status.Presented != status.Generation {
+		t.Fatalf("expected exactly two completed presentations: %+v", status)
 	}
-	// Bubble Tea sends this after the raw image and placement sequence.
-	m, latest := m.Update(panPresentedMsg{owner: m.panState})
-	if latest == nil {
-		t.Fatal("latest requested image was not queued after presentation")
+	if m.panState.pending != nil || latestImage != m.sourceImage {
+		t.Fatal("queue did not settle on newest source")
 	}
-	next := latest().(panPictureMsg).msg.(legacy.KittyFrameMsg)
-	if next.APC == frame.APC || m.pic.Update(next) == nil {
-		t.Fatal("latest pan was not encoded and accepted")
-	}
-	if m.panState.pending != nil {
-		t.Fatal("queue should be empty after presenting the latest image")
-	}
+
 }
 
 func TestAnimationFramesSkipDebounceAndRenderCache(t *testing.T) {
@@ -197,7 +192,7 @@ func (i *countingImage) At(x, y int) color.Color {
 func TestGlyphCacheSurvivesValueReceiverView(t *testing.T) {
 	m := New(20, 11)
 	src := &countingImage{Image: newSolidImage(color.RGBA{90, 40, 30, 255})}
-	m.pic.SetImage(src)
+	drainMap(t, &m, m.pic.SetImageImmutable(src))
 	first := m.View().Content
 	reads := src.reads.Load()
 	if reads == 0 {

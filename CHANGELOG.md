@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Move map presentation to `ntpicture.Picture`, with host-supplied terminal
+  sessions and image ID allocation, `Dispose`/`Keep`/`Close` lifecycle methods,
+  and asynchronous frame coalescing for glyph and Kitty rendering.
+
 - `geodata` reads GeoJSON and GPX into markers and paths: points and
   waypoints as markers, lines, routes and track segments as paths, polygon
   rings as thinner outlines, with each feature's name and the box around

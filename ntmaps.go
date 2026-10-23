@@ -6,15 +6,16 @@ import (
 	"image"
 	"image/color"
 	"image/draw"
+	"reflect"
 	"strings"
 	"time"
 
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	uv "github.com/charmbracelet/ultraviolet"
 	"github.com/charmbracelet/x/ansi"
 	picture "nimbleterminal.dev/ntpicture"
-	"nimbleterminal.dev/ntpicture/legacy"
 
 	"nimbleterminal.dev/ntmaps/geocode"
 	"nimbleterminal.dev/ntmaps/tile"
@@ -62,7 +63,7 @@ type MapCoordinates struct {
 }
 
 // mapImageMsg carries the image.Image produced by an async tile render.
-// Update hands the image to the embedded legacy.Model and, once the render
+// Update hands the image to the embedded picture.Picture and, once the render
 // is complete, stores the image in the render cache keyed by the state
 // that produced it. The gen field is a monotonic counter set when the
 // render Cmd is dispatched; messages whose gen no longer matches the
@@ -104,7 +105,7 @@ type debouncedFetchMsg struct {
 // "should the widget's Update see this?" predicate, use [IsMapUpdate].
 func IsMapOwnMsg(msg tea.Msg) bool {
 	switch msg.(type) {
-	case MapCoordinates, mapImageMsg, debouncedFetchMsg, panPictureMsg, panPresentedMsg, panAnimationMsg:
+	case MapCoordinates, mapImageMsg, debouncedFetchMsg, panAnimationMsg:
 		return true
 	}
 	return false
@@ -114,20 +115,20 @@ func IsMapOwnMsg(msg tea.Msg) bool {
 // Parents containing other focusable widgets must forward matching messages
 // regardless of focus, otherwise async render results are lost.
 //
-// This is a "may need this" predicate, NOT an ownership predicate. It
-// returns true for both [IsMapOwnMsg] (map-only messages) AND every
-// [legacy.IsPictureMsg] (KittyFrameMsg, uv.CellSizeEvent, capability
-// probes). Picture messages are program-wide: if more than one component
-// in your program embeds legacy.Model, do NOT route them with else-if —
-// broadcast them to every picture owner. See README's "Routing messages
-// across multiple picture owners" for the pattern.
-//
-// legacy.IsPictureMsg covers KittyFrameMsg AND uv.CellSizeEvent (the
-// terminal's reply to legacy.RequestCellSize, which ntmaps.Init dispatches
-// via m.pic.Init), so consumers gating forwarding on this helper still route
-// the cell-size reply through to picture's auto-apply.
+// Broadcast picture runtime messages to every picture owner, even when unfocused.
+// Picture internally rejects messages owned by another picture or session.
 func IsMapUpdate(msg tea.Msg) bool {
-	return IsMapOwnMsg(msg) || legacy.IsPictureMsg(msg)
+	if IsMapOwnMsg(msg) {
+		return true
+	}
+	switch msg.(type) {
+	case uv.CellSizeEvent, uv.KittyGraphicsEvent:
+		return true
+	}
+	// ntpicture's asynchronous preparation and session tick types are private.
+	// Include its entire message namespace so those completions reach Update.
+	t := reflect.TypeOf(msg)
+	return t != nil && t.PkgPath() == "nimbleterminal.dev/ntpicture"
 }
 
 type KeyMap struct {
@@ -157,7 +158,7 @@ type Marker struct {
 	Size     float64
 }
 
-// Model renders a tile map using legacy.Model and handles navigation,
+// Model renders a tile map using picture.Picture and handles navigation,
 // tile fetching, and geocoding. Tiles come from a tile.Loader shared by
 // every render; a render paints the tiles it has, fetches the rest, and
 // repaints as they land. Buffered rendering runs one fetch at a time and
@@ -222,7 +223,7 @@ type Model struct {
 
 	// opticalZoom magnifies the cached source image at display time.
 	// 0 = no zoom. N > 0 means crop center 1/2^N of each axis and let
-	// legacy.Model scale it back up to the cell rectangle.
+	// picture.Picture scale it back up to the cell rectangle.
 	opticalZoom int
 
 	// renderDebounce delays the actual tile-fetch goroutine in cache-miss
@@ -245,7 +246,7 @@ type Model struct {
 	sourceImage image.Image
 
 	// Use a pointer to preserve the glyph cache across View calls.
-	pic    *legacy.Model
+	pic    *picture.Picture
 	errMsg string
 
 	smoothPan bool
@@ -262,6 +263,11 @@ type Model struct {
 
 // Config configures a Model at construction.
 type Config struct {
+	// Session shares terminal discovery with the host. Nil creates an owned session.
+	Session *picture.TerminalSession
+	// NextImageID allocates Kitty image IDs. Nil uses picture.NextImageID.
+	NextImageID func() (int, error)
+
 	// SmoothPan animates arrow movement with a critically damped spring.
 	// Frames compose from cached tiles; see Prefetch. Disabled by default.
 	SmoothPan bool
@@ -275,7 +281,7 @@ type Config struct {
 	// KittyMedium selects direct transmission (default) or shared memory.
 	// Shared memory requires a compatible local terminal or browser bridge;
 	// use direct transmission over SSH. Allocation or browser bridge failures
-	// fall back to direct transmission as handled by legacy.Model.
+	// fall back to direct transmission as handled by picture.Picture.
 	KittyMedium KittyMedium
 
 	// PreferKitty switches from Glyph to Kitty rendering once the
@@ -342,7 +348,7 @@ type Config struct {
 	// OpticalZoom magnifies the cached source image without fetching
 	// new tiles — the renderer crops the center 1/2^N of each axis and
 	// nearest-neighbor upscales it back to the source's original
-	// dimensions before handing it to legacy.Model. The same-dim
+	// dimensions before handing it to picture.Picture. The same-dim
 	// upscale matters: integer division of the crop rectangle would
 	// otherwise drift the aspect ratio away from the cell rectangle at
 	// high N, and ansimage's fit-mode would letterbox the result —
@@ -459,8 +465,8 @@ func NewWithConfig(cfg Config) Model {
 			Dir:       dir,
 		})
 	}
+	m.pic = picture.New(picture.Options{Session: cfg.Session, NextID: cfg.NextImageID, Render: picture.Config{KittyMedium: cfg.KittyMedium}})
 	m.setInitialValues()
-	m.pic.SetKittyMedium(cfg.KittyMedium)
 	return m
 }
 
@@ -506,8 +512,9 @@ func (m *Model) setInitialValues() {
 	m.zoom = 15
 	m.lat = 25.0782266
 	m.lng = -77.3383438
-	pic := legacy.NewModel()
-	m.pic = &pic
+	if m.pic == nil {
+		m.pic = picture.New(picture.Options{})
+	}
 	if m.panState == nil {
 		m.panState = &panState{}
 	}
@@ -548,7 +555,7 @@ func (m Model) OpticalZoom() int { return m.opticalZoom }
 
 // SetOpticalZoom adjusts the digital magnification of the cached source
 // image. n is clamped to >= 0. If a source image is already on hand, the
-// result is applied synchronously (no network or tile-render goroutine);
+// crop is computed synchronously and queued for presentation (no tile fetch);
 // otherwise the next renderMapCmd will pick up the new value.
 func (m *Model) SetOpticalZoom(n int) tea.Cmd {
 	if n < 0 {
@@ -562,7 +569,7 @@ func (m *Model) SetOpticalZoom(n int) tea.Cmd {
 	if source == nil {
 		return m.renderMapCmd()
 	}
-	return m.pic.SetImage(opticalCrop(source, opticalCropFactor(n)))
+	return m.presentImage(opticalCrop(source, opticalCropFactor(n)))
 }
 
 // opticalCropFactor returns the linear divisor for a given OpticalZoom
@@ -579,7 +586,7 @@ func opticalCropFactor(opticalZoom int) int {
 // nearest-neighbor upscales it back to img's original dimensions. Two
 // invariants matter for the rendered map to look right:
 //
-//  1. Output dims == source dims. legacy.Model's fit-mode would
+//  1. Output dims == source dims. picture.Picture's fit-mode would
 //     otherwise letterbox the result, visibly shrinking the cell
 //     rectangle as the zoom climbs.
 //  2. (w - cw) and (h - ch) are even. The crop is centered around
@@ -865,7 +872,7 @@ func (c *renderCache) markUsed(k renderKey) {
 	}
 }
 
-// picRows returns the rows available to the embedded legacy.Model after
+// picRows returns the rows available to the embedded picture.Picture after
 // reserving space for the attribution strip.
 func (m Model) picRows() int {
 	if m.rows >= attributionMinRows {
@@ -875,7 +882,7 @@ func (m Model) picRows() int {
 }
 
 // SetSize updates render dimensions in terminal cells. Returns a Cmd that
-// re-syncs legacy.Model and re-renders the map. The tile canvas is sized
+// re-syncs picture.Picture and re-renders the map. The tile canvas is sized
 // per-render inside renderMapCmd to match the cell-rectangle aspect ratio,
 // so the rendered image flows the entire enclosure rather than letterboxing.
 // One row is reserved at the bottom for the source's attribution.
@@ -915,7 +922,7 @@ func (m *Model) SetLocation(loc string, zoom int) tea.Cmd {
 	return m.lookup(loc)
 }
 
-// RenderMode returns the embedded legacy.Model's mode.
+// RenderMode returns the embedded picture.Picture's mode.
 func (m Model) RenderMode() RenderMode {
 	if m.pic == nil {
 		return RenderGlyph
@@ -923,13 +930,49 @@ func (m Model) RenderMode() RenderMode {
 	return m.pic.Mode()
 }
 
-// Close stops any tile fetches still in flight and releases pending
-// shared-memory images after the Bubble Tea program exits.
-func (m *Model) Close() {
-	m.job.cancel()
-	if m.pic != nil {
-		m.pic.SetImage(nil)
+// Dispose stops presentation and returns terminal image cleanup. Run it before
+// removing the map or quitting, then call Close to release map resources.
+func (m *Model) Dispose() tea.Cmd {
+	m.stopWork()
+	if m.pic == nil {
+		return nil
 	}
+	return m.pic.Close()
+}
+
+// Keep preserves the last frame on a main-screen exit. Include View in the
+// host's main-screen view and execute this command before quitting, then Close.
+func (m *Model) Keep() tea.Cmd {
+	m.stopWork()
+	if m.pic == nil {
+		return nil
+	}
+	return m.pic.KeepOnMainScreen()
+}
+
+func (m *Model) stopWork() {
+	m.job.cancel()
+	if m.panState != nil {
+		m.panState.pending = nil
+		m.panState.closed = true
+	}
+	if m.renderGen != nil {
+		*m.renderGen++
+		if m.lastAccepted != nil {
+			*m.lastAccepted = *m.renderGen
+		}
+	}
+}
+
+// Close releases resources idempotently. Use Dispose or Keep while the event
+// loop is running so their returned terminal commands can execute.
+func (m *Model) Close() {
+	m.stopWork()
+	if m.pic != nil {
+		m.pic.Close()
+	}
+	m.sourceImage = nil
+	m.cache = nil
 }
 
 // SetRenderMode changes the display mode, reusing the current image.
@@ -938,7 +981,7 @@ func (m *Model) SetRenderMode(mode RenderMode) tea.Cmd {
 	m.renderModeChosen = true
 	var cmds []tea.Cmd
 	if m.pic.Mode() != mode {
-		cmds = append(cmds, m.pic.Toggle())
+		cmds = append(cmds, m.pic.SetMode(mode))
 	}
 	if m.Image() != nil {
 		return tea.Batch(cmds...)
@@ -947,7 +990,7 @@ func (m *Model) SetRenderMode(mode RenderMode) tea.Cmd {
 	return tea.Batch(cmds...)
 }
 
-// Fit returns the embedded legacy.Model's current fit mode.
+// Fit returns the embedded picture.Picture's current fit mode.
 func (m Model) Fit() FitMode {
 	if m.pic == nil {
 		return FitContain
@@ -955,9 +998,8 @@ func (m Model) Fit() FitMode {
 	return m.pic.Fit()
 }
 
-// SetFit forwards the fit mode to legacy.Model. No-op if unchanged.
-// In Kitty mode this triggers a re-encode; in Glyph mode the next View
-// call picks up the new fit synchronously.
+// SetFit forwards the fit mode to picture.Picture. No-op if unchanged.
+// Execute the returned command and forward completion messages in both modes.
 func (m *Model) SetFit(fit FitMode) tea.Cmd { return m.pic.SetFit(fit) }
 
 // TileSource returns the source tiles are fetched from.
@@ -1108,7 +1150,7 @@ func (m Model) tilesCached(geom viewGeometry, placements []tile.Placement) bool 
 }
 
 // Init dispatches the first tile render plus, on the first invocation only,
-// legacy.Model.Init's terminal queries (RequestCellSize / CSI 16 t plus
+// picture.Picture.Init's terminal queries (RequestCellSize / CSI 16 t plus
 // the Kitty-support probe). The CellSizeEvent reply auto-applies via
 // SetCellPixelSize, and subsequent Kitty placements fill the cell rectangle
 // on terminals whose cell ratio isn't the assumed 1:2.
@@ -1135,25 +1177,28 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 }
 
 // applyPreferKitty performs the one-time Glyph → Kitty switch for
-// Config.PreferKitty. The capability is process-wide and may resolve on any
-// message (probe reply, timeout, or an earlier ForceKittyCapability), so
+// Config.PreferKitty. Session capability may resolve on any message (probe
+// reply, timeout, or an earlier session capability update), so
 // Update checks after every message. Unsupported is not final: a probe
 // timeout can land before a late terminal reply flips it to Supported.
 func (m *Model) applyPreferKitty() tea.Cmd {
 	if !m.preferKitty || m.renderModeChosen || m.pic == nil {
 		return nil
 	}
-	if legacy.KittySupported() != picture.KittyCapabilitySupported {
+	if m.pic.KittySupported() != picture.KittyCapabilitySupported {
 		return nil
 	}
 	m.renderModeChosen = true
 	if m.pic.Mode() == RenderKitty {
 		return nil
 	}
-	return m.pic.Toggle()
+	return m.pic.SetMode(RenderKitty)
 }
 
 func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
+	if m.panState != nil && m.panState.closed {
+		return m, m.pic.Update(msg)
+	}
 	if !m.initialized {
 		m.setInitialValues()
 	}
@@ -1161,24 +1206,6 @@ func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case panAnimationMsg:
 		return m.updatePanAnimation(msg)
-
-	case panPictureMsg:
-		if msg.owner != m.panState {
-			return m, nil
-		}
-		cmd := m.pic.Update(msg.msg)
-		return m, tea.Sequence(cmd, func() tea.Msg { return panPresentedMsg{owner: msg.owner} })
-
-	case panPresentedMsg:
-		if msg.owner != m.panState {
-			return m, nil
-		}
-		m.panState.encoding = false
-		if pending := m.panState.pending; pending != nil {
-			m.panState.pending = nil
-			return m, m.presentImage(pending)
-		}
-		return m, nil
 
 	case tea.MouseMsg:
 		return m.mouse(msg)
@@ -1219,7 +1246,7 @@ func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 
 	case mapImageMsg:
 		// Drop stale renders: only the most-recently-dispatched generation
-		// is allowed to update legacy.Model. Without this guard, a slow
+		// is allowed to update picture.Picture. Without this guard, a slow
 		// goroutine finishing after a faster newer one would replace the
 		// fresh image with a stale one.
 		if m.renderGen == nil || msg.gen != *m.renderGen {
@@ -1230,6 +1257,7 @@ func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 			m.job.cancel()
 			m.errMsg = msg.err.Error()
 			m.sourceImage = nil
+			m.panState.pending = nil
 			return m, m.pic.SetImage(nil)
 		}
 		m.errMsg = ""
@@ -1256,6 +1284,7 @@ func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 	case MapCoordinates:
 		if msg.Err != nil {
 			m.errMsg = msg.Err.Error()
+			m.panState.pending = nil
 			return m, m.pic.SetImage(nil)
 		}
 		m.errMsg = ""
@@ -1265,21 +1294,24 @@ func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 
 	}
 
-	// Unknown messages: forward to legacy.Model so KittyFrameMsg gets handled.
-	return m, m.pic.Update(msg)
+	// Forward runtime messages so Picture can finish preparation and presentation.
+	cmd := m.pic.Update(msg)
+	return m, tea.Batch(cmd, m.presentPending())
 }
 
 // renderMapCmd produces a Cmd that delivers the composited tile image for
 // the Model's current geo state. On a render-cache hit, or when every tile
-// is already in the loader's memory, the image is applied synchronously
-// via picture.SetImage with no in-flight state — the View won't show a
-// Loading overlay and the map updates in the same Bubble Tea iteration.
+// is already in the loader's memory, the image is composed synchronously
+// and queued for presentation without an in-flight tile render.
 // Otherwise it snapshots the state into a renderJob whose Cmd paints the
 // tiles on hand, fetches the rest, and repaints as they land. Each
 // mapImageMsg carries the generation counter used by Update to drop
 // stale results, and the renderKey used to populate the cache once the
 // final image is accepted.
 func (m *Model) renderMapCmd() tea.Cmd {
+	if m.panState != nil && m.panState.closed {
+		return nil
+	}
 	if m.cols <= 0 {
 		return nil
 	}
@@ -1326,7 +1358,7 @@ func (m *Model) renderMapCmd() tea.Cmd {
 			*m.renderGen++
 			*m.lastAccepted = *m.renderGen
 			m.sourceImage = cached
-			return m.pic.SetImage(opticalCrop(cached, opticalCropFactor(m.opticalZoom)))
+			return m.presentImage(opticalCrop(cached, opticalCropFactor(m.opticalZoom)))
 		}
 	}
 
@@ -1409,9 +1441,8 @@ func (m Model) View() tea.View {
 	// Body composition rules:
 	// - Picture is empty AND we've never rendered → fill the cell rect
 	//   with a centered "Loading…" so the enclosure keeps full breadth.
-	// - Picture is empty BUT we have a sourceImage (transient: picture
-	//   invalidates on every SetSize/SetImage and waits for the next
-	//   KittyFrameMsg) → fill blank with just the small corner badge so
+	// - Picture is empty BUT we have a sourceImage (the first presentation
+	//   has not completed yet) → fill blank with just the small corner badge so
 	//   the layout stays steady. In Kitty mode the terminal still shows the
 	//   previous placement under our cells, so this avoids a full-screen
 	//   "Loading…" flash on every resize step.
@@ -1419,7 +1450,7 @@ func (m Model) View() tea.View {
 	//   the small badge in the corner of the previous image, so the map
 	//   stays readable while it refreshes.
 	// - Otherwise → just the picture content.
-	body := pv.Content
+	body := pv
 	switch {
 	case body == "" && m.sourceImage != nil:
 		body = overlayLoadingBadge(blankCellRect(m.cols, picRows), m.cols, picRows)

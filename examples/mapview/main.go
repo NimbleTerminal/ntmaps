@@ -53,11 +53,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyPressMsg:
 		switch v.String() {
 		case "q", "ctrl+c":
-			var cleanup tea.Cmd
-			if m.mapView.RenderMode() == ntmaps.RenderKitty {
-				cleanup = m.mapView.SetRenderMode(ntmaps.RenderGlyph)
-			}
-			return m, tea.Sequence(cleanup, tea.Quit)
+			return m, tea.Sequence(m.mapView.Dispose(), tea.Quit)
 		case "g":
 			mode := ntmaps.RenderKitty
 			if m.mapView.RenderMode() == mode {
