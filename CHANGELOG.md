@@ -1,6 +1,6 @@
 # `ntmaps` CHANGELOG
 
-## Unreleased
+## v0.5.0 (2026-10-23)
 
 - Breaking: maps and headless `Render` now default to no tile source, drawing
   a placeholder without network access. Select `Config.Source`, `SetTileSource`,
