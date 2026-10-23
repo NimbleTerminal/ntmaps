@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="ntmaps tests" xmlns="http://www.topografix.com/GPX/1/1">
+  <metadata><name>Not a feature</name></metadata>
+  <wpt lat="40.7411" lon="-73.9897"><name>Flatiron</name><ele>10</ele></wpt>
+  <wpt lat="40.7484" lon="-73.9857"/>
+  <rte>
+    <name>Up Fifth</name>
+    <rtept lat="40.7411" lon="-73.9897"/>
+    <rtept lat="40.7484" lon="-73.9857"/>
+  </rte>
+  <trk>
+    <name> Morning walk </name>
+    <trkseg>
+      <trkpt lat="40.7359" lon="-73.9911"><ele>12</ele><time>2026-10-23T08:00:00Z</time></trkpt>
+      <trkpt lat="40.7380" lon="-73.9900"/>
+    </trkseg>
+    <trkseg>
+      <trkpt lat="40.7400" lon="-73.9890"/>
+      <trkpt lat="40.7411" lon="-73.9897"/>
+      <trkpt lat="40.7420" lon="-73.9880"/>
+    </trkseg>
+  </trk>
+</gpx>

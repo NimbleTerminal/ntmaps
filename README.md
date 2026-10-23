@@ -112,6 +112,17 @@ It fetches every tile the view needs through the same cache the widget uses, kee
 
 `SetBounds(ntmaps.Bounds{South, West, North, East})` frames a box at the highest zoom that fits the cell rectangle with a one-cell margin, and `FitContent()` does the same for whatever markers and paths are set, so a loaded track is shown whole with no zoom guessing. `ContentBounds()` returns that box. `RenderOptions.Bounds` frames a static image the same way.
 
+The `geodata` package reads the files people keep of such things, GeoJSON and GPX, into markers and paths:
+
+```go
+d, err := geodata.Read(f, geodata.Limits{})   // nimbleterminal.dev/ntmaps/geodata
+mv.SetMarkers(d.Markers())
+mv.SetPaths(d.Paths())
+mv.FitContent()
+```
+
+GeoJSON points become markers, lines become paths, and polygon rings become thinner outlines; GPX waypoints become markers, and routes and track segments become paths. `d.Features` keeps each feature's name and parts, `d.Bounds` the box around them. `Limits` bound the bytes read, positions and features (64 MiB, a million and 100,000 by default), with nesting capped at 64; a file over one fails with `geodata.ErrLimit`. Nothing is fetched. Try it with `./bin/ntmaps-mapview -geodata walk.gpx`.
+
 ## Tile styles
 
 `ntmaps.SetTileSource(...)` switches the map to any `tile.Source`. The `nimbleterminal.dev/ntmaps/tile` package ships keyless built-ins: `tile.OpenStreetMap()`, `tile.Wikimedia()`, `tile.OpenTopoMap()`, `tile.CartoLight()`, `tile.CartoDark()`, and `tile.ArcGISWorldImagery()`. Each comes with the upstream provider's terms-of-use and attribution requirements — read them before shipping a public app. The attribution strip drawn along the bottom of the map and the text row under it both follow the current source.
@@ -196,7 +207,7 @@ For the narrower "is this message owned by ntmaps alone" predicate (the `MapCoor
 
 | Program | Purpose |
 | --- | --- |
-| `mapview` | Minimal 2D map widget host: pan, zoom, marker, glyph/Kitty toggle; `-pmtiles` serves a local archive and `-snapshot out.png` renders headlessly |
+| `mapview` | Minimal 2D map widget host: pan, zoom, marker, glyph/Kitty toggle; `-pmtiles` serves a local archive, `-geodata` shows a GeoJSON or GPX file, and `-snapshot out.png` renders headlessly |
 | `explorer` | Places browser: five base styles (`s`), seamarks overlay (`o`), routes with `F` to frame them, `G` to geocode a name, mouse drag and wheel, bundled offline Flatiron tiles, and switchable 2D / 3D buildings |
 | `cityview3d` | Standalone development viewer for the internal city helpers |
 | `mapview3d` | Flat textured-map rendering and performance fixture |

@@ -15,6 +15,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 	"nimbleterminal.dev/ntmaps"
 	"nimbleterminal.dev/ntmaps/examples/internal/demorun"
+	"nimbleterminal.dev/ntmaps/geodata"
 	"nimbleterminal.dev/ntmaps/tile"
 	"nimbleterminal.dev/ntmaps/tile/pmtiles"
 )
@@ -22,20 +23,33 @@ import (
 type model struct {
 	mapView ntmaps.Model
 	width   int
+	fit     bool // frame the file's places and tracks once the size is known
 }
 
-func newModel(medium ntmaps.KittyMedium, lat, lon float64, zoom int) *model {
+// newModel centers a marker at lat, lon, or, given a file's data, shows its
+// places and tracks.
+func newModel(medium ntmaps.KittyMedium, lat, lon float64, zoom int, data *geodata.Data) *model {
 	mv := ntmaps.NewWithConfig(ntmaps.Config{Cols: 80, Rows: 23, PreferKitty: true, KittyMedium: medium})
 	mv.SetLatLng(lat, lon, zoom)
+	if data != nil {
+		mv.SetMarkers(data.Markers())
+		mv.SetPaths(data.Paths())
+		return &model{mv, 80, true}
+	}
 	mv.SetMarkers([]ntmaps.Marker{{Lat: lat, Lng: lon}})
-	return &model{mv, 80}
+	return &model{mapView: mv, width: 80}
 }
 func (m *model) Init() tea.Cmd { return m.mapView.Init() }
 func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch v := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = v.Width
-		return m, m.mapView.SetSize(v.Width, max(2, v.Height-1))
+		cmd := m.mapView.SetSize(v.Width, max(2, v.Height-1))
+		if m.fit && m.mapView.FitContent() {
+			m.fit = false
+			cmd = tea.Batch(cmd, m.mapView.Init())
+		}
+		return m, cmd
 	case tea.KeyPressMsg:
 		switch v.String() {
 		case "q", "ctrl+c":
@@ -74,6 +88,7 @@ func main() {
 	lon := flag.Float64("lon", -73.989, "map center longitude")
 	zoom := flag.Int("zoom", 16, "map zoom")
 	archive := flag.String("pmtiles", "", "serve tiles from a local PMTiles archive instead of OpenStreetMap")
+	geo := flag.String("geodata", "", "show the places and tracks of a GeoJSON or GPX file")
 	snapshot := flag.String("snapshot", "", "write a PNG of the map to this file and exit, no terminal needed")
 	width := flag.Int("width", 1024, "snapshot width in pixels")
 	height := flag.Int("height", 512, "snapshot height in pixels")
@@ -95,14 +110,23 @@ func main() {
 		defer a.Close()
 		src = a
 	}
+	var data *geodata.Data
+	if *geo != "" {
+		d, err := readGeodata(*geo)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(2)
+		}
+		data = &d
+	}
 	if *snapshot != "" {
-		if err := writeSnapshot(*snapshot, src, *lat, *lon, *zoom, *width, *height); err != nil {
+		if err := writeSnapshot(*snapshot, src, *lat, *lon, *zoom, *width, *height, data); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
 		return
 	}
-	m := newModel(medium, *lat, *lon, *zoom)
+	m := newModel(medium, *lat, *lon, *zoom, data)
 	if src != nil {
 		m.mapView.SetTileSource(src)
 	}
@@ -116,11 +140,20 @@ func main() {
 
 // writeSnapshot renders the map once with ntmaps.Render and saves it as
 // PNG: the headless path, for scripts and documentation images.
-func writeSnapshot(path string, src tile.Source, lat, lon float64, zoom, width, height int) error {
-	img, err := ntmaps.Render(context.Background(), ntmaps.RenderOptions{
+func writeSnapshot(path string, src tile.Source, lat, lon float64, zoom, width, height int, data *geodata.Data) error {
+	o := ntmaps.RenderOptions{
 		Source: src, Lat: lat, Lng: lon, Zoom: zoom, Width: width, Height: height,
 		Markers: []ntmaps.Marker{{Lat: lat, Lng: lon}},
-	})
+	}
+	if data != nil {
+		o.Markers, o.Paths = data.Markers(), data.Paths()
+		if data.Bounds.Valid() {
+			o.Bounds = &data.Bounds
+		} else if data.Points > 0 {
+			o.Lat, o.Lng = data.Bounds.South, data.Bounds.West // One place, or a line due east.
+		}
+	}
+	img, err := ntmaps.Render(context.Background(), o)
 	if err != nil {
 		return err
 	}
@@ -130,4 +163,14 @@ func writeSnapshot(path string, src tile.Source, lat, lon float64, zoom, width, 
 	}
 	defer f.Close()
 	return png.Encode(f, img)
+}
+
+// readGeodata reads a GeoJSON or GPX file within geodata's default limits.
+func readGeodata(path string) (geodata.Data, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return geodata.Data{}, err
+	}
+	defer f.Close()
+	return geodata.Read(f, geodata.Limits{})
 }

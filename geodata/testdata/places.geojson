@@ -1,0 +1,16 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {"type": "Feature", "properties": {"name": "Flatiron"}, "geometry": {"type": "Point", "coordinates": [-73.9897, 40.7411, 10]}},
+    {"type": "Feature", "properties": {"title": "Broadway"}, "geometry": {"type": "LineString", "coordinates": [[-73.9897, 40.7411], [-73.9870, 40.7500]]}},
+    {"type": "Feature", "properties": {"name": 7}, "geometry": {"type": "Polygon", "coordinates": [
+      [[-73.990, 40.740], [-73.986, 40.740], [-73.986, 40.744], [-73.990, 40.744]],
+      [[-73.989, 40.741], [-73.987, 40.741], [-73.987, 40.743], [-73.989, 40.741]]
+    ]}},
+    {"type": "Feature", "properties": null, "geometry": null},
+    {"type": "Feature", "properties": {}, "geometry": {"type": "GeometryCollection", "geometries": [
+      {"type": "MultiPoint", "coordinates": [[-73.98, 40.75], [-73.97, 40.76]]},
+      {"type": "MultiLineString", "coordinates": [[[-73.98, 40.75], [-73.97, 40.76]]]}
+    ]}}
+  ]
+}

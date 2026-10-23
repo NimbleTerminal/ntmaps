@@ -1,5 +1,13 @@
 # `ntmaps` CHANGELOG
 
+## Unreleased
+
+- `geodata` reads GeoJSON and GPX into markers and paths: points and
+  waypoints as markers, lines, routes and track segments as paths, polygon
+  rings as thinner outlines, with each feature's name and the box around
+  them all. Reads are bounded by `Limits`. The mapview example shows a file
+  with `-geodata`.
+
 ## v0.4.0 (2026-10-21)
 
 The project is now `ntmaps` under NimbleTerminal, and the map is composed
