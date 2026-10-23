@@ -1,6 +1,6 @@
 # `ntmaps` CHANGELOG
 
-## Unreleased
+## v0.5.1 (2026-10-23)
 
 - `tile/pmtiles` bounds what an archive can make it read: a directory or the
   metadata at most `Options.MaxDirectoryBytes` (16 MiB), a tile at most
