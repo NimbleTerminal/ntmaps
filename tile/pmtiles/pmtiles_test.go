@@ -465,3 +465,23 @@ func TestDecodeDirectoryRefusesImpossibleCounts(t *testing.T) {
 		t.Fatal("three entries in eight bytes accepted")
 	}
 }
+
+func TestWriteBoundsReachTheAntimeridian(t *testing.T) {
+	tiles := map[tile.ID][]byte{}
+	for x := 0; x < 2; x++ {
+		for y := 0; y < 2; y++ {
+			tiles[tile.ID{Z: 1, X: x, Y: y}] = pngTile(color.RGBA{A: 255})
+		}
+	}
+	var buf bytes.Buffer
+	if err := Write(&buf, tiles, WriteOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	a, err := New(bytes.NewReader(buf.Bytes()), Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, west, _, east := a.Bounds(); west != -180 || east != 180 {
+		t.Fatalf("a whole world's bounds run %v to %v", west, east)
+	}
+}

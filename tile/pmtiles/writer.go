@@ -64,6 +64,9 @@ func Write(w io.Writer, tiles map[tile.ID][]byte, o WriteOptions) error {
 		minZ, maxZ = min(minZ, id.Z), max(maxZ, id.Z)
 		lat1, lng1 := tile.Unproject(float64(id.X*256), float64(id.Y*256), id.Z, 256)
 		lat2, lng2 := tile.Unproject(float64((id.X+1)*256), float64((id.Y+1)*256), id.Z, 256)
+		if id.X+1 == n {
+			lng2 = 180 // Unproject wraps the world's east edge to -180.
+		}
 		minX, maxX = min(minX, lng1), max(maxX, lng2)
 		minY, maxY = min(minY, lat2), max(maxY, lat1)
 	}

@@ -9,6 +9,8 @@
   must fit its bytes, and at most 64 leaf directories stay cached.
 - `tile.Decode` refuses a tile over `tile.MaxTileEdge` (4096) pixels a side
   before decoding it.
+- `pmtiles.Write` derives an east bound of 180° for tiles on the world's
+  east edge, not -180°.
 
 ## v0.5.0 (2026-10-23)
 
