@@ -14,6 +14,8 @@
 - An archive's attribution is kept to one line of printable text, at most
   500 characters: it is shown as a terminal row, and a control character
   from someone else's archive could otherwise reach the screen.
+- The error a map shows in place of itself keeps only printable text and
+  newlines: it can carry what a tile server or geocoder sent.
 
 ## v0.5.0 (2026-10-23)
 

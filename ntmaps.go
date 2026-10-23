@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"strings"
 	"time"
+	"unicode"
 
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
@@ -1427,7 +1428,7 @@ func (m *Model) lookup(address string) tea.Cmd {
 
 func (m Model) View() tea.View {
 	if m.errMsg != "" {
-		return tea.NewView(m.errMsg)
+		return tea.NewView(plainText(m.errMsg))
 	}
 	if m.cols <= 0 || m.rows <= 0 {
 		return tea.NewView("")
@@ -1576,4 +1577,19 @@ func truncateForWidth(s string, width int) string {
 		return string(runes[:1])
 	}
 	return string(runes[:width-1]) + "…"
+}
+
+// plainText keeps the printable runes and newlines of s: an error can carry
+// what a tile server or geocoder sent, which must not reach the terminal as
+// escape sequences.
+func plainText(s string) string {
+	return strings.Map(func(r rune) rune {
+		if r == '\n' || unicode.IsPrint(r) {
+			return r
+		}
+		if r == '\t' {
+			return ' '
+		}
+		return -1
+	}, s)
 }

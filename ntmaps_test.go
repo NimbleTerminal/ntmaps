@@ -1,6 +1,7 @@
 package ntmaps
 
 import (
+	"errors"
 	"image"
 	"image/color"
 	"strings"
@@ -1016,5 +1017,13 @@ func TestImageAccessor(t *testing.T) {
 	}
 	if updated.Image() != updated.sourceImage {
 		t.Error("Image() should return the cached sourceImage bitmap")
+	}
+}
+
+func TestErrorViewIsPlainText(t *testing.T) {
+	m := New(20, 5)
+	m, _ = m.Update(MapCoordinates{Err: errors.New("bad\x1b]52;c;aGk=\x07 status\tline")})
+	if got := m.View().Content; got != "bad]52;c;aGk= status line" {
+		t.Fatalf("error view %q", got)
 	}
 }
