@@ -11,7 +11,7 @@ import (
 
 // RenderOptions describes a one-shot map image for Render.
 type RenderOptions struct {
-	// Source supplies the tiles. nil means tile.OpenStreetMap().
+	// Source supplies the tiles. nil draws the placeholder without fetching tiles.
 	Source tile.Source
 
 	// Loader caches tiles between calls. nil builds one with the default
@@ -42,7 +42,7 @@ type RenderOptions struct {
 	NoAttribution bool
 
 	// UserAgent is applied to a tile.Provider that has none. Empty means
-	// the ntmaps default; a shipped app should name itself.
+	// the ntmaps default. OSMF servers require an app-specific identity.
 	UserAgent string
 }
 
@@ -56,14 +56,11 @@ func Render(ctx context.Context, o RenderOptions) (image.Image, error) {
 		return nil, fmt.Errorf("ntmaps: render size %d×%d must be positive", o.Width, o.Height)
 	}
 	src := o.Source
-	if src == nil {
-		src = tile.OpenStreetMap()
-	}
 	if p, ok := src.(tile.Provider); ok && p.UserAgent == "" && o.UserAgent != "" {
 		p.UserAgent = o.UserAgent
 		src = p
 	}
-	info := src.Info()
+	info := infoOf(src)
 	if o.Bounds != nil {
 		if !o.Bounds.Valid() {
 			return nil, fmt.Errorf("ntmaps: invalid bounds %+v", *o.Bounds)

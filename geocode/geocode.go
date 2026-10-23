@@ -52,15 +52,15 @@ const (
 // OpenStreetMap instance. Its usage policy
 // (https://operations.osmfoundation.org/policies/nominatim/) requires an
 // identifying User-Agent and at most one request per second, which one
-// Nominatim value enforces across its callers; share one value per
-// application. Use a pointer so the pacing state is shared.
+// Nominatim value enforces across its callers. The public service limit
+// applies to all users of an application combined; per-instance pacing alone
+// does not enforce that aggregate limit. Share one value within a process. Use a pointer so the pacing state is shared.
 type Nominatim struct {
 	// Endpoint is the search URL. Empty means the public OSM instance.
 	Endpoint string
 
 	// UserAgent identifies the application. Empty means the ntmaps
-	// default, which is fine for development; a shipped app should name
-	// itself. Not sent under GOOS=js, where the browser sets its own.
+	// default. Public OSM services require an app-specific identity. Not sent under GOOS=js, where the browser sets its own.
 	UserAgent string
 
 	// Client performs the requests. nil uses a client with a 15s timeout.

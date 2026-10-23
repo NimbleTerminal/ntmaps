@@ -263,6 +263,9 @@ type Model struct {
 
 // Config configures a Model at construction.
 type Config struct {
+	// Source supplies base tiles. Nil draws the placeholder and fetches nothing.
+	Source tile.Source
+
 	// Session shares terminal discovery with the host. Nil creates an owned session.
 	Session *picture.TerminalSession
 	// NextImageID allocates Kitty image IDs. Nil uses picture.NextImageID.
@@ -273,9 +276,9 @@ type Config struct {
 	SmoothPan bool
 
 	// Prefetch is how many tile widths beyond each edge of the view are
-	// fetched in the background once a render completes, so the next pan
-	// finds its tiles in memory and paints at once. Zero means 1; negative
-	// disables prefetching; values above 4 are clamped.
+	// fetched in the background once a render completes. Zero or negative
+	// disables prefetching; positive values opt in, capped at 4. OSMF tile
+	// servers forbid prefetching; leave this off when using OpenStreetMap.
 	Prefetch int
 
 	// KittyMedium selects direct transmission (default) or shared memory.
@@ -399,16 +402,13 @@ type Config struct {
 	// DisableDiskCache keeps the built Loader from touching the disk.
 	DisableDiskCache bool
 
-	// UserAgent identifies the application to tile and geocoding
-	// servers; their usage policies require one. Empty means
-	// tile.DefaultUserAgent, which names ntmaps and its version. It is
-	// applied to Providers set without their own and to the default
-	// Geocoder.
+	// UserAgent identifies tile requests. Empty uses tile.DefaultUserAgent.
+	// It applies to Providers without their own identity. OSMF servers require
+	// an app-specific name. Configure the Geocoder's UserAgent separately.
 	UserAgent string
 
-	// Geocoder resolves SetLocation queries. nil means a geocode.Nominatim
-	// against the public OpenStreetMap instance, paced to one request per
-	// second as its policy requires.
+	// Geocoder resolves SetLocation queries. Nil disables geocoding:
+	// SetLocation returns a command delivering an error.
 	Geocoder geocode.Geocoder
 }
 
@@ -467,6 +467,7 @@ func NewWithConfig(cfg Config) Model {
 	}
 	m.pic = picture.New(picture.Options{Session: cfg.Session, NextID: cfg.NextImageID, Render: picture.Config{KittyMedium: cfg.KittyMedium}})
 	m.setInitialValues()
+	m.setSource(cfg.Source)
 	return m
 }
 
@@ -499,15 +500,11 @@ func log2(n int) int {
 
 func (m *Model) setInitialValues() {
 	m.KeyMap = DefaultKeyMap()
-	m.setSource(tile.OpenStreetMap())
 	if m.loader == nil {
 		m.loader = tile.NewLoader(tile.Options{Dir: tile.DefaultDir()})
 	}
 	if m.job == nil {
 		m.job = &jobSlot{}
-	}
-	if m.geocoder == nil {
-		m.geocoder = &geocode.Nominatim{UserAgent: m.userAgent}
 	}
 	m.zoom = 15
 	m.lat = 25.0782266
@@ -1065,13 +1062,11 @@ func overlayKey(overlays []tile.Source) string {
 	return sb.String()
 }
 
-// prefetchRings clamps Config.Prefetch: 0 means one ring, negative none,
+// prefetchRings clamps Config.Prefetch: nonpositive means none,
 // and at most four.
 func prefetchRings(n int) int {
 	switch {
-	case n == 0:
-		return 1
-	case n < 0:
+	case n <= 0:
 		return 0
 	default:
 		return min(4, n)
@@ -1419,6 +1414,9 @@ func (m *Model) renderMapCmd() tea.Cmd {
 func (m *Model) lookup(address string) tea.Cmd {
 	g := m.geocoder
 	return func() tea.Msg {
+		if g == nil {
+			return MapCoordinates{Err: fmt.Errorf("ntmaps: no geocoder configured")}
+		}
 		res, err := g.Geocode(context.Background(), address)
 		if err != nil {
 			return MapCoordinates{Err: err}

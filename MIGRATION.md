@@ -72,3 +72,14 @@ controls, and --no-index asset export.
 Native Kitty, browser pixel rendering, live tile requests/CORS, and hardware GPU
 behavior still need visual/manual acceptance; automated checks do not establish
 those results. No sibling guide or dependency source was edited here.
+
+## Offline defaults (ntmaps v0.5.0)
+
+`New`, `NewWithConfig`, and `Render` no longer choose OpenStreetMap implicitly.
+Pass `Config.Source`, call `SetTileSource`, or supply `RenderOptions.Source` for
+base tiles. Nil draws a background and still supports markers and paths.
+`Config.Geocoder` is nil by default; `SetLocation` returns an error message until
+a geocoder is supplied. `Config.Prefetch` defaults to zero, with positive values
+opting in. Keep prefetch off for OSMF tile servers and use an app-specific
+User-Agent for online services. The native/browser examples opt in explicitly
+and keep their existing tile caches. See README for the service policies.

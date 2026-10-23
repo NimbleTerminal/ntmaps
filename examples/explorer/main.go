@@ -232,9 +232,9 @@ func initialModel(medium ntmaps.KittyMedium, loader *neighborhood.Loader, render
 	// which Kitty terminals downscale to a noticeably sharper image at no
 	// extra geographic coverage. Glyph mode is unaffected visually.
 	terminal := picture.NewTerminalSession(picture.TerminalOptions{})
-	cfg := ntmaps.Config{Session: terminal, Oversample: 2, KittyMedium: medium, PreferKitty: true}
+	cfg := ntmaps.Config{UserAgent: demorun.UserAgent, Geocoder: demorun.Geocoder, Session: terminal, Oversample: 2, KittyMedium: medium, PreferKitty: true}
 	if runtime.GOOS != "js" {
-		// Animate arrow pans; the prefetch ring keeps the next tiles in memory.
+		// Animate arrow pans. Prefetch stays disabled for the public tile servers.
 		cfg.SmoothPan = true
 	}
 	mv := ntmaps.NewWithConfig(cfg)
@@ -279,6 +279,7 @@ func newSearchInput() textinput.Model {
 // front of OpenStreetMap when that style is selected.
 func (m *model) baseSource() tile.Source {
 	src := styles[m.style].src()
+	src.UserAgent = demorun.UserAgent
 	if m.style == 0 && m.archive != nil {
 		return tile.FirstOf(m.archive, src)
 	}

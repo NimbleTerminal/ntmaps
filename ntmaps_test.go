@@ -34,8 +34,8 @@ func TestNewInitializesDefaultState(t *testing.T) {
 	if m.lng != -77.3383438 {
 		t.Fatalf("expected default lng -77.3383438, got %f", m.lng)
 	}
-	if !tile.Fetchable(m.source) {
-		t.Fatal("expected tile provider to be initialized")
+	if tile.Fetchable(m.source) {
+		t.Fatal("default source must not fetch tiles")
 	}
 	// Until the first render completes, View shows a centered "Loading…"
 	// placeholder filling the cell rectangle so surrounding layout boxes
@@ -120,6 +120,7 @@ func TestInitBumpsSharedRenderGen(t *testing.T) {
 // render flips it back to false.
 func TestInFlightBookkeeping(t *testing.T) {
 	m := New(80, 24)
+	m.setSource(newTestTiles(t).provider())
 
 	img := newSolidImage(color.RGBA{R: 100, G: 200, B: 50, A: 255})
 	updated, _ := m.Update(mapImageMsg{gen: 0, img: img})
@@ -147,6 +148,7 @@ func TestInFlightBookkeeping(t *testing.T) {
 // can't overwrite the just-applied cached image.
 func TestCacheHitDuringStaleInFlight(t *testing.T) {
 	m := New(80, 24)
+	m.setSource(newTestTiles(t).provider())
 
 	// Dispatch a render so we have a stale gen "in flight".
 	if cmd := m.renderMapCmd(); cmd == nil {
@@ -472,6 +474,7 @@ func TestPadLinesBottom(t *testing.T) {
 // wrong-size output) would break this end-to-end.
 func TestSetOpticalZoom_KittyEndToEnd(t *testing.T) {
 	m := New(80, 24)
+	m.setSource(newTestTiles(t).provider())
 	m.pic.SetKittyCapability(picture.KittyCapabilitySupported)
 
 	// Toggle into Kitty mode. SetRenderMode bumps renderGen via its
@@ -691,6 +694,7 @@ func TestNewWithConfig_CustomCacheCap(t *testing.T) {
 // cache entry, renderMapCmd must dispatch a goroutine and bump the counter.
 func TestRenderMapCmdMissBumpsGen(t *testing.T) {
 	m := New(80, 24)
+	m.setSource(newTestTiles(t).provider())
 	startGen := *m.renderGen
 
 	if cmd := m.renderMapCmd(); cmd == nil {
@@ -781,6 +785,7 @@ func TestSetMarkersStoresAndClears(t *testing.T) {
 
 func TestSetRenderModeTogglesAndReRenders(t *testing.T) {
 	m := New(80, 24)
+	m.setSource(newTestTiles(t).provider())
 	m.pic.SetKittyCapability(picture.KittyCapabilitySupported)
 
 	if m.RenderMode() != RenderGlyph {
@@ -881,6 +886,7 @@ func newSolidImage(c color.RGBA) image.Image {
 // shouldn't keep re-issuing CSI 16 t / Kitty-support probes.
 func TestInitDispatchesPicInitOnce(t *testing.T) {
 	m := New(80, 24)
+	m.setSource(newTestTiles(t).provider())
 	if m.picInitDone == nil {
 		t.Fatal("expected picInitDone to be heap-allocated by setInitialValues")
 	}
@@ -912,6 +918,7 @@ func TestInitDispatchesPicInitOnce(t *testing.T) {
 // it), Update no-ops without dispatching the captured fetch.
 func TestDebouncedFetchSupersededByNewerGen(t *testing.T) {
 	m := New(80, 24)
+	m.setSource(newTestTiles(t).provider())
 	// Dispatch the first render; gen becomes 1.
 	if cmd := m.renderMapCmd(); cmd == nil {
 		t.Fatal("expected non-nil Cmd on cache miss")
@@ -948,6 +955,7 @@ func TestDebouncedFetchSupersededByNewerGen(t *testing.T) {
 // captured fetch as the Cmd so bubbletea will run it.
 func TestDebouncedFetchLatestGenDispatchesFetch(t *testing.T) {
 	m := New(80, 24)
+	m.setSource(newTestTiles(t).provider())
 	if cmd := m.renderMapCmd(); cmd == nil {
 		t.Fatal("expected non-nil Cmd on cache miss")
 	}
@@ -970,6 +978,7 @@ func TestDebouncedFetchLatestGenDispatchesFetch(t *testing.T) {
 // dispatch, no tick coalescing) pass a negative duration.
 func TestRenderMapCmdMissDebounceDisabled(t *testing.T) {
 	m := NewWithConfig(Config{Cols: 80, Rows: 24, RenderDebounce: -1})
+	m.setSource(newTestTiles(t).provider())
 	if m.renderDebounce >= 0 {
 		t.Fatalf("expected negative renderDebounce to pass through, got %v", m.renderDebounce)
 	}

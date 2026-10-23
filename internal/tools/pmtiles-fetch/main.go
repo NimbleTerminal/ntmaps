@@ -1,7 +1,7 @@
 // Command pmtiles-fetch downloads the tiles covering a bounding box at a
 // range of zooms from an XYZ provider and writes them as a PMTiles
 // archive, for offline use with ntmaps. Mind the provider's usage
-// policy: keep the area and zoom range small.
+// policy: use only a service that permits bulk/offline downloads.
 package main
 
 import (
@@ -25,14 +25,15 @@ func main() {
 	minZoom := flag.Int("min-zoom", 12, "lowest zoom")
 	maxZoom := flag.Int("max-zoom", 17, "highest zoom")
 	name := flag.String("name", "flatiron", "archive name in the metadata")
-	url := flag.String("url", "", "tile URL template with {z}/{x}/{y}/{s}; empty means OpenStreetMap")
+	url := flag.String("url", "", "tile URL template with {z}/{x}/{y}/{s}; required; provider must permit offline downloads")
 	ua := flag.String("user-agent", "", "User-Agent; empty means the ntmaps default")
 	flag.Parse()
 
-	p := tile.OpenStreetMap()
-	if *url != "" {
-		p = tile.Provider{Name: *name, URL: *url, Attribution: "see source terms"}
+	if *url == "" {
+		fmt.Fprintln(os.Stderr, "-url is required: choose a provider that permits offline downloads; OSMF tile servers do not")
+		os.Exit(2)
 	}
+	p := tile.Provider{Name: *name, URL: *url, Attribution: "see source terms"}
 	p.UserAgent = *ua
 
 	tiles := map[tile.ID][]byte{}
@@ -50,7 +51,7 @@ func main() {
 				}
 				tiles[id] = data
 				fmt.Fprintf(os.Stderr, "%v %d bytes\n", id, len(data))
-				time.Sleep(150 * time.Millisecond) // stay well under the usage policy
+				time.Sleep(150 * time.Millisecond) // modest pacing; the chosen provider's policy still applies
 			}
 		}
 	}

@@ -227,8 +227,8 @@ func TestAllTileFetchesFailingReportsError(t *testing.T) {
 
 func TestSetTileSourceSwitchesAndAttributes(t *testing.T) {
 	m := New(40, 3)
-	if m.TileSource().Info().Name != tile.OpenStreetMap().Name {
-		t.Fatalf("default source = %q", m.TileSource().Info().Name)
+	if m.TileSource() != nil {
+		t.Fatal("default source must be nil")
 	}
 	m.SetTileSource(tile.ArcGISWorldImagery())
 	if m.TileSource().Info().Name != tile.ArcGISWorldImagery().Name {
@@ -285,8 +285,8 @@ func TestSetLocationUsesConfiguredGeocoder(t *testing.T) {
 	if msg := cmd().(MapCoordinates); !errors.Is(msg.Err, geocode.ErrNotFound) {
 		t.Fatalf("lookup error = %v, want ErrNotFound", msg.Err)
 	}
-	if New(1, 1).geocoder == nil {
-		t.Fatal("default geocoder should be set")
+	if New(1, 1).geocoder != nil {
+		t.Fatal("default geocoder must be nil")
 	}
 	if m.SetLocation("", 5) != nil || m.Zoom() != 5 {
 		t.Fatal("an empty query only sets the zoom")

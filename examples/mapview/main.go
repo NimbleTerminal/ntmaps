@@ -28,8 +28,8 @@ type model struct {
 
 // newModel centers a marker at lat, lon, or, given a file's data, shows its
 // places and tracks.
-func newModel(medium ntmaps.KittyMedium, lat, lon float64, zoom int, data *geodata.Data) *model {
-	mv := ntmaps.NewWithConfig(ntmaps.Config{Cols: 80, Rows: 23, PreferKitty: true, KittyMedium: medium})
+func newModel(medium ntmaps.KittyMedium, lat, lon float64, zoom int, data *geodata.Data, src tile.Source) *model {
+	mv := ntmaps.NewWithConfig(ntmaps.Config{Source: src, UserAgent: demorun.UserAgent, Geocoder: demorun.Geocoder, Cols: 80, Rows: 23, PreferKitty: true, KittyMedium: medium})
 	mv.SetLatLng(lat, lon, zoom)
 	if data != nil {
 		mv.SetMarkers(data.Markers())
@@ -70,8 +70,9 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 func (m *model) View() tea.View {
 	v := m.mapView.View()
-	v.Content += "\n" + ansi.Truncate("arrows pan · +/- zoom · g glyph/Kitty · q quit", max(1, m.width), "")
+	v.Content += "\n" + ansi.Truncate("arrows/drag pan · +/-/wheel zoom · g glyph/Kitty · q quit", max(1, m.width), "")
 	v.AltScreen = true
+	v.MouseMode = tea.MouseModeCellMotion
 	return v
 }
 func main() {
@@ -96,7 +97,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, "medium must be direct or shm")
 		os.Exit(2)
 	}
-	var src tile.Source
+	var src tile.Source = demorun.OpenStreetMap()
 	if *archive != "" {
 		a, err := pmtiles.Open(*archive, pmtiles.Options{})
 		if err != nil {
@@ -122,10 +123,7 @@ func main() {
 		}
 		return
 	}
-	m := newModel(medium, *lat, *lon, *zoom, data)
-	if src != nil {
-		m.mapView.SetTileSource(src)
-	}
+	m := newModel(medium, *lat, *lon, *zoom, data, src)
 	err := demorun.Run(m, "mapview", "Simple 2D map widget", demorun.Keys{Primary: []key.Binding{demorun.Binding("up", "North"), demorun.Binding("down", "South"), demorun.Binding("left", "West"), demorun.Binding("right", "East"), demorun.Binding("+", "Zoom in"), demorun.Binding("-", "Zoom out")}, More: []key.Binding{demorun.Binding("g", "Graphics")}})
 	m.mapView.Close()
 	if err != nil {
@@ -138,7 +136,7 @@ func main() {
 // PNG: the headless path, for scripts and documentation images.
 func writeSnapshot(path string, src tile.Source, lat, lon float64, zoom, width, height int, data *geodata.Data) error {
 	o := ntmaps.RenderOptions{
-		Source: src, Lat: lat, Lng: lon, Zoom: zoom, Width: width, Height: height,
+		UserAgent: demorun.UserAgent, Source: src, Lat: lat, Lng: lon, Zoom: zoom, Width: width, Height: height,
 		Markers: []ntmaps.Marker{{Lat: lat, Lng: lon}},
 	}
 	if data != nil {

@@ -58,6 +58,7 @@ func TestOverlayBoxPadsShortLines(t *testing.T) {
 // shows the badge in the bottom-right corner, leaving the center visible.
 func TestViewPutsLoadingBadgeInCorner(t *testing.T) {
 	m := New(80, 24)
+	m.setSource(newTestTiles(t).provider())
 	img := newSolidImage(color.RGBA{R: 100, G: 200, B: 50, A: 255})
 	m, _ = m.Update(mapImageMsg{gen: 0, img: img})
 	if cmd := m.renderMapCmd(); cmd == nil {

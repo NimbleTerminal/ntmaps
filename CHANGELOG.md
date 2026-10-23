@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Breaking: maps and headless `Render` now default to no tile source, drawing
+  a placeholder without network access. Select `Config.Source`, `SetTileSource`,
+  or `RenderOptions.Source` explicitly. The archive-download tool requires `-url`.
+- Breaking: nil `Config.Geocoder` disables place lookup; `SetLocation` delivers
+  a no-geocoder-configured error. Supply a geocoder explicitly.
+- Breaking: `Config.Prefetch: 0` now disables look-ahead fetching; positive
+  values opt in only for providers that permit it. Interactive examples retain
+  explicit OSM/Nominatim configuration and an app-specific User-Agent.
+- Enable mouse reporting in mapview: drag to pan and wheel to zoom.
+
 - Move map presentation to `ntpicture.Picture`, with host-supplied terminal
   sessions and image ID allocation, `Dispose`/`Keep`/`Close` lifecycle methods,
   and asynchronous frame coalescing for glyph and Kitty rendering.

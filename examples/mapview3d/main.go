@@ -34,7 +34,7 @@ type model struct {
 func newModel(places []places.Place, medium picture.KittyMedium, renderer chart.RenderMode) *model {
 	// Keep a square map texture across terminal resizes. Camera changes only redraw 3D.
 	session := picture.NewTerminalSession(picture.TerminalOptions{})
-	source := ntmaps.NewWithConfig(ntmaps.Config{Cols: 64, Rows: 33, Session: session})
+	source := ntmaps.NewWithConfig(ntmaps.Config{Source: demorun.OpenStreetMap(), UserAgent: demorun.UserAgent, Geocoder: demorun.Geocoder, Cols: 64, Rows: 33, Session: session})
 	view := chart.New(80, 21, chart.WithRenderMode(renderer), chart.WithTerminalSession(session), chart.WithKittyMedium(medium),
 		chart.WithAxes(chart.Axes{X: chart.Axis{Hidden: true}, Y: chart.Axis{Hidden: true}, Z: chart.Axis{Hidden: true}}))
 	view.SetColorLegendVisible(false)

@@ -6,7 +6,7 @@
     <a href="https://github.com/NimbleTerminal/ntmaps/blob/main/CODE_OF_CONDUCT.md"><img src="https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg"  alt="Code Of Conduct"></a>
 </p>
 
-`ntmaps` is a [Bubble Tea](https://github.com/charmbracelet/bubbletea) widget that renders OpenStreetMap tiles in the terminal. It fetches and composes XYZ tiles itself and renders them with [`ntpicture`](https://nimbleterminal.dev/ntpicture) — half-block glyphs anywhere, full-resolution Kitty graphics on terminals that support them (Kitty, Ghostty, WezTerm).
+`ntmaps` is a [Bubble Tea](https://github.com/charmbracelet/bubbletea) widget that renders maps in the terminal. It starts offline: no tile source, no geocoder, and no look-ahead fetching. Applications explicitly choose local archives or online services. It fetches and composes XYZ tiles itself and renders them with [`ntpicture`](https://nimbleterminal.dev/ntpicture) — half-block glyphs anywhere, full-resolution Kitty graphics on terminals that support them (Kitty, Ghostty, WezTerm).
 
 [Open the map explorer](https://nimbleterminal.github.io/ntmaps/?demo=explorer) ·
 [Minimal 2D example](examples/mapview/main.go) ·
@@ -35,10 +35,10 @@ func (m model) Init() tea.Cmd { return m.mv.Init() }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
     if k, ok := msg.(tea.KeyMsg); ok && (k.String() == "q" || k.String() == "ctrl+c") {
-        return m, tea.Quit
+        return m, tea.Sequence(m.mv.Dispose(), tea.Quit)
     }
     if sz, ok := msg.(tea.WindowSizeMsg); ok {
-        m.mv.SetSize(sz.Width, sz.Height)
+        return m, m.mv.SetSize(sz.Width, sz.Height)
     }
     var cmd tea.Cmd
     m.mv, cmd = m.mv.Update(msg)
@@ -48,7 +48,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m model) View() tea.View { return m.mv.View() }
 
 func main() {
-    mv := ntmaps.New(0, 0)
+    mv := ntmaps.New(0, 0) // Offline background; add markers/paths or choose a source.
+    defer mv.Close()
     mv.SetLatLng(40.6892, -74.0445, 13) // Statue of Liberty
     if _, err := tea.NewProgram(model{mv: mv}).Run(); err != nil {
         fmt.Println(err); os.Exit(1)
@@ -73,10 +74,9 @@ explorer animates them with a critically damped
 (`ntmaps.Config{SmoothPan: true}`), targeting 60 updates per second; actual
 display rate depends on the terminal and transport. Repeated arrows preserve
 velocity and move the target; zooming or selecting a location cancels the
-previous trajectory. Frames compose from the tile cache, and once a render
-completes the ring of tiles beyond each edge is fetched in the background
-(`Config.Prefetch`, one tile width by default, up to four, negative to
-disable), so the next pan usually paints from memory. Kitty presentations run
+previous trajectory. Frames compose from the tile cache. `Config.Prefetch`
+defaults to zero (disabled); positive values opt into up to four tile widths
+of look-ahead for providers that permit it. Leave it disabled for OSMF servers. Kitty presentations run
 one at a time: input that arrives mid-frame is queued and the latest image is
 shown when the frame has been sent.
 
@@ -125,7 +125,7 @@ GeoJSON points become markers, lines become paths, and polygon rings become thin
 
 ## Tile styles
 
-`ntmaps.SetTileSource(...)` switches the map to any `tile.Source`. The `nimbleterminal.dev/ntmaps/tile` package ships keyless built-ins: `tile.OpenStreetMap()`, `tile.Wikimedia()`, `tile.OpenTopoMap()`, `tile.CartoLight()`, `tile.CartoDark()`, and `tile.ArcGISWorldImagery()`. Each comes with the upstream provider's terms-of-use and attribution requirements — read them before shipping a public app. The attribution strip drawn along the bottom of the map and the text row under it both follow the current source.
+`Config.Source` selects the initial base map; `SetTileSource(...)` changes it later. Both a nil source and a provider with an empty URL draw the placeholder without fetching. `RenderOptions.Source` has the same offline default. The `nimbleterminal.dev/ntmaps/tile` package ships keyless built-ins: `tile.OpenStreetMap()`, `tile.Wikimedia()`, `tile.OpenTopoMap()`, `tile.CartoLight()`, `tile.CartoDark()`, and `tile.ArcGISWorldImagery()`. Each comes with the upstream provider's terms-of-use and attribution requirements — read them before shipping a public app. The attribution strip drawn along the bottom of the map and the text row under it both follow the current source.
 
 Any XYZ tile server is a `tile.Provider`, including keyed services:
 
@@ -148,13 +148,34 @@ src, err := pmtiles.Open("city.pmtiles", pmtiles.Options{})   // nimbleterminal.
 mv.SetTileSource(src)
 ```
 
-Raster archives with uncompressed or gzip directories and PNG or JPEG tiles are supported; the attribution comes from the archive metadata. Try it with `./bin/ntmaps-mapview -pmtiles city.pmtiles`. `tile.FirstOf(archive, tile.OpenStreetMap())` puts an archive in front of an online provider, which is how the explorer serves its bundled Flatiron tiles offline. `pmtiles.Write` and the `internal/tools/pmtiles-fetch` tool build an archive for a small area from any XYZ provider; mind the provider's usage policy.
+Raster archives with uncompressed or gzip directories and PNG or JPEG tiles are supported; the attribution comes from the archive metadata. Try it with `./bin/ntmaps-mapview -pmtiles city.pmtiles`. `tile.FirstOf(archive, tile.OpenStreetMap())` puts an archive in front of an online provider, which is how the explorer serves its bundled Flatiron tiles offline. `pmtiles.Write` and the `internal/tools/pmtiles-fetch` tool build an archive for a small area from any XYZ provider; the download tool requires `-url` for a provider that permits offline downloads. OSMF tile servers prohibit archive building and prefetching.
 
 `SetOverlays(...)` draws transparent layers over the base, bottom to top: `tile.OpenSeaMap()` for seamarks, `tile.OpenRailwayMap()` for railways, or any source serving transparent tiles. An overlay is skipped beyond its `MaxZoom`, its credit joins the attribution, and tiles of another size are scaled into the base grid. Base and overlay tiles are fetched together, so progressive painting and the prefetch ring cover both. `RenderOptions.Overlays` does the same for static images. Press `o` in the explorer to toggle seamarks.
 
-Tile and geocoding requests identify the application with a `User-Agent` of `ntmaps/<version> (+https://github.com/NimbleTerminal/ntmaps)`. Usage policies, [OpenStreetMap's](https://operations.osmfoundation.org/policies/tiles/) included, ask that a public app name itself, so set `Config.UserAgent` before shipping one. Browsers send their own, and the header is not set under WASM.
+The library retains `ntmaps/<version> (+https://github.com/NimbleTerminal/ntmaps)`
+as a fallback User-Agent for your own servers. OSMF servers block library-default
+agents: apps using them must set `Config.UserAgent` / `RenderOptions.UserAgent`
+to their own name and contact URL. Set the geocoder's User-Agent separately.
+Browsers supply their own User-Agent; preserve their HTTP Referer. Read the
+[OSMF tile policy](https://operations.osmfoundation.org/policies/tiles/): prefetch
+features, bulk/offline downloads, and headless bots panning/zooming are prohibited.
 
-`SetLocation` resolves a place name through `Config.Geocoder` and returns the Cmd that delivers the `MapCoordinates`; the default is `geocode.Nominatim` against the public OpenStreetMap instance, paced to one request per second as [its policy](https://operations.osmfoundation.org/policies/nominatim/) requires. Point it at your own Nominatim with `&geocode.Nominatim{Endpoint: ...}`, or implement `geocode.Geocoder` for another service.
+`SetLocation` uses `Config.Geocoder`. Nil means no geocoder: its command returns
+`MapCoordinates{Err: ...}` saying no geocoder is configured. An explicitly supplied
+`&geocode.Nominatim{Endpoint: ..., UserAgent: ...}` can use your own server, or
+implement `geocode.Geocoder` for another service. Choosing public Nominatim is an
+application decision subject to its
+[usage policy](https://operations.osmfoundation.org/policies/nominatim/): at most
+one request per second **across all users of an application**, user-triggered
+searches only (no autocomplete or systematic queries), and a service that can be
+switched without a software update. Nominatim's built-in pacing is per instance;
+it cannot enforce the aggregate limit across separate processes or users.
+
+The interactive native examples and browser demos explicitly select OSM and a
+shared Nominatim geocoder, use an `ntmaps-examples` identity on native requests,
+and leave prefetch disabled. Native tiles use memory and persistent disk caches;
+browser tiles use memory and the browser HTTP cache. Explorer also ships bundled
+Flatiron tiles and caches its 3D neighborhoods. Geocoding results are not cached.
 
 ## Render modes
 
@@ -234,7 +255,7 @@ image while allowing the current frame to finish.
 
 | Program | Purpose |
 | --- | --- |
-| `mapview` | Minimal 2D map widget host: pan, zoom, marker, glyph/Kitty toggle; `-pmtiles` serves a local archive, `-geodata` shows a GeoJSON or GPX file, and `-snapshot out.png` renders headlessly |
+| `mapview` | Minimal 2D map widget host: arrows/drag to pan, +/-/wheel to zoom, marker, glyph/Kitty toggle; `-pmtiles` serves a local archive, `-geodata` shows a GeoJSON or GPX file, and `-snapshot out.png` renders headlessly |
 | `explorer` | Places browser: five base styles (`s`), seamarks overlay (`o`), routes with `F` to frame them, `G` to geocode a name, mouse drag and wheel, bundled offline Flatiron tiles, and switchable 2D / 3D buildings |
 | `cityview3d` | Standalone development viewer for the internal city helpers |
 | `mapview3d` | Flat textured-map rendering and performance fixture |
@@ -360,7 +381,7 @@ attribution are recorded in [examples/cityview3d/DATA.md](examples/cityview3d/DA
 - **Server-side supersample (`Config.Oversample`).** Raises the source-image pixel density without changing visible geographic coverage — `Oversample: N` (powers of 2) renders the same area at `N×` per-cell resolution and `+log2(N)` OSM tile zoom, so Kitty terminals can downscale a sharper source. `1` (default) keeps current behavior; `2` is a noticeable boost; `4` is hi-DPI quality at ~16× the tile fetches. Capped so the effective tile zoom never exceeds the provider's `MaxZoom`. Glyph mode pays the cost without visible benefit.
 - **Client-side optical zoom (`Config.OpticalZoom` / `mv.SetOpticalZoom(n)`).** Magnifies the *cached* source image by cropping the center `1/2^n` of each axis and letting the renderer scale it back up to the cell rectangle. No network, no tile-render goroutine — switching is instant. Pixelated at high N (it's digital zoom in spirit even though we call it optical), but useful for going past the OSM tile-zoom ceiling or just inspecting fine detail without re-fetching. Composes with `Oversample`: e.g. `Oversample: 2` + `OpticalZoom: 1` is a 2× zoomed view rendered from a 2× supersampled source.
 - **Aspect-ratio guardrail (`Config.MaxAspectRatio` / `Config.LetterboxColor`).** Maps display correctly at any cell-rect AR — every pixel sits at its true geographic location — but at extreme ARs (a 100×5 status bar, say) viewers find the result disorienting because their mental model of "a map" is roughly square. `MaxAspectRatio: 3.0` lets the cell rect's AR range up to 3:1 in either direction; beyond that, the map portion is rendered at the boundary AR centered in the cell rect, with the rest filled by `LetterboxColor` (default opaque black; `color.Transparent` shows the terminal background through the bars). The letterbox is composed into the source image *before* picture renders, so Glyph and Kitty show identical letterbox geometry — toggling render modes doesn't change layout. Default `0` keeps the current "fill the cell rect at any AR" behavior; opt in when your layout might land in extreme territory.
-- **Geocoding uses Nominatim** with no caching. Respect their [usage policy](https://operations.osmfoundation.org/policies/nominatim/) for production traffic.
+- **Geocoding is opt-in.** Supply `Config.Geocoder`; no service is contacted by default.
 
 ## License
 

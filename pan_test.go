@@ -23,7 +23,7 @@ func animatedTestModel() Model {
 
 func TestPrefetchRingMakesNeighborPanSynchronous(t *testing.T) {
 	s := newTestTiles(t)
-	m := NewWithConfig(Config{Cols: 20, Rows: 5, RenderDebounce: -1, DisableDiskCache: true})
+	m := NewWithConfig(Config{Cols: 20, Rows: 5, RenderDebounce: -1, DisableDiskCache: true, Prefetch: 1})
 	m.SetLatLng(40.7415, -73.989, 12)
 	m.SetTileSource(s.provider())
 	msgs := runRender(t, m.renderMapCmd())
@@ -69,7 +69,7 @@ func TestPrefetchIsCanceledByNewRender(t *testing.T) {
 	s := newTestTiles(t)
 	s.hold = make(chan struct{})
 	defer close(s.hold)
-	m := NewWithConfig(Config{Cols: 20, Rows: 5, RenderDebounce: -1, DisableDiskCache: true})
+	m := NewWithConfig(Config{Cols: 20, Rows: 5, RenderDebounce: -1, DisableDiskCache: true, Prefetch: 1})
 	m.SetLatLng(40.7415, -73.989, 12)
 	m.SetTileSource(s.provider())
 	geom := viewGeometry{source: m.source, zoom: m.zoom, w: 160, h: 64}
@@ -95,8 +95,8 @@ func TestNoPrefetchWhenDisabledOrEmptyProvider(t *testing.T) {
 	if m.prefetch != 0 {
 		t.Fatalf("prefetch rings = %d, want 0", m.prefetch)
 	}
-	if NewWithConfig(Config{Prefetch: 9}).prefetch != 4 || New(1, 1).prefetch != 1 {
-		t.Fatal("prefetch should clamp to 1..4")
+	if NewWithConfig(Config{Prefetch: 9}).prefetch != 4 || New(1, 1).prefetch != 0 {
+		t.Fatal("prefetch should default to zero and clamp to 0..4")
 	}
 	m.SetTileSource(tile.Provider{})
 	geom := viewGeometry{source: m.source, w: 160, h: 64}
