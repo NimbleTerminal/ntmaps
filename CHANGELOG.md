@@ -1,5 +1,15 @@
 # `ntmaps` CHANGELOG
 
+## Unreleased
+
+- `tile/pmtiles` bounds what an archive can make it read: a directory or the
+  metadata at most `Options.MaxDirectoryBytes` (16 MiB), a tile at most
+  `Options.MaxTileBytes` (8 MiB), stored or decompressed (`ErrTooLarge`);
+  offsets past the addressable range are refused, a directory's entry count
+  must fit its bytes, and at most 64 leaf directories stay cached.
+- `tile.Decode` refuses a tile over `tile.MaxTileEdge` (4096) pixels a side
+  before decoding it.
+
 ## v0.5.0 (2026-10-23)
 
 - Breaking: maps and headless `Render` now default to no tile source, drawing

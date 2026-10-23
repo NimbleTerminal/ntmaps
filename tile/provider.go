@@ -122,8 +122,21 @@ func Fetchable(s Source) bool {
 	return true
 }
 
-// Decode decodes a PNG or JPEG tile.
+// MaxTileEdge is the widest or tallest tile Decode accepts. Tiles are 256
+// or 512 pixels, or twice that for high-density screens; the bound stops a
+// small file from declaring a picture that would take gigabytes.
+const MaxTileEdge = 4096
+
+// Decode decodes a PNG or JPEG tile, refusing one over MaxTileEdge on a
+// side before decoding its pixels.
 func Decode(data []byte) (image.Image, error) {
+	c, _, err := image.DecodeConfig(bytes.NewReader(data))
+	if err != nil {
+		return nil, err
+	}
+	if c.Width > MaxTileEdge || c.Height > MaxTileEdge {
+		return nil, fmt.Errorf("tile: %d×%d pixels is over the %d-pixel limit", c.Width, c.Height, MaxTileEdge)
+	}
 	img, _, err := image.Decode(bytes.NewReader(data))
 	return img, err
 }

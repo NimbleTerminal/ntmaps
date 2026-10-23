@@ -416,3 +416,52 @@ func TestWriteProducesAReadableArchive(t *testing.T) {
 		t.Fatal("out-of-range tile accepted")
 	}
 }
+
+// An archive's header and directories say how much to read; an archive
+// that claims too much is refused before anything that size is allocated.
+func TestArchiveRefusesWhatItCannotBound(t *testing.T) {
+	data := buildArchive(t, flatironTiles(), fixture{})
+	huge := append([]byte(nil), data...)
+	binary.LittleEndian.PutUint64(huge[16:], 1<<40) // root length
+	if _, err := New(bytes.NewReader(huge), Options{}); !errors.Is(err, ErrTooLarge) {
+		t.Fatalf("a terabyte root directory: %v", err)
+	}
+	wrapped := append([]byte(nil), data...)
+	binary.LittleEndian.PutUint64(wrapped[8:], math.MaxUint64-4) // root offset
+	if _, err := New(bytes.NewReader(wrapped), Options{}); err == nil {
+		t.Fatal("a root offset past the end accepted")
+	}
+	meta := append([]byte(nil), data...)
+	binary.LittleEndian.PutUint64(meta[32:], 1<<40) // metadata length
+	if a, err := New(bytes.NewReader(meta), Options{}); err != nil || a.Info().Attribution != "" {
+		t.Fatalf("oversized metadata should leave no attribution: %v", err)
+	} else if _, err := a.Metadata(); !errors.Is(err, ErrTooLarge) {
+		t.Fatalf("oversized metadata: %v", err)
+	}
+
+	// A tile over MaxTileBytes, stored or decompressed.
+	x, y, _ := tile.Project(flatironLat, flatironLng, 12, 256)
+	id := tile.ID{Z: 12, X: int(x / 256), Y: int(y / 256)}
+	a, err := New(bytes.NewReader(data), Options{MaxTileBytes: 64})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := a.Tile(context.Background(), id); !errors.Is(err, ErrTooLarge) {
+		t.Fatalf("a stored tile over the limit: %v", err)
+	}
+	bomb := map[tile.ID][]byte{id: make([]byte, 1<<20)}
+	a, err = New(bytes.NewReader(buildArchive(t, bomb, fixture{tileCompress: CompressionGzip})), Options{MaxTileBytes: 1 << 16})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := a.TileData(context.Background(), id); !errors.Is(err, ErrTooLarge) {
+		t.Fatalf("a tile decompressing past the limit: %v", err)
+	}
+}
+
+func TestDecodeDirectoryRefusesImpossibleCounts(t *testing.T) {
+	// Eight bytes cannot hold three entries of four varints each.
+	if _, err := DecodeDirectory([]byte{3, 1, 1, 1, 1, 1, 1, 1}); err == nil {
+		t.Fatal("three entries in eight bytes accepted")
+	}
+}

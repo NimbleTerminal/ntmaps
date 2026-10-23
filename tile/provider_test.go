@@ -1,6 +1,9 @@
 package tile
 
 import (
+	"bytes"
+	"image"
+	"image/png"
 	"testing"
 )
 
@@ -59,5 +62,22 @@ func TestBuiltinsAreValidAndHTTPS(t *testing.T) {
 	}
 	if _, _, _, a := CartoDark().Info().Fill().RGBA(); a != 0xffff {
 		t.Fatal("placeholder must be opaque")
+	}
+}
+
+func TestDecodeRefusesOversizedTiles(t *testing.T) {
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, image.NewGray(image.Rect(0, 0, MaxTileEdge+1, 1))); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Decode(buf.Bytes()); err == nil {
+		t.Fatal("a tile wider than MaxTileEdge decoded")
+	}
+	buf.Reset()
+	if err := png.Encode(&buf, image.NewGray(image.Rect(0, 0, 256, 256))); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Decode(buf.Bytes()); err != nil {
+		t.Fatal(err)
 	}
 }

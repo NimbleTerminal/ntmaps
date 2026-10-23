@@ -20,6 +20,7 @@ import (
 	"image"
 	"image/color"
 	"io"
+	"math"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -151,7 +152,31 @@ type Options struct {
 
 	// Placeholder fills missing tiles; see tile.Info.
 	Placeholder color.Color
+
+	// MaxDirectoryBytes bounds a directory or the metadata, stored and
+	// decompressed, so an archive cannot claim more memory than this for
+	// one read. Zero means DefaultMaxDirectoryBytes.
+	MaxDirectoryBytes int
+
+	// MaxTileBytes bounds one tile, stored and decompressed. Zero means
+	// DefaultMaxTileBytes.
+	MaxTileBytes int
 }
+
+// The default bounds on an archive's reads: an archive is often a file
+// someone else made, and its header and directories say how much to read.
+const (
+	DefaultMaxDirectoryBytes = 16 << 20
+	DefaultMaxTileBytes      = 8 << 20
+)
+
+// maxLeaves is how many decoded leaf directories an Archive keeps; past it
+// the cache starts over.
+const maxLeaves = 64
+
+// ErrTooLarge is a directory, the metadata or a tile larger than its bound
+// in Options.
+var ErrTooLarge = errors.New("pmtiles: larger than the archive's read limit")
 
 // Archive reads tiles from a PMTiles file. It is safe for concurrent use.
 type Archive struct {
@@ -160,6 +185,8 @@ type Archive struct {
 	header Header
 	info   tile.Info
 	root   []Entry
+
+	maxDirectory, maxTile int
 
 	mu     sync.Mutex
 	leaves map[uint64][]Entry // decoded leaf directories by offset
@@ -184,7 +211,14 @@ func New(r io.ReaderAt, o Options) (*Archive, error) {
 	if !supportedCompression(h.InternalCompression) || !supportedCompression(h.TileCompression) {
 		return nil, fmt.Errorf("%w: compression %d/%d", ErrUnsupported, h.InternalCompression, h.TileCompression)
 	}
-	a := &Archive{r: r, header: h, leaves: make(map[uint64][]Entry)}
+	a := &Archive{r: r, header: h, leaves: make(map[uint64][]Entry),
+		maxDirectory: o.MaxDirectoryBytes, maxTile: o.MaxTileBytes}
+	if a.maxDirectory <= 0 {
+		a.maxDirectory = DefaultMaxDirectoryBytes
+	}
+	if a.maxTile <= 0 {
+		a.maxTile = DefaultMaxTileBytes
+	}
 	root, err := a.readDirectory(h.RootOffset, h.RootLength)
 	if err != nil {
 		return nil, fmt.Errorf("pmtiles: root directory: %w", err)
@@ -295,11 +329,11 @@ func (a *Archive) TileData(ctx context.Context, id tile.ID) ([]byte, error) {
 			return nil, tile.ErrNotFound
 		}
 		if e.RunLength > 0 {
-			data := make([]byte, e.Length)
-			if _, err := a.r.ReadAt(data, int64(a.header.TileDataOffset+e.Offset)); err != nil {
+			data, err := a.read(a.header.TileDataOffset, e.Offset, uint64(e.Length), a.maxTile)
+			if err != nil {
 				return nil, fmt.Errorf("pmtiles: read tile: %w", err)
 			}
-			return decompress(data, a.header.TileCompression)
+			return decompress(data, a.header.TileCompression, a.maxTile)
 		}
 		leaf, err := a.leaf(e)
 		if err != nil {
@@ -332,22 +366,45 @@ func (a *Archive) leaf(e Entry) ([]Entry, error) {
 	if ok {
 		return entries, nil
 	}
+	if off < a.header.LeafOffset {
+		return nil, fmt.Errorf("pmtiles: leaf offset %d is out of range", e.Offset)
+	}
 	entries, err := a.readDirectory(off, uint64(e.Length))
 	if err != nil {
 		return nil, fmt.Errorf("pmtiles: leaf directory: %w", err)
 	}
 	a.mu.Lock()
+	if len(a.leaves) >= maxLeaves {
+		clear(a.leaves)
+	}
 	a.leaves[off] = entries
 	a.mu.Unlock()
 	return entries, nil
 }
 
-func (a *Archive) readDirectory(off, length uint64) ([]Entry, error) {
-	raw := make([]byte, length)
-	if _, err := a.r.ReadAt(raw, int64(off)); err != nil {
+// read reads length bytes at base+off, refusing a length over limit or a
+// position past what an offset can address, before allocating anything.
+func (a *Archive) read(base, off, length uint64, limit int) ([]byte, error) {
+	if length > uint64(limit) {
+		return nil, fmt.Errorf("%w: %d bytes, limit %d", ErrTooLarge, length, limit)
+	}
+	at := base + off
+	if at < base || at > math.MaxInt64-length {
+		return nil, fmt.Errorf("pmtiles: offset %d+%d is out of range", base, off)
+	}
+	data := make([]byte, length)
+	if _, err := a.r.ReadAt(data, int64(at)); err != nil {
 		return nil, err
 	}
-	data, err := decompress(raw, a.header.InternalCompression)
+	return data, nil
+}
+
+func (a *Archive) readDirectory(off, length uint64) ([]Entry, error) {
+	raw, err := a.read(0, off, length, a.maxDirectory)
+	if err != nil {
+		return nil, err
+	}
+	data, err := decompress(raw, a.header.InternalCompression, a.maxDirectory)
 	if err != nil {
 		return nil, err
 	}
@@ -361,7 +418,7 @@ func DecodeDirectory(data []byte) ([]Entry, error) {
 	if err != nil {
 		return nil, fmt.Errorf("pmtiles: directory count: %w", err)
 	}
-	if n > uint64(len(data)) {
+	if n > uint64(len(data))/4 { // Each entry takes at least four bytes.
 		return nil, fmt.Errorf("pmtiles: directory claims %d entries in %d bytes", n, len(data))
 	}
 	entries := make([]Entry, n)
@@ -402,7 +459,8 @@ func DecodeDirectory(data []byte) ([]Entry, error) {
 	return entries, nil
 }
 
-func decompress(data []byte, compression uint8) ([]byte, error) {
+// decompress undoes compression, refusing output over limit bytes.
+func decompress(data []byte, compression uint8, limit int) ([]byte, error) {
 	switch compression {
 	case CompressionNone, CompressionUnknown:
 		return data, nil
@@ -412,7 +470,14 @@ func decompress(data []byte, compression uint8) ([]byte, error) {
 			return nil, fmt.Errorf("pmtiles: gzip: %w", err)
 		}
 		defer zr.Close()
-		return io.ReadAll(zr)
+		out, err := io.ReadAll(io.LimitReader(zr, int64(limit)+1))
+		if err != nil {
+			return nil, fmt.Errorf("pmtiles: gzip: %w", err)
+		}
+		if len(out) > limit {
+			return nil, fmt.Errorf("%w: decompresses past %d bytes", ErrTooLarge, limit)
+		}
+		return out, nil
 	default:
 		return nil, fmt.Errorf("%w: compression %d", ErrUnsupported, compression)
 	}
@@ -423,11 +488,11 @@ func (a *Archive) Metadata() ([]byte, error) {
 	if a.header.MetadataLength == 0 {
 		return []byte("{}"), nil
 	}
-	raw := make([]byte, a.header.MetadataLength)
-	if _, err := a.r.ReadAt(raw, int64(a.header.MetadataOffset)); err != nil {
+	raw, err := a.read(0, a.header.MetadataOffset, a.header.MetadataLength, a.maxDirectory)
+	if err != nil {
 		return nil, fmt.Errorf("pmtiles: read metadata: %w", err)
 	}
-	return decompress(raw, a.header.InternalCompression)
+	return decompress(raw, a.header.InternalCompression, a.maxDirectory)
 }
 
 func (a *Archive) metadataAttribution() string {
