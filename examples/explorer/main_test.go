@@ -14,6 +14,7 @@ import (
 	"charm.land/lipgloss/v2"
 	chart "github.com/NimbleMarkets/ntcharts3d"
 	"nimbleterminal.dev/ntmaps/internal/city"
+	picture "nimbleterminal.dev/ntpicture"
 )
 
 func fixture(t *testing.T) *model {
@@ -171,12 +172,35 @@ func TestReplacementCancelsAndShutdownRejectsLateLoad(t *testing.T) {
 	}
 }
 func TestSharedTerminalSessionNotClosedByCity(t *testing.T) {
-	m := fixture(t)
-	before := m.terminal.Snapshot()
-	enterCity(t, m)
-	m.cityPane.Close()
-	after := m.terminal.Snapshot()
-	if before.Kitty != after.Kitty {
-		t.Fatal("closing city altered shared terminal capability")
+	for _, term := range []string{"dumb", "xterm-kitty"} {
+		t.Run(term, func(t *testing.T) {
+			for _, key := range []string{"TERM_PROGRAM", "KITTY_WINDOW_ID", "KITTY_INSTALLATION_DIR", "GHOSTTY_RESOURCES_DIR", "WEZTERM_EXECUTABLE", "WEZTERM_PANE", "TMUX"} {
+				t.Setenv(key, "")
+			}
+			t.Setenv("TERM", term)
+			m := fixture(t)
+			enterCity(t, m)
+			// Opening the city initializes discovery and may legitimately change
+			// capability on a headless runner. Only Close must preserve this state.
+			before := m.terminal.Snapshot()
+			m.cityPane.Close()
+			if after := m.terminal.Snapshot(); before != after {
+				t.Fatalf("closing city altered shared terminal state: before=%+v after=%+v", before, after)
+			}
+			// Close leaves the snapshot intact even when it closes a session, so
+			// also prove that the host can still update it and receive notifications.
+			capability := picture.KittyCapabilitySupported
+			if before.Kitty == capability {
+				capability = picture.KittyCapabilityUnsupported
+			}
+			cmd := m.terminal.SetKittyCapability(capability)
+			if cmd == nil {
+				t.Fatal("shared terminal session stopped accepting updates")
+			}
+			msg, ok := cmd().(picture.TerminalSessionMsg)
+			if !ok || msg.Session != m.terminal || msg.State.Kitty != capability {
+				t.Fatalf("shared terminal session did not notify host: %#v", msg)
+			}
+		})
 	}
 }
