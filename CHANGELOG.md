@@ -11,6 +11,9 @@
   before decoding it.
 - `pmtiles.Write` derives an east bound of 180° for tiles on the world's
   east edge, not -180°.
+- An archive's attribution is kept to one line of printable text, at most
+  500 characters: it is shown as a terminal row, and a control character
+  from someone else's archive could otherwise reach the screen.
 
 ## v0.5.0 (2026-10-23)
 

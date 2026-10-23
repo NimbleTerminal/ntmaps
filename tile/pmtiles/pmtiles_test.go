@@ -485,3 +485,18 @@ func TestWriteBoundsReachTheAntimeridian(t *testing.T) {
 		t.Fatalf("a whole world's bounds run %v to %v", west, east)
 	}
 }
+
+func TestArchiveAttributionIsPlainText(t *testing.T) {
+	var buf bytes.Buffer
+	tiles := map[tile.ID][]byte{{Z: 0}: pngTile(color.RGBA{A: 255})}
+	if err := Write(&buf, tiles, WriteOptions{Attribution: "Maps\x1b]52;c;aGk=\x07 by\n\tus"}); err != nil {
+		t.Fatal(err)
+	}
+	a, err := New(bytes.NewReader(buf.Bytes()), Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := a.Info().Attribution; got != "Maps]52;c;aGk= by us" {
+		t.Fatalf("attribution %q", got)
+	}
+}

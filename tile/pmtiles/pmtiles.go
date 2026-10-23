@@ -27,6 +27,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"unicode"
 
 	"nimbleterminal.dev/ntmaps/internal/httpua"
 	"nimbleterminal.dev/ntmaps/tile"
@@ -506,7 +507,30 @@ func (a *Archive) metadataAttribution() string {
 	if json.Unmarshal(data, &meta) != nil {
 		return ""
 	}
-	return meta.Attribution
+	return plainAttribution(meta.Attribution)
+}
+
+// maxAttribution is the most runes of an archive's attribution kept.
+const maxAttribution = 500
+
+// plainAttribution makes an archive's attribution one line of printable
+// text: it is drawn on the map and shown as a terminal row, and an archive
+// someone else made could otherwise put escape sequences on the screen.
+func plainAttribution(s string) string {
+	s = strings.Map(func(r rune) rune {
+		if unicode.IsSpace(r) {
+			return ' '
+		}
+		if !unicode.IsPrint(r) {
+			return -1
+		}
+		return r
+	}, s)
+	s = strings.Join(strings.Fields(s), " ")
+	if r := []rune(s); len(r) > maxAttribution {
+		s = string(r[:maxAttribution]) + "…"
+	}
+	return s
 }
 
 // httpReaderAt serves ReadAt through HTTP range requests.
