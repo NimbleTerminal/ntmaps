@@ -28,8 +28,11 @@ type panState struct {
 	motion panMotion
 
 	// pending retains only the newest immutable render while Picture is busy.
-	pending image.Image
-	closed  bool
+	pending     image.Image
+	pendingCrop image.Rectangle
+	submitted   image.Image
+	canvas      *panCanvas
+	closed      bool
 }
 
 func (m *Model) currentRenderKey() renderKey {
@@ -44,20 +47,29 @@ func (m *Model) currentRenderKey() renderKey {
 // presentImage lets an asynchronous presentation finish before submitting the
 // newest pending image. This prevents rapid input from starving either renderer.
 func (m *Model) presentImage(img image.Image) tea.Cmd {
+	return m.presentCrop(img, image.Rectangle{})
+}
+
+func (m *Model) presentCrop(img image.Image, crop image.Rectangle) tea.Cmd {
 	if m.panState.closed {
 		return nil
 	}
 	if img != nil && m.pic.Status().Busy {
 		m.panState.pending = img
+		m.panState.pendingCrop = crop
 		return nil
 	}
 	m.panState.pending = nil
-	return m.pic.SetImageImmutable(img)
+	if img != nil && !crop.Empty() && img == m.panState.submitted && m.pic.Status().Err == nil {
+		return m.pic.SetCrop(crop)
+	}
+	m.panState.submitted = img
+	return m.pic.SetImageImmutableCropped(img, crop)
 }
 
 func (m *Model) presentPending() tea.Cmd {
 	if m.panState.pending == nil || m.pic.Status().Busy {
 		return nil
 	}
-	return m.presentImage(m.panState.pending)
+	return m.presentCrop(m.panState.pending, m.panState.pendingCrop)
 }

@@ -563,6 +563,10 @@ func (m *Model) SetOpticalZoom(n int) tea.Cmd {
 		return nil
 	}
 	m.opticalZoom = n
+	if m.panState != nil && m.panState.canvas != nil && m.pic.Mode() == RenderKitty {
+		c := m.panState.canvas
+		return m.presentCrop(c.image, opticalCropRect(c.viewport, opticalCropFactor(n)))
+	}
 	source := m.Image()
 	if source == nil {
 		return m.renderMapCmd()
@@ -952,6 +956,8 @@ func (m *Model) stopWork() {
 	m.job.cancel()
 	if m.panState != nil {
 		m.panState.pending = nil
+		m.panState.canvas = nil
+		m.panState.submitted = nil
 		m.panState.closed = true
 	}
 	if m.renderGen != nil {
@@ -1254,6 +1260,8 @@ func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 			m.errMsg = msg.err.Error()
 			m.sourceImage = nil
 			m.panState.pending = nil
+			m.panState.canvas = nil
+			m.panState.submitted = nil
 			return m, m.pic.SetImage(nil)
 		}
 		m.errMsg = ""
@@ -1281,6 +1289,8 @@ func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 		if msg.Err != nil {
 			m.errMsg = msg.Err.Error()
 			m.panState.pending = nil
+			m.panState.canvas = nil
+			m.panState.submitted = nil
 			return m, m.pic.SetImage(nil)
 		}
 		m.errMsg = ""
@@ -1342,22 +1352,6 @@ func (m *Model) renderMapCmd() tea.Cmd {
 	// Whatever happens next supersedes a render still fetching tiles.
 	m.job.cancel()
 
-	if m.cache != nil {
-		if cached, ok := m.cache.get(key); ok {
-			// Synchronous hit: SetImage now, no goroutine. Bump gen so
-			// any older in-flight render's mapImageMsg is rejected as
-			// stale when it lands; sync lastAccepted so inFlight stays
-			// false and View doesn't flash a Loading badge over the
-			// just-applied cached image. Cache holds the un-cropped
-			// source so optical zoom can still be re-applied without
-			// a re-fetch.
-			*m.renderGen++
-			*m.lastAccepted = *m.renderGen
-			m.sourceImage = cached
-			return m.presentImage(opticalCrop(cached, opticalCropFactor(m.opticalZoom)))
-		}
-	}
-
 	*m.renderGen++
 	gen := *m.renderGen
 
@@ -1377,6 +1371,24 @@ func (m *Model) renderMapCmd() tea.Cmd {
 		source: m.source, overlays: append([]tile.Source(nil), m.overlays...), zoom: tileZoom, w: mapW, h: mapH, cx: cx, cy: cy,
 		markers: markers, paths: paths, cellRectW: cellRectW, cellRectH: cellRectH, letterbox: m.letterboxColor,
 	}
+	if cmd, ok := m.cachedPan(geom, key); ok {
+		return cmd
+	}
+	if m.cache != nil {
+		if cached, ok := m.cache.get(key); ok {
+			// Synchronous hit: SetImage now, no goroutine. The generation
+			// bump above ensures an older render's mapImageMsg is rejected as
+			// stale when it lands; sync lastAccepted so inFlight stays
+			// false and View doesn't flash a Loading badge over the
+			// just-applied cached image. Cache holds the un-cropped
+			// source so optical zoom can still be re-applied without
+			// a re-fetch.
+			*m.lastAccepted = *m.renderGen
+			m.sourceImage = cached
+			return m.presentImage(opticalCrop(cached, opticalCropFactor(m.opticalZoom)))
+		}
+	}
+
 	job := newRenderJob(gen, key, m.loader, geom)
 
 	// Every tile already in memory, or nothing to fetch: compose on this

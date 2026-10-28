@@ -10,7 +10,7 @@ require (
 	github.com/charmbracelet/ultraviolet v0.0.0-20261008173134-6b8d4baf91b4
 	github.com/charmbracelet/x/ansi v0.11.9
 	golang.org/x/image v0.47.0
-	nimbleterminal.dev/ntpicture v0.1.1
+	nimbleterminal.dev/ntpicture v0.1.2-0.20261028113138-35e6d0497298
 )
 
 require (
@@ -28,3 +28,6 @@ require (
 	golang.org/x/sync v0.24.0 // indirect
 	golang.org/x/sys v0.49.0 // indirect
 )
+
+// Use the local frame-capability fallback fix until it is pushed and pinned.
+replace nimbleterminal.dev/ntpicture => ../ntpicture

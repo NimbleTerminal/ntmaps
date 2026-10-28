@@ -150,7 +150,7 @@ func TestKittyPresentsFramesDuringRapidInput(t *testing.T) {
 	if status.Busy || status.Presented != firstGeneration+1 || status.Presented != status.Generation {
 		t.Fatalf("expected exactly two completed presentations: %+v", status)
 	}
-	if m.panState.pending != nil || latestImage != m.sourceImage {
+	if m.panState.pending != nil || latestImage != m.panState.canvas.image || m.pic.Crop() != m.panState.canvas.viewport {
 		t.Fatal("queue did not settle on newest source")
 	}
 

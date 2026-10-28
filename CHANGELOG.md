@@ -1,5 +1,16 @@
 # `ntmaps` CHANGELOG
 
+## Unreleased
+
+- Use ntpicture’s capability-gated frame updates in the city viewer: terminals
+  without frame-edit support receive full image replacements during orbit.
+
+- Reuse a bounded canvas of cached map tiles for Kitty panning and optical zoom,
+  sending crop placement updates instead of uploading each frame. Preserve
+  progressive loading, presentation coalescing, and viewport-sized exports.
+  Pin ntpicture revision `35e6d0497298`; temporarily use the sibling checkout
+  for the pending frame-capability fallback fix.
+
 ## v0.5.1 (2026-10-23)
 
 - `tile/pmtiles` bounds what an archive can make it read: a directory or the

@@ -14,7 +14,7 @@ require (
 	github.com/lrstanley/bubblezone/v2 v2.0.0
 	nimbleterminal.dev/nt3d v0.3.1
 	nimbleterminal.dev/ntmaps v0.0.0
-	nimbleterminal.dev/ntpicture v0.1.1
+	nimbleterminal.dev/ntpicture v0.1.2-0.20261028113138-35e6d0497298
 )
 
 require (
@@ -49,3 +49,6 @@ require (
 )
 
 replace nimbleterminal.dev/ntmaps => ..
+
+// Use the local frame-capability fallback fix until it is pushed and pinned.
+replace nimbleterminal.dev/ntpicture => ../../ntpicture

@@ -1026,7 +1026,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## nimbleterminal.dev/ntpicture v0.1.1
+## nimbleterminal.dev/ntpicture v0.1.2-0.20261028113138-35e6d0497298
 
 ```
 MIT License
