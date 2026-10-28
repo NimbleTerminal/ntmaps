@@ -2,14 +2,17 @@
 
 ## Unreleased
 
+- Update nt3d to v0.7.0, ntcharts3d to v0.3.3, ntgpuimage to v0.5.0,
+  ntcanvas to v0.1.2, go-booba to v0.10.5, and Bubble Tea to v2.1.1.
+  Refresh Ultraviolet and the browser Bubble Tea fork.
+
 - Use ntpicture’s capability-gated frame updates in the city viewer: terminals
   without frame-edit support receive full image replacements during orbit.
 
 - Reuse a bounded canvas of cached map tiles for Kitty panning and optical zoom,
   sending crop placement updates instead of uploading each frame. Preserve
   progressive loading, presentation coalescing, and viewport-sized exports.
-  Pin ntpicture revision `35e6d0497298`; temporarily use the sibling checkout
-  for the pending frame-capability fallback fix.
+  Pin ntpicture v0.1.2 and remove the temporary local replacements.
 
 ## v0.5.1 (2026-10-23)
 

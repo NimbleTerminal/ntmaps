@@ -4,13 +4,13 @@ go 1.26.8
 
 require (
 	charm.land/bubbles/v2 v2.2.1
-	charm.land/bubbletea/v2 v2.1.0
+	charm.land/bubbletea/v2 v2.1.1
 	charm.land/lipgloss/v2 v2.0.6
 	github.com/charmbracelet/harmonica v0.2.0
-	github.com/charmbracelet/ultraviolet v0.0.0-20261008173134-6b8d4baf91b4
+	github.com/charmbracelet/ultraviolet v0.0.0-20261023060817-a45b7c86333f
 	github.com/charmbracelet/x/ansi v0.11.9
 	golang.org/x/image v0.47.0
-	nimbleterminal.dev/ntpicture v0.1.2-0.20261028113138-35e6d0497298
+	nimbleterminal.dev/ntpicture v0.1.2
 )
 
 require (
@@ -28,6 +28,3 @@ require (
 	golang.org/x/sync v0.24.0 // indirect
 	golang.org/x/sys v0.49.0 // indirect
 )
-
-// Use the local frame-capability fallback fix until it is pushed and pinned.
-replace nimbleterminal.dev/ntpicture => ../ntpicture

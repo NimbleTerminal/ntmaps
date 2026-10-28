@@ -196,7 +196,7 @@ Flatiron tiles and caches its 3D neighborhoods. Geocoding results are not cached
 
 To start in Kitty whenever it is available, set `ntmaps.Config{PreferKitty: true}`. The model begins in Glyph and switches once the terminal's Kitty-support probe succeeds; it never overrides a mode chosen with `SetRenderMode`.
 
-The WASM browser demo requests Kitty shared-memory transport through booba v0.10.4 and starts in Kitty rendering; press `g` to switch to glyphs. Native demos default to direct transmission, including over SSH. Other consumers can opt in with `ntmaps.Config{KittyMedium: ntmaps.KittyMediumSharedMemory}` when their terminal or browser bridge supports it. Shared-memory allocation or bridge failures fall back to direct transmission.
+The WASM browser demo requests Kitty shared-memory transport through booba v0.10.5 and starts in Kitty rendering; press `g` to switch to glyphs. Native demos default to direct transmission, including over SSH. Other consumers can opt in with `ntmaps.Config{KittyMedium: ntmaps.KittyMediumSharedMemory}` when their terminal or browser bridge supports it. Shared-memory allocation or bridge failures fall back to direct transmission.
 
 Serve the browser demos over `https` or from `localhost`. On a plain `http` origin that is not localhost, Safari 26 and later runs the page in its Enhanced Security content process with the JIT disabled, so the WebAssembly runs interpreted, roughly twenty times slower: every tile arrival blocks the page for most of a second and resizing crawls. The same insecure origin also hides WebGPU, since `navigator.gpu` exists only in secure contexts. `task serve-wasm-site` serves `http://localhost:8000/ntmaps/`, which is fine on the same machine; to test from a tablet or another computer put the site behind TLS (for example `tailscale serve`, `cloudflared`, or a certificate the device trusts) rather than opening the LAN address directly.
 
@@ -402,10 +402,8 @@ Made with :heart: and :fire: by the team behind [Nimble.Markets](https://nimble.
 
 ## Development and browser demos
 
-Both Go modules pin ntpicture’s pushed revision `35e6d0497298` using the Go
-pseudo-version `v0.1.2-0.20261028113138-35e6d0497298`. Temporary local replacements now use `../ntpicture` for the
-frame-capability fallback fix; remove them and update the pin after that fix is
-pushed. This keeps 3D updates working on terminals with static Kitty support.
+Both Go modules pin ntpicture v0.1.2, including capability-gated frame updates.
+Native and browser builds use the released module; no sibling checkout is required.
 
 In Kitty mode, ntmaps retains a canvas twice the viewport width and height when
 the surrounding tiles are already cached. Nearby pans and optical zooms reuse
@@ -417,8 +415,8 @@ is not detected. Attribution stays in the fixed terminal row; `Image()` retains
 viewport-sized pixels with embedded attribution for exports.
 
 The root module contains the map widget. `examples/go.mod` owns ntcharts3d
-v0.3.2 (with nt3d v0.3.1) and go-booba v0.10.4; library users do not inherit the demo or GPU
-dependencies. ntcharts3d uses published nt3d and the same pinned ntpicture revision. The root
+v0.3.3 (with nt3d v0.7.0) and go-booba v0.10.5; library users do not inherit the demo or GPU
+dependencies. ntcharts3d uses published nt3d and the same pinned ntpicture release. The root
 module path is `nimbleterminal.dev/ntmaps`, hosted at
 [github.com/NimbleTerminal/ntmaps](https://github.com/NimbleTerminal/ntmaps).
 

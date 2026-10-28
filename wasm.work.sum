@@ -4,5 +4,7 @@ github.com/neomantra/bubbletea/v2 v2.0.0-20261009201241-c397c32a5074 h1:BugUw4xB
 github.com/neomantra/bubbletea/v2 v2.0.0-20261009201241-c397c32a5074/go.mod h1:xWHeyxIX9/wiFU2kgPW04ojOZyTzrWf+8lGjUCaftiU=
 github.com/neomantra/bubbletea/v2 v2.0.0-20261014185126-aa0ac3f1b5fe h1:vqCc03fdbsbEPE5hIQ2sencVLgfbfvG5IXlmWjXByCg=
 github.com/neomantra/bubbletea/v2 v2.0.0-20261014185126-aa0ac3f1b5fe/go.mod h1:xWHeyxIX9/wiFU2kgPW04ojOZyTzrWf+8lGjUCaftiU=
+github.com/neomantra/bubbletea/v2 v2.0.0-20261020122444-536722b0bdb6 h1:C9lBGwJQSxylyXyoQNsKytKKdjp52iS0UEyvzIt0/1o=
+github.com/neomantra/bubbletea/v2 v2.0.0-20261020122444-536722b0bdb6/go.mod h1:xWHeyxIX9/wiFU2kgPW04ojOZyTzrWf+8lGjUCaftiU=
 github.com/neomantra/clipboard v0.0.0-20260506203444-114abb315f8d h1:YPBmjGcwTd2rswtf1xuQme6jXdBMmi/haTvK/60N8ow=
 github.com/neomantra/clipboard v0.0.0-20260506203444-114abb315f8d/go.mod h1:ZY9tmq7sm5xIbd9bOK4onWV4S6X0u6GY7Vn0Yu86PYI=
