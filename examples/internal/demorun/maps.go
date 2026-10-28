@@ -6,7 +6,7 @@ import (
 )
 
 // UserAgent identifies the interactive examples to their selected services.
-const UserAgent = "ntmaps-examples/0.5.1 (+https://github.com/NimbleTerminal/ntmaps)"
+const UserAgent = "ntmaps-examples/0.6.0 (+https://github.com/NimbleTerminal/ntmaps)"
 
 // OpenStreetMap opts the interactive examples into the public tile service.
 // Keep map prefetch disabled with this provider.
