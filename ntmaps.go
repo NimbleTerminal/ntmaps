@@ -400,6 +400,13 @@ type Config struct {
 	// is none in the browser.
 	TileCacheDir string
 
+	// TileCacheDiskCap bounds disk bytes. Zero means 500 MiB; negative is unlimited.
+	TileCacheDiskCap int64
+
+	// TileCacheDefaultTTL is freshness without server headers. Zero means seven days.
+	// Negative means revalidate on every use.
+	TileCacheDefaultTTL time.Duration
+
 	// DisableDiskCache keeps the built Loader from touching the disk.
 	DisableDiskCache bool
 
@@ -462,8 +469,10 @@ func NewWithConfig(cfg Config) Model {
 			dir = ""
 		}
 		m.loader = tile.NewLoader(tile.Options{
-			MemoryCap: cfg.TileCacheCap,
-			Dir:       dir,
+			MemoryCap:  cfg.TileCacheCap,
+			Dir:        dir,
+			DiskCap:    cfg.TileCacheDiskCap,
+			DefaultTTL: cfg.TileCacheDefaultTTL,
 		})
 	}
 	m.pic = picture.New(picture.Options{Session: cfg.Session, NextID: cfg.NextImageID, Render: picture.Config{KittyMedium: cfg.KittyMedium}})

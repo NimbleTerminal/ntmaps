@@ -9,6 +9,18 @@ ntwebterm, formerly NimbleMarkets' ghostty-web fork. Booba 0.11 retains the
 old module as a re-export and the old WASM path; those compatibility paths
 are scheduled for removal in 0.12. Existing dependency pins are unchanged.
 
+## v0.6.2 (2026-10-31)
+
+- Honor HTTP tile freshness, validators, no-store, and no-cache in disk and
+  memory caches; serve stale disk tiles on network errors or server failures.
+  Add optional MetadataSource without breaking existing DataSource implementations.
+- Bound disk storage to 500 MiB by default with batched LRU pruning and shared
+  directory reconciliation. Add TileCacheDiskCap and TileCacheDefaultTTL config
+  fields (DiskCap and DefaultTTL on tile.Options); default freshness is seven days.
+- Atomically store bounded metadata with tile bytes, hash provider directory
+  names, and bound disk reads. PMTiles avoids duplicate disk storage; FirstOf
+  preserves each source's cache behavior.
+
 ## v0.6.1 (2026-10-30)
 
 - Correct city look controls: arrow keys look in the indicated direction while

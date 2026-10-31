@@ -17,6 +17,7 @@ import (
 	_ "image/png"
 	"io"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -208,31 +209,55 @@ func (p Provider) shard(x, y int) string {
 
 // TileData implements DataSource with one HTTP GET.
 func (p Provider) TileData(ctx context.Context, id ID) ([]byte, error) {
+	r, err := p.TileDataMeta(ctx, id, Validators{})
+	return r.Data, err
+}
+
+// TileDataMeta implements MetadataSource, including conditional GETs.
+func (p Provider) TileDataMeta(ctx context.Context, id ID, validators Validators) (TileResponse, error) {
+	var result TileResponse
 	if !p.Valid() {
-		return nil, ErrNoSource
+		return result, ErrNoSource
 	}
-	url := p.TileURL(id.Z, id.X, id.Y)
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	tileURL := p.TileURL(id.Z, id.X, id.Y)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, tileURL, nil)
 	if err != nil {
-		return nil, err
+		return result, err
 	}
 	httpua.Set(req, p.UserAgent)
+	if validators.ETag != "" {
+		req.Header.Set("If-None-Match", validators.ETag)
+	}
+	if validators.LastModified != "" {
+		req.Header.Set("If-Modified-Since", validators.LastModified)
+	}
 	client := p.Client
 	if client == nil {
 		client = defaultClient
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, err
+		return result, err
 	}
 	defer resp.Body.Close()
+	result.Header = resp.Header
 	switch {
+	case resp.StatusCode == http.StatusNotModified:
+		result.NotModified = true
+		return result, nil
 	case resp.StatusCode == http.StatusNotFound:
-		return nil, ErrNotFound
+		return result, ErrNotFound
 	case resp.StatusCode != http.StatusOK:
-		return nil, fmt.Errorf("tile: GET %s: %s", url, resp.Status)
+		return result, &HTTPError{StatusCode: resp.StatusCode, URL: tileURL}
 	}
-	return io.ReadAll(io.LimitReader(resp.Body, maxTileBytes))
+	result.Data, err = io.ReadAll(io.LimitReader(resp.Body, maxTileBytes+1))
+	if len(result.Data) > maxTileBytes {
+		return TileResponse{}, fmt.Errorf("tile: response exceeds %d bytes", maxTileBytes)
+	}
+	if err != nil {
+		return result, &url.Error{Op: "read", URL: req.URL.String(), Err: err}
+	}
+	return result, nil
 }
 
 // Tile implements Source.

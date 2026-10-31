@@ -389,7 +389,7 @@ attribution are recorded in [examples/cityview3d/DATA.md](examples/cityview3d/DA
 ## Known caveats
 
 - **WASM dependencies.** `wasm.work` selects Bubble Tea and clipboard forks with browser support. Native builds use upstream versions. The WASM task and CI select this workspace automatically; manual builds need `task build-wasm` (or select that workspace with `go -C examples build`).
-- **Progressive tile rendering.** A render paints the tiles already in memory, fetches the rest, and repaints as they land (batched to about ten repaints per second), keeping the Loading badge up until the last tile arrives. Panning across tiles seen before composes synchronously with no fetch and no badge. Tiles live in a per-Loader memory LRU (`Config.TileCacheCap`, default 256 tiles) and, natively, a raw-bytes disk cache under the user cache directory (`Config.TileCacheDir`, `Config.DisableDiskCache`); pass one `Config.Loader` to several models to share both. A newer render cancels the fetches of the one it supersedes, except for tiles both need. Downloads share one concurrency limit, so a background prefetch never starves the render on screen. Composited viewports are kept in a small per-Model LRU keyed on `(lat, lng, zoom, cols, rows, provider, oversample, markers)` — revisiting a state hits the cache synchronously. Default cap is 16 entries; tune via `ntmaps.NewWithConfig(Config{RenderCacheCap: N})` (`-1` disables this LRU). Spring-animation frames bypass it. Hosts that snapshot the first frame should wait until no render is in flight, since it may show placeholder tiles.
+- **Progressive tile rendering.** A render paints the tiles already in memory, fetches the rest, and repaints as they land (batched to about ten repaints per second), keeping the Loading badge up until the last tile arrives. Panning across tiles seen before composes synchronously with no fetch and no badge. Tiles live in a per-Loader memory LRU (`Config.TileCacheCap`, default 256 tiles) and, natively, a bounded disk cache under the user cache directory (`Config.TileCacheDir`, `Config.DisableDiskCache`); pass one `Config.Loader` to several models to share both. A newer render cancels the fetches of the one it supersedes, except for tiles both need. Downloads share one concurrency limit, so a background prefetch never starves the render on screen. Composited viewports are kept in a small per-Model LRU keyed on `(lat, lng, zoom, cols, rows, provider, oversample, markers)` — revisiting a state hits the cache synchronously. Default cap is 16 entries; tune via `ntmaps.NewWithConfig(Config{RenderCacheCap: N})` (`-1` disables this LRU). Spring-animation frames bypass it. Hosts that snapshot the first frame should wait until no render is in flight, since it may show placeholder tiles.
 - **Server-side supersample (`Config.Oversample`).** Raises the source-image pixel density without changing visible geographic coverage — `Oversample: N` (powers of 2) renders the same area at `N×` per-cell resolution and `+log2(N)` OSM tile zoom, so Kitty terminals can downscale a sharper source. `1` (default) keeps current behavior; `2` is a noticeable boost; `4` is hi-DPI quality at ~16× the tile fetches. Capped so the effective tile zoom never exceeds the provider's `MaxZoom`. Glyph mode pays the cost without visible benefit.
 - **Client-side optical zoom (`Config.OpticalZoom` / `mv.SetOpticalZoom(n)`).** Magnifies the *cached* source image by cropping the center `1/2^n` of each axis and letting the renderer scale it back up to the cell rectangle. No network, no tile-render goroutine — switching is instant. Pixelated at high N (it's digital zoom in spirit even though we call it optical), but useful for going past the OSM tile-zoom ceiling or just inspecting fine detail without re-fetching. Composes with `Oversample`: e.g. `Oversample: 2` + `OpticalZoom: 1` is a 2× zoomed view rendered from a 2× supersampled source.
 - **Aspect-ratio guardrail (`Config.MaxAspectRatio` / `Config.LetterboxColor`).** Maps display correctly at any cell-rect AR — every pixel sits at its true geographic location — but at extreme ARs (a 100×5 status bar, say) viewers find the result disorienting because their mental model of "a map" is roughly square. `MaxAspectRatio: 3.0` lets the cell rect's AR range up to 3:1 in either direction; beyond that, the map portion is rendered at the boundary AR centered in the cell rect, with the rest filled by `LetterboxColor` (default opaque black; `color.Transparent` shows the terminal background through the bars). The letterbox is composed into the source image *before* picture renders, so Glyph and Kitty show identical letterbox geometry — toggling render modes doesn't change layout. Default `0` keeps the current "fill the cell rect at any AR" behavior; opt in when your layout might land in extreme territory.
@@ -440,3 +440,41 @@ glyph-cache regression, and suggested platform guide corrections.
 For reproducible 3D CPU benchmarks, run `task bench-mapview3d`. See the
 [performance baseline](examples/mapview3d/PERFORMANCE.md) for timings, allocation
 profiles, and measurement limits.
+
+### Disk tile cache
+
+The built loader uses a dedicated cache directory (`Config.TileCacheDir`), with a
+500 MiB byte cap including metadata. `Config.TileCacheDiskCap` sets the cap;
+zero selects the default and a negative value permits unlimited storage.
+`Config.DisableDiskCache` disables all disk access. With a custom loader, use
+`tile.Options{Dir: ..., DiskCap: ..., DefaultTTL: ...}`; an empty `Dir` disables disk storage.
+
+HTTP tiles honor private-cache `Cache-Control: max-age`, `Expires`, `Date`, and
+`Age`; `s-maxage` is ignored. Without explicit freshness, tiles are fresh for
+seven days (`Config.TileCacheDefaultTTL` / `tile.Options.DefaultTTL`; zero means
+the default, negative means always revalidate). Stale entries send `ETag` and
+`Last-Modified` validators. A 304 refreshes metadata; a 200 replaces the tile.
+Network failures and 5xx responses serve the stale tile without extending its
+freshness or rewriting it. `no-store` prevents storage and removes an existing
+disk entry; `no-cache` stores but revalidates on every use. Memory entries also
+expire according to these rules.
+
+Each cache file contains a version marker, a bounded JSON metadata line (at most
+16 KiB), and at most 8 MiB of encoded image data. The entire file is replaced by
+an atomic rename, so readers cannot see mismatched metadata and pixels. Provider
+names are SHA-256 directory keys, including empty or path-like names. Existing
+unversioned cache files are not reused but count toward eviction. Use a directory
+dedicated to tiles: pruning may remove files anywhere within that directory.
+
+Disk reads update file modification time for least-recently-used eviction.
+The loader builds a size index once, reconciles after writing 5% of capacity,
+and rescans under pressure before pruning in batches toward 90% of capacity.
+Several processes can share the directory; totals are approximate and may
+briefly exceed the cap while writers overlap. Temporary atomic-write files are
+excluded from accounting.
+
+Existing `tile.DataSource` implementations continue to work with default
+freshness. Implement `tile.MetadataSource` to supply cache headers and accept
+conditional validators. Local sources can implement `tile.DiskCachePolicy`
+with `DiskCacheable() bool` returning false; PMTiles archives do this already.
+`tile.FirstOf` preserves each constituent source's disk policy and metadata.

@@ -3,12 +3,15 @@ package tile
 import (
 	"container/list"
 	"context"
+	"crypto/sha256"
 	"errors"
+	"fmt"
 	"image"
 	"os"
 	"path/filepath"
 	"strconv"
 	"sync"
+	"time"
 )
 
 const (
@@ -28,6 +31,14 @@ type Options struct {
 	// DefaultDir returns a per-user location on native.
 	Dir string
 
+	// DiskCap is the disk byte limit, including metadata. Zero means 500 MiB;
+	// negative means unlimited. Shared processes can temporarily exceed it.
+	DiskCap int64
+
+	// DefaultTTL applies when no explicit freshness is supplied. Zero means
+	// seven days; negative means revalidate on every use.
+	DefaultTTL time.Duration
+
 	// Concurrency bounds simultaneous fetches across every caller, so a
 	// background prefetch cannot starve the render on screen. Zero means
 	// 6, matching a browser's per-host connection limit.
@@ -38,6 +49,8 @@ type Options struct {
 // disk cache, and one fetch per tile no matter how many callers want it.
 // It is safe for concurrent use.
 type Loader struct {
+	disk diskCache
+	ttl  time.Duration
 	dir  string
 	conc int
 	sem  chan struct{}
@@ -63,6 +76,14 @@ type download struct {
 // NewLoader returns a Loader configured by o.
 func NewLoader(o Options) *Loader {
 	l := &Loader{dir: o.Dir, conc: o.Concurrency, inflight: make(map[cacheKey]*download)}
+	l.ttl = o.DefaultTTL
+	if l.ttl == 0 {
+		l.ttl = 7 * 24 * time.Hour
+	}
+	l.disk.cap = o.DiskCap
+	if l.disk.cap == 0 {
+		l.disk.cap = 500 << 20
+	}
 	if l.conc <= 0 {
 		l.conc = defaultConcurrency
 	}
@@ -136,9 +157,10 @@ func (l *Loader) Fetch(ctx context.Context, src Source, id ID) (image.Image, err
 func (l *Loader) run(ctx context.Context, d *download, k cacheKey, src Source, id ID) {
 	var img image.Image
 	var err error
+	var expires time.Time
 	select {
 	case l.sem <- struct{}{}:
-		img, err = l.load(ctx, src, id)
+		img, expires, err = l.load(ctx, src, id)
 		<-l.sem
 	case <-ctx.Done():
 		err = ctx.Err()
@@ -146,6 +168,7 @@ func (l *Loader) run(ctx context.Context, d *download, k cacheKey, src Source, i
 	l.mu.Lock()
 	if err == nil && l.mem != nil {
 		l.mem.put(k, img)
+		l.mem.entries[k].Value.(*lruEntry).expires = expires
 	}
 	delete(l.inflight, k)
 	d.img, d.err = img, err
@@ -154,35 +177,9 @@ func (l *Loader) run(ctx context.Context, d *download, k cacheKey, src Source, i
 	close(d.done)
 }
 
-func (l *Loader) load(ctx context.Context, src Source, id ID) (image.Image, error) {
-	ds, _ := src.(DataSource)
-	path := l.diskPath(src, id)
-	if ds == nil || path == "" {
-		return src.Tile(ctx, id)
-	}
-	if data, err := os.ReadFile(path); err == nil {
-		if img, err := Decode(data); err == nil {
-			return img, nil
-		}
-	}
-	data, err := ds.TileData(ctx, id)
-	if errors.Is(err, ErrNoData) {
-		return src.Tile(ctx, id)
-	}
-	if err != nil {
-		return nil, err
-	}
-	img, err := Decode(data)
-	if err != nil {
-		return nil, err
-	}
-	_ = writeFileAtomic(path, data)
-	return img, nil
-}
-
 func (l *Loader) diskPath(src Source, id ID) string {
-	name := src.Info().Name
-	if l.dir == "" || name == "" {
+	name := fmt.Sprintf("%x", sha256.Sum256([]byte(src.Info().Name)))
+	if l.dir == "" {
 		return ""
 	}
 	return filepath.Join(l.dir, name, strconv.Itoa(id.Z), strconv.Itoa(id.X), strconv.Itoa(id.Y))
@@ -210,6 +207,7 @@ func writeFileAtomic(path string, data []byte) error {
 		os.Remove(name)
 		return err
 	}
+	defer os.Remove(name)
 	return os.Rename(name, path)
 }
 
@@ -267,8 +265,9 @@ type lru struct {
 }
 
 type lruEntry struct {
-	key cacheKey
-	img image.Image
+	key     cacheKey
+	img     image.Image
+	expires time.Time
 }
 
 func newLRU(cap int) *lru {
@@ -280,8 +279,14 @@ func (c *lru) get(k cacheKey) (image.Image, bool) {
 	if !ok {
 		return nil, false
 	}
+	entry := e.Value.(*lruEntry)
+	if !entry.expires.IsZero() && !time.Now().Before(entry.expires) {
+		c.order.Remove(e)
+		delete(c.entries, k)
+		return nil, false
+	}
 	c.order.MoveToFront(e)
-	return e.Value.(*lruEntry).img, true
+	return entry.img, true
 }
 
 func (c *lru) put(k cacheKey, img image.Image) {

@@ -600,3 +600,6 @@ func (h *httpReaderAt) ReadAt(p []byte, off int64) (int, error) {
 	}
 	return n, err
 }
+
+// DiskCacheable is false: archives already own their tile storage.
+func (a *Archive) DiskCacheable() bool { return false }
