@@ -298,6 +298,9 @@ in the places list to select a place. Borders/status rows do not receive map
 zoom gestures, and releasing outside the pane ends the drag. The app enables
 terminal mouse reporting in both native and browser sessions.
 
+City arrow keys look left/right/up/down while keeping the camera eye fixed.
+Mouse drag orbits the current focus; Shift-drag translates the camera.
+
 Switching preserves the geographic center. Returning from 3D moves the 2D map
 to the city camera's ground target. Moving within an already loaded neighborhood
 reuses the city geometry. Selecting a different place loads a small neighborhood
@@ -329,7 +332,8 @@ go -C examples run ./mapview3d -medium shm
 ```
 
 Use arrows to tilt and rotate, WASD to pan the map, `[` / `]` for map zoom,
-and `+` / `-` for camera zoom. `n` / `p` select places, `0` resets the camera,
+and `+` / `-` for camera zoom. Mouse drag orbits and the wheel zooms only the
+camera; horizontal scrolling is ignored. `n` / `p` select places, `0` resets the camera,
 `r` toggles rotation, `o` switches projection, and `g` toggles glyph/Kitty output.
 Press `t` to switch between software and GPU rendering without restarting. The
 status line shows the active renderer and, if it falls back, the requested mode

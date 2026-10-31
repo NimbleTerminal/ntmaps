@@ -40,10 +40,16 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch v := msg.(type) {
 	case tea.WindowSizeMsg:
 		return m, m.SetSize(v.Width, v.Height)
+	case tea.MouseWheelMsg:
+		if v.Button != tea.MouseWheelUp && v.Button != tea.MouseWheelDown {
+			return m, nil
+		}
 	case tea.KeyPressMsg:
 		switch v.String() {
 		case "q", "ctrl+c":
 			return m, tea.Sequence(m.Chart.Dispose(), tea.Quit)
+		case "left", "h", "right", "l", "up", "k", "down", "j":
+			return m, m.look(v.String())
 		case "0":
 			return m, m.Chart.SetCamera(initialCamera(m.Scene))
 		case "t":
@@ -123,8 +129,8 @@ func (m *Model) Resume(mode chart.RenderMode) tea.Cmd { return m.Chart.SetRender
 func (m *Model) Dispose() tea.Cmd                     { return m.Chart.Dispose() }
 func (m *Model) Close() error                         { return m.Chart.Close() }
 
-// Center converts the camera target back to geographic coordinates. Looking or
-// zooming does not change it; moving along the ground does.
+// Center converts the camera focus back to geographic coordinates. Looking
+// changes the focus; orbiting and zooming keep it fixed.
 func (m *Model) Center() city.Coordinate {
 	c := m.Chart.Camera()
 	k := m.Scene.Scale()

@@ -127,3 +127,37 @@ func TestMapSurfacePreservesAspectAndNorthUpTexture(t *testing.T) {
 		}
 	}
 }
+
+func TestMouseControlsOnlyVisibleChart(t *testing.T) {
+	m := newModel([]places.Place{{Name: "Test", Lat: 40, Lon: 10, Zoom: 10}}, picture.KittyMediumDirect, chart.Wireframe)
+	defer m.chart.Close()
+	defer m.source.Close()
+	defer m.session.Close()
+	m.View()
+	lat, lon := m.source.Center()
+	zoom := m.source.Zoom()
+	camera := m.chart.Camera()
+	for _, button := range []tea.MouseButton{tea.MouseWheelLeft, tea.MouseWheelRight} {
+		m.Update(tea.MouseWheelMsg{X: 20, Y: 10, Button: button})
+		if m.chart.Camera() != camera {
+			t.Fatal("horizontal wheel changed camera")
+		}
+	}
+	m.Update(tea.MouseWheelMsg{X: 20, Y: 10, Button: tea.MouseWheelUp})
+	if m.chart.Camera().Distance >= camera.Distance {
+		t.Fatal("wheel up did not move camera closer")
+	}
+	m.Update(tea.MouseWheelMsg{X: 20, Y: 10, Button: tea.MouseWheelDown})
+	if m.chart.Camera().Distance != camera.Distance {
+		t.Fatal("wheel down did not restore distance")
+	}
+	m.Update(tea.MouseClickMsg{X: 20, Y: 10, Button: tea.MouseLeft})
+	m.Update(tea.MouseMotionMsg{X: 24, Y: 12, Button: tea.MouseLeft})
+	if m.chart.Camera().Beta == camera.Beta {
+		t.Fatal("drag did not orbit chart")
+	}
+	m.Update(tea.MouseReleaseMsg{X: 24, Y: 12, Button: tea.MouseLeft})
+	if a, b := m.source.Center(); a != lat || b != lon || m.source.Zoom() != zoom || m.source.Dragging() {
+		t.Fatal("chart mouse input changed hidden map")
+	}
+}

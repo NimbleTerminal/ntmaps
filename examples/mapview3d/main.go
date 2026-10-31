@@ -95,6 +95,13 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = v.Width
 		return m, m.chart.SetSize(v.Width, max(3, v.Height-3))
+	case tea.MouseMsg:
+		if wheel, ok := v.(tea.MouseWheelMsg); ok && wheel.Button != tea.MouseWheelUp && wheel.Button != tea.MouseWheelDown {
+			return m, nil
+		}
+		// The source is a hidden texture producer, not a second mouse target.
+		_, cmd := m.chart.Update(v)
+		return m, cmd
 	case tea.KeyPressMsg:
 		switch v.String() {
 		case "q", "ctrl+c":
