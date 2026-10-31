@@ -38,9 +38,9 @@ func (m *Model) cachedPan(geom viewGeometry, key renderKey) (tea.Cmd, bool) {
 	if canvas == nil || canvas.key != key || !cropFor(canvas).In(canvas.image.Bounds()) {
 		m.panState.canvas = nil
 		expanded := geom
-		// Half a viewport of slack on each side, bounded by ntpicture's upload cap.
+		// Half a viewport of slack on each side, bounded to limit retained memory.
 		expanded.w, expanded.h = 2*geom.w, 2*geom.h
-		const maxPanPixels = 16 << 20 // ntpicture's whole-source panning limit
+		const maxPanPixels = 16 << 20
 		if expanded.w <= 0 || expanded.h <= 0 || expanded.w > maxPanPixels/expanded.h {
 			return nil, false
 		}

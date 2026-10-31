@@ -26,28 +26,28 @@ func kittyPanModel(t *testing.T) Model {
 	return m
 }
 
-func assertPlacementOnly(t *testing.T, out string) {
+func assertCropUpload(t *testing.T, out string) {
 	t.Helper()
-	if !strings.Contains(out, "a=p") || strings.Contains(out, "a=T") || strings.Contains(out, "a=t") || len(out) > 256 {
-		t.Fatalf("expected a small placement update without image data: %d bytes, %.256q", len(out), out)
+	if !strings.Contains(out, "a=T") || strings.Contains(out, "a=p") {
+		t.Fatalf("expected a fresh cropped image upload: %d bytes, %.256q", len(out), out)
 	}
 }
 
-func TestCachedPanReusesUploadAndPlaceholderGrid(t *testing.T) {
+func TestCachedPanReusesCanvas(t *testing.T) {
 	m := kittyPanModel(t)
 	m.SetMarkers([]Marker{{Lat: 0, Lng: 0}})
 	first := drainMap(t, &m, m.renderMapCmd())
 	if !strings.Contains(first, "a=T") || m.panState.canvas == nil {
 		t.Fatal("initial canvas was not uploaded")
 	}
-	canvas, grid := m.panState.canvas, m.pic.View()
+	canvas := m.panState.canvas
 	m.panPixels(16, -16)
-	assertPlacementOnly(t, drainMap(t, &m, m.renderMapCmd()))
-	if m.panState.canvas != canvas || m.pic.View() != grid || m.inFlight() {
-		t.Fatal("pan replaced canvas/grid or left a render pending")
+	assertCropUpload(t, drainMap(t, &m, m.renderMapCmd()))
+	if m.panState.canvas != canvas || m.pic.View() == "" || m.inFlight() {
+		t.Fatal("pan replaced canvas, cleared the view, or left a render pending")
 	}
-	assertPlacementOnly(t, drainMap(t, &m, m.SetOpticalZoom(1)))
-	assertPlacementOnly(t, drainMap(t, &m, m.SetOpticalZoom(0)))
+	assertCropUpload(t, drainMap(t, &m, m.SetOpticalZoom(1)))
+	assertCropUpload(t, drainMap(t, &m, m.SetOpticalZoom(0)))
 	// Exported pixels retain the ordinary viewport dimensions and marker position.
 	g := canvas.geom
 	g.w, g.h = m.cols*osmPxPerCellW, m.picRows()*osmPxPerCellH
@@ -88,7 +88,7 @@ func TestCachedPanWrapsAntimeridian(t *testing.T) {
 	drainMap(t, &m, m.renderMapCmd())
 	before := m.panState.canvas
 	m.panPixels(16, 0)
-	assertPlacementOnly(t, drainMap(t, &m, m.renderMapCmd()))
+	assertCropUpload(t, drainMap(t, &m, m.renderMapCmd()))
 	if m.lng >= 0 || m.panState.canvas != before {
 		t.Fatal("antimeridian crossing did not reuse the neighboring world pixels")
 	}

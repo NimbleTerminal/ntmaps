@@ -406,20 +406,20 @@ Made with :heart: and :fire: by the team behind [Nimble.Markets](https://nimble.
 
 ## Development and browser demos
 
-Both Go modules pin ntpicture v0.1.2, including capability-gated frame updates.
+Both Go modules pin ntpicture v0.1.4, including capability-gated frame updates.
 Native and browser builds use the released module; no sibling checkout is required.
 
 In Kitty mode, ntmaps retains a canvas twice the viewport width and height when
 the surrounding tiles are already cached. Nearby pans and optical zooms reuse
-that upload through crop placement updates. This does not fetch additional tiles
-unless prefetching was already enabled. Canvas uploads are capped at 16 Mi pixels;
+the composed canvas while uploading fresh cropped pixels for terminal compatibility.
+This does not fetch additional tiles unless prefetching was already enabled.
+Retained canvases are capped at 16 Mi pixels;
 missing tiles, letterboxed views, and views spanning the world use the ordinary
-renderer. ntpicture uses per-crop preparation when virtual-placement support
-is not detected. Attribution stays in the fixed terminal row; `Image()` retains
+renderer. Attribution stays in the fixed terminal row; `Image()` retains
 viewport-sized pixels with embedded attribution for exports.
 
 The root module contains the map widget. `examples/go.mod` owns ntcharts3d
-v0.3.3 (with nt3d v0.7.0) and go-booba v0.10.5; library users do not inherit the demo or GPU
+v0.3.4 (with nt3d v0.8.0) and go-booba v0.10.7; library users do not inherit the demo or GPU
 dependencies. ntcharts3d uses published nt3d and the same pinned ntpicture release. The root
 module path is `nimbleterminal.dev/ntmaps`, hosted at
 [github.com/NimbleTerminal/ntmaps](https://github.com/NimbleTerminal/ntmaps).

@@ -115,7 +115,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## github.com/NimbleMarkets/go-booba v0.10.5
+## github.com/NimbleMarkets/go-booba v0.10.7
 
 ```
 MIT License
@@ -149,7 +149,7 @@ The following files are under their respective licenses:
   * ./etc/booba.png remains **All Rights Reserved** by Neomantra Corp.  You may use it only in unmodified form and only as part of this project (e.g., in forks or distributions of the project).  You may **not** extract it for unrelated use, modify it, or redistribute it separately without explicit permission.
 ```
 
-## github.com/NimbleMarkets/ntcharts3d v0.3.3
+## github.com/NimbleMarkets/ntcharts3d v0.3.4
 
 ```
 MIT License
@@ -533,7 +533,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## github.com/gogpu/naga v0.20.3
+## github.com/gogpu/naga v0.20.4
 
 ```
 MIT License
@@ -785,7 +785,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## github.com/xo/terminfo v1.2.0
+## github.com/xo/terminfo v1.3.0
 
 ```
 The MIT License (MIT)
@@ -939,7 +939,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ```
 
-## nimbleterminal.dev/nt3d v0.7.0
+## nimbleterminal.dev/nt3d v0.8.0
 
 ```
 MIT License
@@ -965,7 +965,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## nimbleterminal.dev/ntcanvas v0.1.2
+## nimbleterminal.dev/ntcanvas v0.1.3
 
 ```
 MIT License
@@ -1000,7 +1000,7 @@ Browser runtime licenses are in web/licenses; regenerate dependency notices with
 `task notices`. Generated runtime assets retain their upstream licenses.
 ```
 
-## nimbleterminal.dev/ntgpuimage v0.5.0
+## nimbleterminal.dev/ntgpuimage v0.6.0
 
 ```
 MIT License
@@ -1026,7 +1026,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## nimbleterminal.dev/ntpicture v0.1.2
+## nimbleterminal.dev/ntpicture v0.1.4
 
 ```
 MIT License
