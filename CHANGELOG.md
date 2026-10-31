@@ -1,5 +1,22 @@
 # `ntmaps` CHANGELOG
 
+## v0.6.1 (2026-10-30)
+
+- Correct city look controls: arrow keys look in the indicated direction while
+  keeping the camera eye fixed, including at elevation limits. Mouse dragging
+  continues to orbit the current focus.
+- Route mouse input in the standalone 3D map only to the visible chart, so
+  orbiting and camera zoom no longer also pan or zoom the hidden map texture.
+  Ignore horizontal wheel events in both standalone 3D viewers.
+- Update ntpicture to v0.1.4. Cached map canvases still avoid recomposition,
+  but panning and optical zoom now upload fresh cropped pixels for terminal
+  compatibility instead of relying on virtual-placement source rectangles.
+- Update nt3d to v0.8.0, ntcharts3d to v0.3.4, ntgpuimage to v0.6.0,
+  ntcanvas to v0.1.3, go-booba to v0.10.7, naga to v0.20.4, and terminfo
+  to v1.3.0. Refresh checksums and dependency license notices.
+- Pin the examples to ntmaps v0.6.1 while retaining the local replacement
+  for development against the current checkout.
+
 ## v0.6.0 (2026-10-28)
 
 - Reuse a bounded canvas of cached map tiles for Kitty panning and optical zoom,

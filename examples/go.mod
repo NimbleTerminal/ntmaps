@@ -13,7 +13,7 @@ require (
 	github.com/charmbracelet/x/ansi v0.11.9
 	github.com/lrstanley/bubblezone/v2 v2.0.0
 	nimbleterminal.dev/nt3d v0.8.0
-	nimbleterminal.dev/ntmaps v0.6.0
+	nimbleterminal.dev/ntmaps v0.6.1
 	nimbleterminal.dev/ntpicture v0.1.4
 )
 
