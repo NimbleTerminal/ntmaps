@@ -8,7 +8,7 @@ for (const api of [BoobaTerminal, installActionBar, installRendererHud, parseRen
 }
 for (const file of [
   'index.html', 'site.css', 'site.js', 'wasm_exec.js', 'booba/booba.js',
-  'ghostty-web/ghostty-web.js', 'ghostty-web/ghostty-vt.wasm',
+  'ntwebterm/ntwebterm.js', 'ntwebterm/ghostty-vt.wasm',
   'LICENSE', 'THIRD_PARTY_NOTICES.md',
 ]) await access(`web/${file}`);
 const html = await readFile('web/index.html', 'utf8');

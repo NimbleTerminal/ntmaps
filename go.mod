@@ -10,7 +10,7 @@ require (
 	github.com/charmbracelet/ultraviolet v0.0.0-20261023060817-a45b7c86333f
 	github.com/charmbracelet/x/ansi v0.11.9
 	golang.org/x/image v0.47.0
-	nimbleterminal.dev/ntpicture v0.1.4
+	nimbleterminal.dev/ntpicture v0.1.5
 )
 
 require (

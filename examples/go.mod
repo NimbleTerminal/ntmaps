@@ -2,19 +2,19 @@ module nimbleterminal.dev/ntmaps/examples
 
 go 1.26.8
 
-tool github.com/NimbleMarkets/go-booba/cmd/booba-assets
+tool nimbleterminal.dev/booba/cmd/booba-assets
 
 require (
 	charm.land/bubbles/v2 v2.2.1
 	charm.land/bubbletea/v2 v2.1.1
 	charm.land/lipgloss/v2 v2.0.6
-	github.com/NimbleMarkets/go-booba v0.10.7
-	github.com/NimbleMarkets/ntcharts3d v0.3.4
+	github.com/NimbleMarkets/ntcharts3d v0.3.6
 	github.com/charmbracelet/x/ansi v0.11.9
 	github.com/lrstanley/bubblezone/v2 v2.0.0
-	nimbleterminal.dev/nt3d v0.8.0
-	nimbleterminal.dev/ntmaps v0.6.2
-	nimbleterminal.dev/ntpicture v0.1.4
+	nimbleterminal.dev/booba v0.12.1
+	nimbleterminal.dev/nt3d v0.8.1
+	nimbleterminal.dev/ntmaps v0.6.3
+	nimbleterminal.dev/ntpicture v0.1.5
 )
 
 require (
@@ -27,10 +27,10 @@ require (
 	github.com/charmbracelet/x/windows v0.2.2 // indirect
 	github.com/clipperhouse/displaywidth v0.11.0 // indirect
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
-	github.com/go-webgpu/goffi v0.6.7 // indirect
+	github.com/go-webgpu/goffi v0.6.8 // indirect
 	github.com/go-webgpu/webgpu v0.5.5 // indirect
 	github.com/gogpu/gpucontext v0.31.3 // indirect
-	github.com/gogpu/gputypes v0.8.0 // indirect
+	github.com/gogpu/gputypes v0.8.2 // indirect
 	github.com/gogpu/naga v0.20.4 // indirect
 	github.com/gogpu/wgpu v0.34.5 // indirect
 	github.com/lucasb-eyer/go-colorful v1.4.1 // indirect
@@ -44,7 +44,7 @@ require (
 	golang.org/x/sync v0.24.0 // indirect
 	golang.org/x/sys v0.49.0 // indirect
 	golang.org/x/text v0.43.0 // indirect
-	nimbleterminal.dev/ntcanvas v0.1.3 // indirect
+	nimbleterminal.dev/ntcanvas v0.1.4 // indirect
 	nimbleterminal.dev/ntgpuimage v0.6.0 // indirect
 )
 

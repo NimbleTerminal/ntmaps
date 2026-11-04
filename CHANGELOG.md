@@ -1,13 +1,14 @@
 # `ntmaps` CHANGELOG
 
-## Next booba dependency bump
+## v0.6.3 (2026-11-04)
 
-When adopting booba v0.11.0 or later, regenerate browser assets with
-`booba-assets` and move imports from `ghostty-web/ghostty-web.js` to
-`ntwebterm/ntwebterm.js` (under `static/` for served pages). The engine is
-ntwebterm, formerly NimbleMarkets' ghostty-web fork. Booba 0.11 retains the
-old module as a re-export and the old WASM path; those compatibility paths
-are scheduled for removal in 0.12. Existing dependency pins are unchanged.
+- Restore the working Metal backend with wgpu v0.34.5 and naga v0.20.4.
+  Use the ntcharts3d v0.3.6 scheduling fix so continuous camera motion presents
+  completed frames while coalescing the next pose, avoiding drag starvation.
+- Migrate Booba imports and the asset tool to `nimbleterminal.dev/booba`
+  v0.12.1. Generate and validate the browser runtime under `ntwebterm/`.
+- Update ntpicture to v0.1.5, nt3d to v0.8.1, ntcanvas to v0.1.4, and
+  ntcharts3d to v0.3.6. Refresh checksums and dependency license notices.
 
 ## v0.6.2 (2026-10-31)
 
