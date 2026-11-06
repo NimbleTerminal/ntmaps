@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -138,6 +139,10 @@ func (n *Nominatim) Geocode(ctx context.Context, query string) (Result, error) {
 	lng, err := strconv.ParseFloat(hits[0].Lon, 64)
 	if err != nil {
 		return Result{}, fmt.Errorf("geocode: longitude %q: %w", hits[0].Lon, err)
+	}
+	// ParseFloat accepts "NaN" and "Inf", which no map can center on.
+	if math.IsNaN(lat) || math.IsNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180 {
+		return Result{}, fmt.Errorf("geocode: %s, %s is not a latitude and longitude", hits[0].Lat, hits[0].Lon)
 	}
 	return Result{Lat: lat, Lng: lng, Name: hits[0].DisplayName}, nil
 }

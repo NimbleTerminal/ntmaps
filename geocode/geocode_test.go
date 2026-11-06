@@ -61,6 +61,15 @@ func TestNominatimNotFoundAndErrors(t *testing.T) {
 	if _, err := n.Geocode(context.Background(), "x"); err == nil || !strings.Contains(err.Error(), "429") {
 		t.Fatalf("got %v, want status error", err)
 	}
+	// strconv parses "NaN" and "Inf"; a server must not be able to send
+	// the map a center it cannot draw.
+	for _, body := range []string{`[{"lat":"NaN","lon":"0"}]`, `[{"lat":"0","lon":"-Inf"}]`, `[{"lat":"91","lon":"0"}]`, `[{"lat":"0","lon":"180.5"}]`} {
+		s, _ := newServer(t, body)
+		n = &Nominatim{Endpoint: s.URL, MinInterval: time.Millisecond}
+		if _, err := n.Geocode(context.Background(), "x"); err == nil || !strings.Contains(err.Error(), "latitude and longitude") {
+			t.Fatalf("%s: got %v, want a coordinate error", body, err)
+		}
+	}
 }
 
 func TestNominatimPacesRequests(t *testing.T) {

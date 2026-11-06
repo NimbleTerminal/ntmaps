@@ -43,15 +43,31 @@ func Unproject(x, y float64, zoom, tileSize int) (lat, lng float64) {
 	return
 }
 
+// MaxCoverZoom is the deepest zoom Cover addresses, matching the deepest
+// tile id the tile formats carry.
+const MaxCoverZoom = 31
+
 // Cover lists the tiles needed to fill a w×h image whose pixel (w/2, h/2)
 // shows world pixel (⌊cx⌋, ⌊cy⌋), with each tile's offset in that image.
 // Columns wrap across the antimeridian; rows outside the world are
 // returned with InWorld false so callers can paint a placeholder there.
+// An empty view, a zoom over MaxCoverZoom, or a NaN or infinite center
+// covers nothing.
 func Cover(cx, cy float64, w, h, zoom, tileSize int) []Placement {
-	if w <= 0 || h <= 0 || tileSize <= 0 || zoom < 0 {
+	if w <= 0 || h <= 0 || tileSize <= 0 || zoom < 0 || zoom > MaxCoverZoom {
 		return nil
 	}
+	if math.IsNaN(cx) || math.IsNaN(cy) || math.IsInf(cx, 0) || math.IsInf(cy, 0) {
+		return nil
+	}
+	// A center may come from a program or a geocoder, so it can lie far
+	// beyond the world. The column wraps around the world as the tiles do,
+	// and a row far outside it moves to just past its edge, where every
+	// tile is a placeholder anyway; both keep the integer math in range.
 	n := 1 << uint(zoom)
+	world := float64(n) * float64(tileSize)
+	cx = math.Mod(math.Mod(cx, world)+world, world)
+	cy = max(-float64(h+tileSize), min(world+float64(h+tileSize), cy))
 	originX := int(math.Floor(cx)) - w/2
 	originY := int(math.Floor(cy)) - h/2
 	firstX := floorDiv(originX, tileSize)
