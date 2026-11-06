@@ -1,5 +1,18 @@
 # `ntmaps` CHANGELOG
 
+## Unreleased
+
+- Add native Go fuzz targets for PMTiles archives, directories, tile ids and
+  the writer round trip; GeoJSON and GPX reading; OSM JSON decoding and scene
+  building; HTTP cache freshness; tile coverage; bounds fitting; and path
+  drawing. `task fuzz-smoke` runs them all briefly as the fuzzing fleet does,
+  and `task fuzz TARGET=... FUZZTIME=...` works one target harder.
+- `tile.Cover` covers nothing instead of panicking for a NaN or infinite
+  center or a zoom over the new `tile.MaxCoverZoom`, and wraps or clamps a
+  center far outside the world. A Nominatim hit whose coordinates parse as
+  `NaN`, `Inf`, or out of range is now an error rather than a map center that
+  crashed the renderer.
+
 ## v0.6.3 (2026-11-04)
 
 - Restore the working Metal backend with wgpu v0.34.5 and naga v0.20.4.

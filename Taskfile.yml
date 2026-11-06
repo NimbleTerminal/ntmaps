@@ -39,6 +39,48 @@ tasks:
       - go test -mod=readonly ./...
       - go -C examples test -mod=readonly ./...
 
+###############################################################################
+# Fuzzing. Targets are FuzzXxx functions in fuzz_test.go files; go test runs
+# their seed corpora. The NimbleTerminal fuzzing fleet (fuzz.nimbleterminal.com,
+# run by ntfuzz) discovers them from the repository and fuzzes them
+# continuously; fuzz-smoke runs them the same way for a moment locally.
+
+  fuzz-smoke:
+    desc: 'Run every fuzz target for FUZZTIME (default 10s) as the fleet does: one process on one CPU'
+    vars:
+      FUZZTIME: '{{.FUZZTIME | default "10s"}}'
+    cmds:
+      - |
+        failed=0
+        for mod in . examples; do
+          dirs=$(cd "$mod" && grep -rl --include='*_test.go' --exclude-dir=examples --exclude-dir=web --exclude-dir=.task '^func Fuzz' . | sed 's|/[^/]*$||' | sort -u)
+          for dir in $dirs; do
+            for target in $(go -C "$mod" test -mod=readonly -list '^Fuzz' "$dir" | grep '^Fuzz'); do
+              echo "== $mod $dir $target"
+              GOMAXPROCS=1 go -C "$mod" test -mod=readonly -parallel=1 -run='^$' -fuzz="^${target}\$" -fuzztime={{.FUZZTIME}} "$dir" || failed=1
+            done
+          done
+        done
+        exit $failed
+
+  fuzz:
+    desc: 'Fuzz one target harder, on every CPU (TARGET=FuzzArchive FUZZTIME=5m)'
+    requires:
+      vars: [TARGET]
+    vars:
+      FUZZTIME: '{{.FUZZTIME | default "5m"}}'
+    cmds:
+      - |
+        set -- $(grep -rl --include='*_test.go' --exclude-dir=web --exclude-dir=.task '^func {{.TARGET}}(' . | sed 's|/[^/]*$||' | sort -u)
+        if [ $# -ne 1 ]; then
+          echo "expected one package to define {{.TARGET}}, found: $*" >&2
+          exit 1
+        fi
+        case "$1" in
+          ./examples/*) go -C examples test -mod=readonly -run='^$' -fuzz='^{{.TARGET}}$' -fuzztime={{.FUZZTIME}} ".${1#./examples}" ;;
+          *) go test -mod=readonly -run='^$' -fuzz='^{{.TARGET}}$' -fuzztime={{.FUZZTIME}} "$1" ;;
+        esac
+
   build:
     desc: 'Build all the things'
     deps:

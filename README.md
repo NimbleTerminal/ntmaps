@@ -433,6 +433,16 @@ with `task serve-wasm-site`. The landing page offers the explorer, minimal 2D ma
 buttons, renderer selection, and restart. Generated assets are ignored.
 GitHub Pages deploys only after the same CI checks pass.
 
+Fuzz targets (`FuzzXxx` functions in `fuzz_test.go` files) cover what arrives
+from outside: PMTiles archives and directories, GeoJSON and GPX files, the OSM
+JSON behind the city viewer, HTTP cache headers, and the bounds, centers and
+path geometry a program or geocoder hands the widget. `go test` runs their seed
+corpora. `task fuzz-smoke` runs every target briefly the way the NimbleTerminal
+fuzzing fleet at [fuzz.nimbleterminal.com](https://fuzz.nimbleterminal.com)
+does, one process on one CPU; `task fuzz TARGET=FuzzArchive FUZZTIME=5m` works
+one target harder. A failing input lands under `testdata/fuzz/`; commit it with
+the fix so it stays a regression test.
+
 After changing dependencies, run `task go-tidy` and `task notices`. Browser
 builds use `wasm.work`; native tasks explicitly disable workspaces.
 
